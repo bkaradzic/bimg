@@ -8,9 +8,8 @@
 #include <bx/readerwriter.h>
 #include <bx/endian.h>
 
-#include <bimg/bimg.h>
-#include <bimg/bimg_decode.h>
-#include <bimg/bimg_encode.h>
+#include <bimg/decode.h>
+#include <bimg/encode.h>
 
 #if 0
 #	define BX_TRACE(_format, ...) fprintf(stderr, "" _format "\n", ##__VA_ARGS__)

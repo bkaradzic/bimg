@@ -6,6 +6,8 @@
 #ifndef BIMG_DECODE_H_HEADER_GUARD
 #define BIMG_DECODE_H_HEADER_GUARD
 
+#include "bimg.h"
+
 namespace bimg
 {
 	///

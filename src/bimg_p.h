@@ -4,6 +4,9 @@
  */
 
 #include <bimg/bimg.h>
+#include <bx/allocator.h>
+#include <bx/readerwriter.h>
+#include <bx/pixelformat.h>
 #include <bx/endian.h>
 #include <bx/error.h>
 #include <bx/simd_t.h>
@@ -42,5 +45,28 @@ namespace bimg
 
 		return 1;
 	}
+
+	///
+	void imageConvert(
+		  void* _dst
+		, uint32_t _bpp
+		, bx::PackFn _pack
+		, const void* _src
+		, bx::UnpackFn _unpack
+		, uint32_t _size
+		);
+
+	///
+	void imageConvert(
+		  void* _dst
+		, uint32_t _dstBpp
+		, bx::PackFn _pack
+		, const void* _src
+		, uint32_t _srcBpp
+		, bx::UnpackFn _unpack
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		);
 
 } // namespace bimg

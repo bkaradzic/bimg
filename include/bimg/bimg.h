@@ -6,9 +6,17 @@
 #ifndef BIMG_IMAGE_H_HEADER_GUARD
 #define BIMG_IMAGE_H_HEADER_GUARD
 
-#include <bx/pixelformat.h>
-#include <bx/allocator.h>
-#include <bx/readerwriter.h>
+#include <stdint.h> // uint32_t
+#include <stdlib.h> // NULL
+
+namespace bx
+{
+	struct AllocatorI;
+	struct Error;
+	struct ReaderSeekerI;
+	struct WriterI;
+
+} // namespace bx
 
 namespace bimg
 {
@@ -263,29 +271,6 @@ namespace bimg
 
 	///
 	bool imageConvert(TextureFormat::Enum _dstFormat, TextureFormat::Enum _srcFormat);
-
-	///
-	void imageConvert(
-		  void* _dst
-		, uint32_t _bpp
-		, bx::PackFn _pack
-		, const void* _src
-		, bx::UnpackFn _unpack
-		, uint32_t _size
-		);
-
-	///
-	void imageConvert(
-		  void* _dst
-		, uint32_t _dstBpp
-		, bx::PackFn _pack
-		, const void* _src
-		, uint32_t _srcBpp
-		, bx::UnpackFn _unpack
-		, uint32_t _width
-		, uint32_t _height
-		, uint32_t _srcPitch
-		);
 
 	///
 	bool imageConvert(
