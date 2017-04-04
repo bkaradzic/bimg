@@ -15,6 +15,13 @@ project "bimg"
 		path.join(BIMG_DIR, "src/image.*"),
 	}
 
+	configuration { "linux-*" }
+		buildoptions {
+			"-fPIC",
+		}
+
+	configuration {}
+
 project "bimg_decode"
 	kind "StaticLib"
 
@@ -29,6 +36,13 @@ project "bimg_decode"
 	files {
 		path.join(BIMG_DIR, "src/image_decode.*"),
 	}
+
+	configuration { "linux-*" }
+		buildoptions {
+			"-fPIC",
+		}
+
+	configuration {}
 
 project "bimg_encode"
 	kind "StaticLib"
@@ -59,3 +73,10 @@ project "bimg_encode"
 		path.join(BIMG_DIR, "3rdparty/iqa/include/**.h"),
 		path.join(BIMG_DIR, "3rdparty/iqa/source/**.c"),
 	}
+
+	configuration { "linux-*" }
+		buildoptions {
+			"-fPIC",
+		}
+
+	configuration {}
