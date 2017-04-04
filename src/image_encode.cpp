@@ -14,11 +14,9 @@
 
 namespace bimg
 {
-	bool imageEncodeFromRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint8_t _format)
+	bool imageEncodeFromRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format)
 	{
-		TextureFormat::Enum format = TextureFormat::Enum(_format);
-
-		switch (format)
+		switch (_format)
 		{
 		case TextureFormat::BC1:
 		case TextureFormat::BC2:
@@ -26,11 +24,11 @@ namespace bimg
 		case TextureFormat::BC4:
 		case TextureFormat::BC5:
 			squish::CompressImage( (const uint8_t*)_src, _width, _height, _dst
-				, format == TextureFormat::BC2 ? squish::kDxt3
-				: format == TextureFormat::BC3 ? squish::kDxt5
-				: format == TextureFormat::BC4 ? squish::kBc4
-				: format == TextureFormat::BC5 ? squish::kBc5
-				:                                squish::kDxt1
+				, _format == TextureFormat::BC2 ? squish::kDxt3
+				: _format == TextureFormat::BC3 ? squish::kDxt5
+				: _format == TextureFormat::BC4 ? squish::kBc4
+				: _format == TextureFormat::BC5 ? squish::kBc5
+				:                                 squish::kDxt1
 				);
 			return true;
 
@@ -108,16 +106,14 @@ namespace bimg
 			break;
 		}
 
-		return imageConvert(_dst, format, _src, TextureFormat::RGBA8, _width, _height);
+		return imageConvert(_dst, _format, _src, TextureFormat::RGBA8, _width, _height);
 	}
 
-	bool imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint8_t _format)
+	bool imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format)
 	{
-		TextureFormat::Enum format = TextureFormat::Enum(_format);
-
 		const uint8_t* src = (const uint8_t*)_src;
 
-		switch (format)
+		switch (_format)
 		{
 		case TextureFormat::RGBA8:
 			{
@@ -164,7 +160,7 @@ namespace bimg
 			break;
 		}
 
-		return imageConvert(_dst, format, _src, TextureFormat::RGBA32F, _width, _height);
+		return imageConvert(_dst, _format, _src, TextureFormat::RGBA32F, _width, _height);
 	}
 
 	void imageRgba32f11to01(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
