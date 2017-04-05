@@ -1,3 +1,9 @@
+#if defined(_MSC_VER)
+#	pragma warning(disable:4244) // warning C4244: '=': conversion from 'int' to 'stbi__uint16', possible loss of data
+#	pragma warning(disable:4245) // warning C4245: 'argument': conversion from 'int' to 'char', signed/unsigned mismatch
+#	pragma warning(disable:4456) // warning C4456: declaration of 'k' hides previous local declaration
+#endif
+
 /* stb_image - v2.15 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 

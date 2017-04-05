@@ -65,6 +65,8 @@ end
 
 group "libs"
 dofile "bimg.lua"
+dofile "bimg_decode.lua"
+dofile "bimg_encode.lua"
 
 dofile(path.join(BX_DIR, "scripts/bx.lua"))
 

@@ -792,6 +792,8 @@ namespace miniz {
     defined(i386) || defined(__ia64__) || defined(__x86_64__)
 // MINIZ_X86_OR_X64_CPU is only used to help set the below macros.
 #define MINIZ_X86_OR_X64_CPU 1
+#else
+#define MINIZ_X86_OR_X64_CPU 0
 #endif
 
 #if defined(__sparcv9)
@@ -803,7 +805,7 @@ namespace miniz {
 #endif
 #endif
 
-#if MINIZ_X86_OR_X64_CPU
+#if 1 // MINIZ_X86_OR_X64_CPU
 // Set MINIZ_USE_UNALIGNED_LOADS_AND_STORES to 1 on CPU's that permit efficient
 // integer loads and stores from unaligned addresses.
 //#define MINIZ_USE_UNALIGNED_LOADS_AND_STORES 1
@@ -10452,7 +10454,7 @@ static void ReconstructLineOffsets(std::vector<tinyexr::tinyexr_uint64> *offsets
     tinyexr::swap4(reinterpret_cast<unsigned int *>(&data_len));
 
     (*offsets)[i] = offset;
-    
+
     marker += data_len + 8; // 8 = 4 bytes(y) + 4 bytes(data_len)
   }
 }
@@ -10797,7 +10799,7 @@ int LoadEXRImageFromFile(EXRImage *exr_image, const EXRHeader *exr_header,
     return TINYEXR_ERROR_INVALID_ARGUMENT;
   }
 
-#ifdef _WIN32
+#if 0 //def _WIN32
   FILE *fp = NULL;
   fopen_s(&fp, filename, "rb");
 #else
@@ -11381,7 +11383,7 @@ int SaveEXRImageToFile(const EXRImage *exr_image, const EXRHeader *exr_header,
   }
 #endif
 
-#ifdef _WIN32
+#if 0 //def _WIN32
   FILE *fp = NULL;
   fopen_s(&fp, filename, "wb");
 #else
@@ -11859,7 +11861,7 @@ int ParseEXRHeaderFromFile(EXRHeader *exr_header, const EXRVersion *exr_version,
     return TINYEXR_ERROR_INVALID_ARGUMENT;
   }
 
-#ifdef _WIN32
+#if 0 //def _WIN32
   FILE *fp = NULL;
   fopen_s(&fp, filename, "rb");
 #else
@@ -11983,7 +11985,7 @@ int ParseEXRMultipartHeaderFromFile(EXRHeader ***exr_headers, int *num_headers,
     return TINYEXR_ERROR_INVALID_ARGUMENT;
   }
 
-#ifdef _WIN32
+#if 0 //def _WIN32
   FILE *fp = NULL;
   fopen_s(&fp, filename, "rb");
 #else
@@ -12083,7 +12085,7 @@ int ParseEXRVersionFromFile(EXRVersion *version, const char *filename) {
     return TINYEXR_ERROR_INVALID_ARGUMENT;
   }
 
-#ifdef _WIN32
+#if 0 //def _WIN32
   FILE *fp = NULL;
   fopen_s(&fp, filename, "rb");
 #else
@@ -12214,7 +12216,7 @@ int LoadEXRMultipartImageFromFile(EXRImage *exr_images,
     return TINYEXR_ERROR_INVALID_ARGUMENT;
   }
 
-#ifdef _WIN32
+#if 0 //def _WIN32
   FILE *fp = NULL;
   fopen_s(&fp, filename, "rb");
 #else

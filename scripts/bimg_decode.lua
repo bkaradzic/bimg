@@ -3,16 +3,19 @@
 -- License: https://github.com/bkaradzic/bx#license-bsd-2-clause
 --
 
-project "bimg"
+project "bimg_decode"
 	kind "StaticLib"
 
 	includedirs {
 		path.join(BX_DIR, "include"),
 		path.join(BIMG_DIR, "include"),
+		path.join(BIMG_DIR, "3rdparty"),
+		path.join(BIMG_DIR, "3rdparty/nvtt"),
+		path.join(BIMG_DIR, "3rdparty/iqa/include"),
 	}
 
 	files {
-		path.join(BIMG_DIR, "src/image.*"),
+		path.join(BIMG_DIR, "src/image_decode.*"),
 	}
 
 	configuration { "linux-*" }
