@@ -8,7 +8,6 @@
 
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
-#include <bx/pixelformat.h>
 
 namespace bx
 {
@@ -21,6 +20,9 @@ namespace bx
 
 namespace bimg
 {
+	typedef void (*PackFn)(void*, const float*);
+	typedef void (*UnpackFn)(float*, const void*);
+
 	/// Texture format enum.
 	///
 	/// Notation:
@@ -241,45 +243,109 @@ namespace bimg
 		);
 
 	///
-	void imageSolid(void* _dst, uint32_t _width, uint32_t _height, uint32_t _solid);
+	void imageSolid(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _solid
+		);
 
 	///
-	void imageCheckerboard(void* _dst, uint32_t _width, uint32_t _height, uint32_t _step, uint32_t _0, uint32_t _1);
+	void imageCheckerboard(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _step
+		, uint32_t _0
+		, uint32_t _1
+		);
 
 	///
-	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src);
+	void imageRgba8Downsample2x2(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, const void* _src
+		);
 
 	///
-	void imageRgba32fToLinear(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src);
+	void imageRgba32fToLinear(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, const void* _src
+		);
 
 	///
-	void imageRgba32fToGamma(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src);
+	void imageRgba32fToGamma(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, const void* _src
+		);
 
 	///
-	void imageRgba32fLinearDownsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src);
+	void imageRgba32fLinearDownsample2x2(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, const void* _src
+		);
 
 	///
-	void imageRgba32fDownsample2x2NormalMap(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src);
+	void imageRgba32fDownsample2x2NormalMap(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, const void* _src
+		);
 
 	///
-	void imageSwizzleBgra8(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src);
+	void imageSwizzleBgra8(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, const void* _src
+		);
 
 	///
-	void imageCopy(void* _dst, uint32_t _height, uint32_t _srcPitch, const void* _src, uint32_t _dstPitch);
+	void imageCopy(
+		  void* _dst
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, uint32_t _dstPitch
+		);
 
 	///
-	void imageCopy(void* _dst, uint32_t _width, uint32_t _height, uint32_t _bpp, uint32_t _pitch, const void* _src);
+	void imageCopy(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _bpp
+		, uint32_t _pitch
+		, const void* _src
+		);
 
 	///
-	bool imageConvert(TextureFormat::Enum _dstFormat, TextureFormat::Enum _srcFormat);
+	bool imageConvert(
+		  TextureFormat::Enum _dstFormat
+		, TextureFormat::Enum _srcFormat
+		);
 
 	///
 	void imageConvert(
 		  void* _dst
 		, uint32_t _bpp
-		, bx::PackFn _pack
+		, PackFn _pack
 		, const void* _src
-		, bx::UnpackFn _unpack
+		, UnpackFn _unpack
 		, uint32_t _size
 		);
 
@@ -287,10 +353,10 @@ namespace bimg
 	void imageConvert(
 		  void* _dst
 		, uint32_t _dstBpp
-		, bx::PackFn _pack
+		, PackFn _pack
 		, const void* _src
 		, uint32_t _srcBpp
-		, bx::UnpackFn _unpack
+		, UnpackFn _unpack
 		, uint32_t _width
 		, uint32_t _height
 		, uint32_t _srcPitch
@@ -315,6 +381,13 @@ namespace bimg
 		);
 
 	///
+	ImageContainer* imageConvert(
+		  bx::AllocatorI* _allocator
+		, TextureFormat::Enum _dstFormat
+		, const ImageContainer& _input
+		);
+
+	///
 	ImageContainer* imageAlloc(
 		  bx::AllocatorI* _allocator
 		, TextureFormat::Enum _format
@@ -328,7 +401,9 @@ namespace bimg
 		);
 
 	///
-	void imageFree(ImageContainer* _imageContainer);
+	void imageFree(
+		  ImageContainer* _imageContainer
+		);
 
 	///
 	void imageWriteTga(
@@ -365,22 +440,79 @@ namespace bimg
 		);
 
 	///
-	bool imageParse(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader);
+	bool imageParse(
+		  ImageContainer& _imageContainer
+		, bx::ReaderSeekerI* _reader
+		);
 
 	///
-	bool imageParse(ImageContainer& _imageContainer, const void* _data, uint32_t _size);
+	bool imageParse(
+		  ImageContainer& _imageContainer
+		, const void* _data
+		, uint32_t _size
+		);
 
 	///
-	void imageDecodeToBgra8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _pitch, TextureFormat::Enum _format);
+	ImageContainer* imageParseDds(
+		  bx::AllocatorI* _allocator
+		, const void* _src
+		, uint32_t _size
+		);
 
 	///
-	void imageDecodeToRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _pitch, TextureFormat::Enum _format);
+	ImageContainer* imageParseKtx(
+		  bx::AllocatorI* _allocator
+		, const void* _src
+		, uint32_t _size
+		);
 
 	///
-	void imageDecodeToRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _pitch, TextureFormat::Enum _format);
+	ImageContainer* imageParsePvr3(
+		  bx::AllocatorI* _allocator
+		, const void* _src
+		, uint32_t _size
+		);
 
 	///
-	bool imageGetRawData(const ImageContainer& _imageContainer, uint16_t _side, uint8_t _lod, const void* _data, uint32_t _size, ImageMip& _mip);
+	void imageDecodeToBgra8(
+		  void* _dst
+		, const void* _src
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, TextureFormat::Enum _format
+		);
+
+	///
+	void imageDecodeToRgba8(
+		  void* _dst
+		, const void* _src
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, TextureFormat::Enum _format
+		);
+
+	///
+	void imageDecodeToRgba32f(
+		  bx::AllocatorI* _allocator
+		, void* _dst
+		, const void* _src
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _pitch
+		, TextureFormat::Enum _format
+		);
+
+	///
+	bool imageGetRawData(
+		  const ImageContainer& _imageContainer
+		, uint16_t _side
+		, uint8_t _lod
+		, const void* _data
+		, uint32_t _size
+		, ImageMip& _mip
+		);
 
 } // namespace bimg
 

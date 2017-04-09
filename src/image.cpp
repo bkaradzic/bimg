@@ -688,8 +688,8 @@ namespace bimg
 
 	struct PackUnpack
 	{
-		bx::PackFn pack;
-		bx::UnpackFn unpack;
+		PackFn pack;
+		UnpackFn unpack;
 	};
 
 	static const PackUnpack s_packUnpack[] =
@@ -775,14 +775,14 @@ namespace bimg
 
 	bool imageConvert(TextureFormat::Enum _dstFormat, TextureFormat::Enum _srcFormat)
 	{
-		bx::UnpackFn unpack = s_packUnpack[_srcFormat].unpack;
-		bx::PackFn   pack   = s_packUnpack[_dstFormat].pack;
+		UnpackFn unpack = s_packUnpack[_srcFormat].unpack;
+		PackFn   pack   = s_packUnpack[_dstFormat].pack;
 		return NULL != pack
 			&& NULL != unpack
 			;
 	}
 
-	void imageConvert(void* _dst, uint32_t _bpp, bx::PackFn _pack, const void* _src, bx::UnpackFn _unpack, uint32_t _size)
+	void imageConvert(void* _dst, uint32_t _bpp, PackFn _pack, const void* _src, UnpackFn _unpack, uint32_t _size)
 	{
 		const uint8_t* src = (uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
@@ -797,7 +797,7 @@ namespace bimg
 		}
 	}
 
-	void imageConvert(void* _dst, uint32_t _dstBpp, bx::PackFn _pack, const void* _src, uint32_t _srcBpp, bx::UnpackFn _unpack, uint32_t _width, uint32_t _height, uint32_t _srcPitch)
+	void imageConvert(void* _dst, uint32_t _dstBpp, PackFn _pack, const void* _src, uint32_t _srcBpp, UnpackFn _unpack, uint32_t _width, uint32_t _height, uint32_t _srcPitch)
 	{
 		const uint8_t* src = (uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
@@ -817,8 +817,8 @@ namespace bimg
 
 	bool imageConvert(void* _dst, TextureFormat::Enum _dstFormat, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _srcPitch)
 	{
-		bx::UnpackFn unpack = s_packUnpack[_srcFormat].unpack;
-		bx::PackFn   pack   = s_packUnpack[_dstFormat].pack;
+		UnpackFn unpack = s_packUnpack[_srcFormat].unpack;
+		PackFn   pack   = s_packUnpack[_dstFormat].pack;
 		if (NULL == pack
 		||  NULL == unpack)
 		{
@@ -889,10 +889,19 @@ namespace bimg
 		return output;
 	}
 
-	ImageContainer* imageParseBgfx(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	typedef bool (*ParseFn)(ImageContainer&, bx::ReaderSeekerI*);
+
+	template<uint32_t magicT, ParseFn parseFnT>
+	ImageContainer* imageParseT(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
 	{
+		bx::MemoryReader reader(_src, _size);
+
+		uint32_t magic;
+		bx::read(&reader, magic);
+
 		ImageContainer imageContainer;
-		if (!imageParse(imageContainer, _src, _size) )
+		if (magicT == magic
+		&& !parseFnT(imageContainer, &reader) )
 		{
 			return NULL;
 		}
@@ -2117,6 +2126,11 @@ namespace bimg
 		return TextureFormat::Unknown != format;
 	}
 
+	ImageContainer* imageParseDds(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	{
+		return imageParseT<DDS_MAGIC, imageParseDds>(_allocator, _src, _size);
+	}
+
 // KTX
 #define KTX_MAGIC       BX_MAKEFOURCC(0xAB, 'K', 'T', 'X')
 #define KTX_HEADER_SIZE 64
@@ -2427,6 +2441,11 @@ namespace bimg
 		return TextureFormat::Unknown != format;
 	}
 
+	ImageContainer* imageParseKtx(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	{
+		return imageParseT<KTX_MAGIC, imageParseKtx>(_allocator, _src, _size);
+	}
+
 // PVR3
 #define PVR3_MAKE8CC(_a, _b, _c, _d, _e, _f, _g, _h) (uint64_t(BX_MAKEFOURCC(_a, _b, _c, _d) ) | (uint64_t(BX_MAKEFOURCC(_e, _f, _g, _h) )<<32) )
 
@@ -2576,6 +2595,11 @@ namespace bimg
 		_imageContainer.m_srgb      = colorSpace > 0;
 
 		return TextureFormat::Unknown != format;
+	}
+
+	ImageContainer* imageParsePvr3(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	{
+		return imageParseT<PVR3_MAGIC, imageParsePvr3>(_allocator, _src, _size);
 	}
 
 	bool imageParse(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader)

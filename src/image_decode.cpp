@@ -67,55 +67,6 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 
 namespace bimg
 {
-#if !defined(BIMG_IMAGE_H_HEADER_GUARD)
-	struct ImageMip
-	{
-		TextureFormat::Enum m_format;
-		uint32_t m_width;
-		uint32_t m_height;
-		uint32_t m_blockSize;
-		uint32_t m_size;
-		uint8_t  m_bpp;
-		bool     m_hasAlpha;
-		const uint8_t* m_data;
-	};
-#endif // !defined(BIMG_IMAGE_H_HEADER_GUARD)
-
-	uint32_t imageGetSize(
-		  TextureInfo* _info
-		, uint16_t _width
-		, uint16_t _height
-		, uint16_t _depth
-		, bool _cubeMap
-		, bool _hasMips
-		, uint16_t _numLayers
-		, TextureFormat::Enum _format
-		);
-
-	///
-	ImageContainer* imageParseBgfx(bx::AllocatorI* _allocator, const void* _src, uint32_t _size);
-
-	///
-	bool imageConvert(
-		  void* _dst
-		, TextureFormat::Enum _dstFormat
-		, const void* _src
-		, TextureFormat::Enum _srcFormat
-		, uint32_t _width
-		, uint32_t _height
-		);
-
-	///
-	ImageContainer* imageConvert(
-		  bx::AllocatorI* _allocator
-		, TextureFormat::Enum _dstFormat
-		, const ImageContainer& _input
-		);
-
-} // namespace bimg
-
-namespace bimg
-{
 	static ImageContainer* imageParseLodePng(bx::AllocatorI* _allocator, const void* _data, uint32_t _size)
 	{
 		static uint8_t pngMagic[] = { 0x89, 0x50, 0x4E, 0x47, 0x0d, 0x0a };
@@ -411,7 +362,9 @@ namespace bimg
 
 	ImageContainer* imageParse(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, TextureFormat::Enum _dstFormat)
 	{
-		ImageContainer* input = imageParseBgfx    (_allocator, _data, _size)        ;
+		ImageContainer* input = imageParseDds     (_allocator, _data, _size)        ;
+		input = NULL == input ? imageParseKtx     (_allocator, _data, _size) : input;
+		input = NULL == input ? imageParsePvr3    (_allocator, _data, _size) : input;
 		input = NULL == input ? imageParseLodePng (_allocator, _data, _size) : input;
 		input = NULL == input ? imageParseTinyExr (_allocator, _data, _size) : input;
 		input = NULL == input ? imageParseStbImage(_allocator, _data, _size) : input;
