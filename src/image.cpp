@@ -900,8 +900,8 @@ namespace bimg
 		bx::read(&reader, magic);
 
 		ImageContainer imageContainer;
-		if (magicT == magic
-		&& !parseFnT(imageContainer, &reader) )
+		if (magicT != magic
+		|| !parseFnT(imageContainer, &reader) )
 		{
 			return NULL;
 		}
