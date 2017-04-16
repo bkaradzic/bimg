@@ -12,6 +12,10 @@
 #include <pvrtc/PvrTcEncoder.h>
 #include <edtaa3/edtaa3func.h>
 
+extern "C" {
+#include <iqa.h>
+}
+
 namespace bimg
 {
 	bool imageEncodeFromRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format)
@@ -266,6 +270,35 @@ namespace bimg
 
 		BX_FREE(_allocator, inside);
 		BX_FREE(_allocator, outside);
+	}
+
+	static const iqa_ssim_args s_iqaArgs =
+	{
+		0.39f,     // alpha
+		0.731f,    // beta
+		1.12f,     // gamma
+		187,       // L
+		0.025987f, // K1
+		0.0173f,   // K2
+		1          // factor
+	};
+
+	float imageQualityRgba8(
+		  const void* _reference
+		, const void* _data
+		, uint16_t _width
+		, uint16_t _height
+		)
+	{
+		float result = iqa_ssim( (const uint8_t*)_reference
+			, (const uint8_t*)_data
+			, _width
+			, _height
+			, _width*4
+			, 0
+			, &s_iqaArgs
+			);
+		return result;
 	}
 
 } // namespace bimg
