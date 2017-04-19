@@ -57,6 +57,12 @@ namespace bimg
 		, uint16_t _height
 		);
 
+	///
+	bool imageResizeRgba32fLinear(
+		  ImageContainer* _dst
+		, const ImageContainer* _src
+		);
+
 } // namespace bimg
 
 #endif // BIMG_ENCODE_H_HEADER_GUARD

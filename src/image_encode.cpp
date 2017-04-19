@@ -12,6 +12,13 @@
 #include <pvrtc/PvrTcEncoder.h>
 #include <edtaa3/edtaa3func.h>
 
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // warning C4100: 'alloc_context': unreferenced formal parameter
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4702) // warning C4702: unreachable code
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb/stb_image_resize.h>
+BX_PRAGMA_DIAGNOSTIC_POP();
+
 extern "C" {
 #include <iqa.h>
 }
@@ -299,6 +306,21 @@ namespace bimg
 			, &s_iqaArgs
 			);
 		return result;
+	}
+
+	bool imageResizeRgba32fLinear(ImageContainer* _dst, const ImageContainer* _src)
+	{
+		int result = stbir_resize_float_generic(
+			  (const float*)_src->m_data, _src->m_width, _src->m_height, _src->m_width*16
+			, (      float*)_dst->m_data, _dst->m_width, _dst->m_height, _dst->m_width*16
+			, 4, 1
+			, 0
+			, STBIR_EDGE_CLAMP
+			, STBIR_FILTER_DEFAULT
+			, STBIR_COLORSPACE_LINEAR
+			, NULL
+			);
+		return 1 == result;
 	}
 
 } // namespace bimg
