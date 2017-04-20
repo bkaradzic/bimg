@@ -314,7 +314,7 @@ namespace bimg
 		int result = stbir_resize_float_generic(
 			  (const float*)_src->m_data, _src->m_width, _src->m_height, _src->m_width*16
 			, (      float*)_dst->m_data, _dst->m_width, _dst->m_height, _dst->m_width*16
-			, 4, 1
+			, 4, 3
 			, 0
 			, STBIR_EDGE_CLAMP
 			, STBIR_FILTER_DEFAULT
