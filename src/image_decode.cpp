@@ -91,28 +91,44 @@ namespace bimg
 
 		if (0 == error)
 		{
+			bool palette   = false;
+			bool supported = false;
+
 			switch (state.info_raw.bitdepth)
 			{
+				case 1:
+					format    = bimg::TextureFormat::R1;
+					palette   = true;
+					supported = true;
+					break;
+
 				case 8:
 					switch (state.info_raw.colortype)
 					{
 						case LCT_GREY:
 							format = bimg::TextureFormat::R8;
+							supported = true;
 							break;
 
 						case LCT_GREY_ALPHA:
 							format = bimg::TextureFormat::RG8;
+							supported = true;
 							break;
 
 						case LCT_RGB:
 							format = bimg::TextureFormat::RGB8;
+							supported = true;
 							break;
 
 						case LCT_RGBA:
 							format = bimg::TextureFormat::RGBA8;
+							supported = true;
 							break;
 
 						case LCT_PALETTE:
+							format  = bimg::TextureFormat::RGBA8;
+							palette = true;
+							supported = true;
 							break;
 					}
 					break;
@@ -127,6 +143,7 @@ namespace bimg
 								rgba[0] = bx::toHostEndian(rgba[0], false);
 							}
 							format = bimg::TextureFormat::R16;
+							supported = true;
 							break;
 
 						case LCT_GREY_ALPHA:
@@ -137,6 +154,7 @@ namespace bimg
 								rgba[1] = bx::toHostEndian(rgba[1], false);
 							}
 							format = bimg::TextureFormat::RG16;
+							supported = true;
 							break;
 
 						case LCT_RGBA:
@@ -149,6 +167,7 @@ namespace bimg
 								rgba[3] = bx::toHostEndian(rgba[3], false);
 							}
 							format = bimg::TextureFormat::RGBA16;
+							supported = true;
 							break;
 
 						case LCT_RGB:
@@ -161,16 +180,43 @@ namespace bimg
 					break;
 			}
 
-			output = imageAlloc(_allocator
-				, format
-				, uint16_t(width)
-				, uint16_t(height)
-				, 0
-				, 1
-				, false
-				, false
-				, data
-				);
+			if (supported)
+			{
+				output = imageAlloc(_allocator
+					, bimg::TextureFormat::R1 == format ? bimg::TextureFormat::R8 : format
+					, uint16_t(width)
+					, uint16_t(height)
+					, 0
+					, 1
+					, false
+					, false
+					, palette ? NULL : data
+					);
+
+				if (bimg::TextureFormat::R1 == format)
+				{
+					for (uint32_t ii = 0, num = width*height/8; ii < num; ++ii)
+					{
+						uint8_t value = data[ii];
+						uint8_t* dst = (uint8_t*)output->m_data + ii * 8;
+						dst[0] = value & 0x01 ? 255 : 0;
+						dst[1] = value & 0x02 ? 255 : 0;
+						dst[2] = value & 0x04 ? 255 : 0;
+						dst[3] = value & 0x08 ? 255 : 0;
+						dst[4] = value & 0x10 ? 255 : 0;
+						dst[5] = value & 0x20 ? 255 : 0;
+						dst[6] = value & 0x40 ? 255 : 0;
+						dst[7] = value & 0x80 ? 255 : 0;
+					}
+				}
+				else if (palette)
+				{
+					for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+					{
+						bx::memCopy( (uint8_t*)output->m_data + ii*4, state.info_raw.palette + data[ii]*4, 4);
+					}
+				}
+			}
 		}
 
 		lodepng_state_cleanup(&state);
