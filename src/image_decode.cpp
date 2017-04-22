@@ -258,22 +258,22 @@ namespace bimg
 				{
 					const EXRChannelInfo& channel = exrHeader.channels[ii];
 					if (UINT8_MAX == idxR
-					&&  0 == bx::strncmp(channel.name, "R") )
+					&&  0 == bx::strCmp(channel.name, "R") )
 					{
 						idxR = ii;
 					}
 					else if (UINT8_MAX == idxG
-					&&  0 == bx::strncmp(channel.name, "G") )
+					&&  0 == bx::strCmp(channel.name, "G") )
 					{
 						idxG = ii;
 					}
 					else if (UINT8_MAX == idxB
-					&&  0 == bx::strncmp(channel.name, "B") )
+					&&  0 == bx::strCmp(channel.name, "B") )
 					{
 						idxB = ii;
 					}
 					else if (UINT8_MAX == idxA
-					&&  0 == bx::strncmp(channel.name, "A") )
+					&&  0 == bx::strCmp(channel.name, "A") )
 					{
 						idxA = ii;
 					}

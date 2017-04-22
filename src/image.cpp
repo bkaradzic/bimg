@@ -234,7 +234,7 @@ namespace bimg
 			const TextureFormat::Enum fmt = TextureFormat::Enum(ii);
 			if (isValid(fmt) )
 			{
-				if (0 == bx::strincmp(s_textureFormatName[ii], _name) )
+				if (0 == bx::strCmpI(s_textureFormatName[ii], _name) )
 				{
 					return fmt;
 				}
