@@ -86,7 +86,7 @@ namespace bimg
 		{  16, 1, 1,  2, 1, 1,  0, 0,  4,  4,  4,  4, uint8_t(bx::EncodingType::Unorm) }, // RGBA4
 		{  16, 1, 1,  2, 1, 1,  0, 0,  5,  5,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // RGB5A1
 		{  32, 1, 1,  4, 1, 1,  0, 0, 10, 10, 10,  2, uint8_t(bx::EncodingType::Unorm) }, // RGB10A2
-		{  32, 1, 1,  4, 1, 1,  0, 0, 11, 11, 10,  0, uint8_t(bx::EncodingType::Unorm) }, // R11G11B10F
+		{  32, 1, 1,  4, 1, 1,  0, 0, 11, 11, 10,  0, uint8_t(bx::EncodingType::Unorm) }, // RG11B10F
 		{   0, 0, 0,  0, 0, 0,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Count) }, // UnknownDepth
 		{  16, 1, 1,  2, 1, 1, 16, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // D16
 		{  24, 1, 1,  3, 1, 1, 24, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // D24
@@ -167,7 +167,7 @@ namespace bimg
 		"RGBA4",      // RGBA4
 		"RGB5A1",     // RGB5A1
 		"RGB10A2",    // RGB10A2
-		"R11G11B10F", // R11G11B10F
+		"RG11B10F", // RG11B10F
 		"<unknown>",  // UnknownDepth
 		"D16",        // D16
 		"D24",        // D24
@@ -760,7 +760,7 @@ namespace bimg
 		{ bx::packRgba4,      bx::unpackRgba4      }, // RGBA4
 		{ bx::packRgb5a1,     bx::unpackRgb5a1     }, // RGB5A1
 		{ bx::packRgb10A2,    bx::unpackRgb10A2    }, // RGB10A2
-		{ bx::packR11G11B10F, bx::unpackR11G11B10F }, // R11G11B10F
+		{ bx::packRG11B10F, bx::unpackRG11B10F }, // RG11B10F
 		{ NULL,               NULL                 }, // UnknownDepth
 		{ bx::packR16,        bx::unpackR16        }, // D16
 		{ bx::packR24,        bx::unpackR24        }, // D24
@@ -1946,7 +1946,7 @@ namespace bimg
 		{ DDS_FORMAT_B4G4R4A4_UNORM,      TextureFormat::RGBA4,      false },
 		{ DDS_FORMAT_B5G5R5A1_UNORM,      TextureFormat::RGB5A1,     false },
 		{ DDS_FORMAT_R10G10B10A2_UNORM,   TextureFormat::RGB10A2,    false },
-		{ DDS_FORMAT_R11G11B10_FLOAT,     TextureFormat::R11G11B10F, false },
+		{ DDS_FORMAT_R11G11B10_FLOAT,     TextureFormat::RG11B10F, false },
 	};
 
 	struct TranslateDdsPixelFormat
@@ -2326,7 +2326,7 @@ namespace bimg
 		{ KTX_RGBA4,                                    KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_4_4_4_4,       }, // RGBA4
 		{ KTX_RGB5_A1,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_5_5_5_1,       }, // RGB5A1
 		{ KTX_RGB10_A2,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2
-		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // R11G11B10F
+		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // RG11B10F
 	};
 	BX_STATIC_ASSERT(TextureFormat::UnknownDepth == BX_COUNTOF(s_translateKtxFormat) );
 
