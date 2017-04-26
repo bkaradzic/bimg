@@ -500,7 +500,7 @@ namespace bimg
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _dstPitch
 		, TextureFormat::Enum _format
 		);
 

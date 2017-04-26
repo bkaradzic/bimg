@@ -2958,7 +2958,7 @@ namespace bimg
 		}
 	}
 
-	void imageDecodeToRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _pitch, TextureFormat::Enum _format)
+	void imageDecodeToRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _dstPitch, TextureFormat::Enum _format)
 	{
 		const uint8_t* src = (const uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
@@ -3000,25 +3000,26 @@ namespace bimg
 			break;
 
 		case TextureFormat::RGBA32F:
-			bx::memCopy(_dst, _src, _pitch*_height);
+			bx::memCopy(_dst, _src, _dstPitch*_height);
 			break;
 
 		case TextureFormat::RGBA8:
-			imageRgba8ToRgba32f(_dst, _width, _height, _pitch, _src);
+			imageRgba8ToRgba32f(_dst, _width, _height, _dstPitch, _src);
 			break;
 
 		default:
 			if (isCompressed(_format) )
 			{
-				uint32_t size = imageGetSize(NULL, uint16_t(_pitch/4), uint16_t(_height), 0, false, false, 1, _format);
+				uint32_t size = imageGetSize(NULL, uint16_t(_dstPitch/4), uint16_t(_height), 0, false, false, 1, _format);
 				void* temp = BX_ALLOC(_allocator, size);
-				imageDecodeToRgba8(temp, _src, _width, _height, _pitch, _format);
-				imageRgba8ToRgba32f(_dst, _width, _height, _pitch, temp);
+				imageDecodeToRgba8(temp, _src, _width, _height, _dstPitch, _format);
+				imageRgba8ToRgba32f(_dst, _width, _height, _dstPitch, temp);
 				BX_FREE(_allocator, temp);
 			}
 			else
 			{
-				imageConvert(_dst, TextureFormat::RGBA32F, _src, _format, _width, _height, _pitch);
+				const uint32_t srcBpp = s_imageBlockInfo[_format].bitsPerPixel;
+				imageConvert(_dst, TextureFormat::RGBA32F, _src, _format, _width, _height, _width*srcBpp/8);
 			}
 			break;
 		}
