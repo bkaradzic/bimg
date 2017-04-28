@@ -12,7 +12,9 @@
 #include <bimg/encode.h>
 
 #if 0
-#	define BX_TRACE(_format, ...) fprintf(stderr, "" _format "\n", ##__VA_ARGS__)
+#	define DBG(_format, ...) fprintf(stderr, "" _format "\n", ##__VA_ARGS__)
+#else
+#	define DBG(...) BX_NOOP()
 #endif // DEBUG
 
 #include <bx/bx.h>
@@ -31,6 +33,26 @@ struct Options
 		, iqa(false)
 		, sdf(false)
 	{
+	}
+
+	void dump()
+	{
+		DBG("Options:\n"
+			"\t  maxSize: %d\n"
+			"\t     edge: %f\n"
+			"\t   format: %s\n"
+			"\t     mips: %s\n"
+			"\tnormalMap: %s\n"
+			"\t      iqa: %s\n"
+			"\t      sdf: %s\n"
+			, maxSize
+			, edge
+			, bimg::getName(format)
+			, mips      ? "true" : "false"
+			, normalMap ? "true" : "false"
+			, iqa       ? "true" : "false"
+			, sdf       ? "true" : "false"
+			);
 	}
 
 	uint32_t maxSize;
@@ -105,7 +127,16 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			if (_options.normalMap)
 			{
-				output = bimg::imageAlloc(_allocator, format, uint16_t(mip.m_width), uint16_t(mip.m_height), 0, 1, false, _options.mips);
+				output = bimg::imageAlloc(
+					  _allocator
+					, format
+					, uint16_t(mip.m_width)
+					, uint16_t(mip.m_height)
+					, 0
+					, 1
+					, false
+					, _options.mips
+					);
 
 				bimg::ImageMip dstMip;
 				bimg::imageGetRawData(*output, 0, 0, NULL, 0, dstMip);
@@ -179,7 +210,16 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			else if (!bimg::isCompressed(input->m_format)
 				 &&  8 != bimg::getBlockInfo(input->m_format).rBits)
 			{
-				output = bimg::imageAlloc(_allocator, format, uint16_t(mip.m_width), uint16_t(mip.m_height), 0, 1, false, _options.mips);
+				output = bimg::imageAlloc(
+					  _allocator
+					, format
+					, uint16_t(mip.m_width)
+					, uint16_t(mip.m_height)
+					, 0
+					, 1
+					, false
+					, _options.mips
+					);
 
 				bimg::ImageMip dstMip;
 				bimg::imageGetRawData(*output, 0, 0, NULL, 0, dstMip);
@@ -248,7 +288,16 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			}
 			else
 			{
-				output = bimg::imageAlloc(_allocator, format, uint16_t(mip.m_width), uint16_t(mip.m_height), 0, 1, false, _options.mips);
+				output = bimg::imageAlloc(
+					  _allocator
+					, format
+					, uint16_t(mip.m_width)
+					, uint16_t(mip.m_height)
+					, 0
+					, 1
+					, false
+					, _options.mips
+					);
 
 				bimg::ImageMip dstMip;
 				bimg::imageGetRawData(*output, 0, 0, NULL, 0, dstMip);
