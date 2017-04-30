@@ -337,11 +337,11 @@ namespace bimg
 
 	void imageRgba8Downsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
 	{
-		const uint32_t dstwidth  = _width/2;
-		const uint32_t dstheight = _height/2;
+		const uint32_t dstWidth  = _width/2;
+		const uint32_t dstHeight = _height/2;
 
-		if (0 == dstwidth
-		||  0 == dstheight)
+		if (0 == dstWidth
+		||  0 == dstHeight)
 		{
 			return;
 		}
@@ -349,10 +349,10 @@ namespace bimg
 		uint8_t* dst = (uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstheight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
-			for (uint32_t xx = 0; xx < dstwidth; ++xx, rgba += 8, dst += 4)
+			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 			{
 				float rr = bx::fpow(rgba[       0], 2.2f);
 				float gg = bx::fpow(rgba[       1], 2.2f);
@@ -388,11 +388,11 @@ namespace bimg
 
 	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
 	{
-		const uint32_t dstwidth  = _width/2;
-		const uint32_t dstheight = _height/2;
+		const uint32_t dstWidth  = _width/2;
+		const uint32_t dstHeight = _height/2;
 
-		if (0 == dstwidth
-		||  0 == dstheight)
+		if (0 == dstWidth
+		||  0 == dstHeight)
 		{
 			return;
 		}
@@ -411,10 +411,10 @@ namespace bimg
 		const simd128_t linear = simd_ld(2.2f, 2.2f, 2.2f, 1.0f);
 		const simd128_t quater = simd_splat(0.25f);
 
-		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstheight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
-			for (uint32_t xx = 0; xx < dstwidth; ++xx, rgba += 8, dst += 4)
+			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 			{
 				const simd128_t abgr0  = simd_splat(rgba);
 				const simd128_t abgr1  = simd_splat(rgba+4);
@@ -487,12 +487,12 @@ namespace bimg
 		}
 	}
 
-	void imageRgba32fToGamma(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba32fToGamma(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
 		      uint8_t* dst = (      uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0; yy < _height; ++yy, src += _pitch)
+		for (uint32_t yy = 0; yy < _height; ++yy, src += _srcPitch)
 		{
 			for (uint32_t xx = 0; xx < _width; ++xx, dst += 16)
 			{
@@ -507,13 +507,13 @@ namespace bimg
 		}
 	}
 
-	void imageRgba32fLinearDownsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba32fLinearDownsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
-		const uint32_t dstwidth  = _width/2;
-		const uint32_t dstheight = _height/2;
+		const uint32_t dstWidth  = _width/2;
+		const uint32_t dstHeight = _height/2;
 
-		if (0 == dstwidth
-		||  0 == dstheight)
+		if (0 == dstWidth
+		||  0 == dstHeight)
 		{
 			return;
 		}
@@ -521,13 +521,14 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
-		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstheight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 		{
 			const float* rgba0 = (const float*)&src[0];
-			const float* rgba1 = (const float*)&src[_pitch];
-			for (uint32_t xx = 0; xx < dstwidth; ++xx, rgba0 += 8, rgba1 += 8, dst += 16)
+			const float* rgba1 = (const float*)&src[_srcPitch];
+			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba0 += 8, rgba1 += 8, dst += 16)
 			{
 				float xyz[4];
+
 				xyz[0]  = rgba0[0];
 				xyz[1]  = rgba0[1];
 				xyz[2]  = rgba0[2];
@@ -552,22 +553,24 @@ namespace bimg
 				xyz[1] *= 0.25f;
 				xyz[2] *= 0.25f;
 				xyz[3] *= 0.25f;
+
+				bx::packRgba32F(dst, xyz);
 			}
 		}
 	}
 
-	void imageRgba32fLinearDownsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba32fLinearDownsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
-		imageRgba32fLinearDownsample2x2Ref(_dst, _width, _height, _pitch, _src);
+		imageRgba32fLinearDownsample2x2Ref(_dst, _width, _height, _srcPitch, _src);
 	}
 
-	void imageRgba32fDownsample2x2NormalMapRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba32fDownsample2x2NormalMapRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
-		const uint32_t dstwidth  = _width/2;
-		const uint32_t dstheight = _height/2;
+		const uint32_t dstWidth  = _width/2;
+		const uint32_t dstHeight = _height/2;
 
-		if (0 == dstwidth
-		||  0 == dstheight)
+		if (0 == dstWidth
+		||  0 == dstHeight)
 		{
 			return;
 		}
@@ -575,33 +578,38 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
-		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstheight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 		{
 			const float* rgba0 = (const float*)&src[0];
-			const float* rgba1 = (const float*)&src[_pitch];
-			for (uint32_t xx = 0; xx < dstwidth; ++xx, rgba0 += 8, rgba1 += 8, dst += 16)
+			const float* rgba1 = (const float*)&src[_srcPitch];
+			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba0 += 8, rgba1 += 8, dst += 16)
 			{
 				float xyz[3];
+
 				xyz[0]  = rgba0[0];
 				xyz[1]  = rgba0[1];
 				xyz[2]  = rgba0[2];
+
 				xyz[0] += rgba0[4];
 				xyz[1] += rgba0[5];
 				xyz[2] += rgba0[6];
+
 				xyz[0] += rgba1[0];
 				xyz[1] += rgba1[1];
 				xyz[2] += rgba1[2];
+
 				xyz[0] += rgba1[4];
 				xyz[1] += rgba1[5];
 				xyz[2] += rgba1[6];
+
 				bx::vec3Norm( (float*)dst, xyz);
 			}
 		}
 	}
 
-	void imageRgba32fDownsample2x2NormalMap(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba32fDownsample2x2NormalMap(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
-		imageRgba32fDownsample2x2NormalMapRef(_dst, _width, _height, _pitch, _src);
+		imageRgba32fDownsample2x2NormalMapRef(_dst, _width, _height, _srcPitch, _src);
 	}
 
 	void imageSwizzleBgra8Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
@@ -2896,11 +2904,11 @@ namespace bimg
 
 	void imageRgba8ToRgba32fRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
 	{
-		const uint32_t dstwidth  = _width;
-		const uint32_t dstheight = _height;
+		const uint32_t dstWidth  = _width;
+		const uint32_t dstHeight = _height;
 
-		if (0 == dstwidth
-		||  0 == dstheight)
+		if (0 == dstWidth
+		||  0 == dstHeight)
 		{
 			return;
 		}
@@ -2908,10 +2916,10 @@ namespace bimg
 		float* dst = (float*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0, ystep = _pitch; yy < dstheight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _pitch; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
-			for (uint32_t xx = 0; xx < dstwidth; ++xx, rgba += 4, dst += 4)
+			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 4, dst += 4)
 			{
 				dst[0] = bx::fpow(rgba[0], 2.2f);
 				dst[1] = bx::fpow(rgba[1], 2.2f);
@@ -2923,11 +2931,11 @@ namespace bimg
 
 	void imageRgba8ToRgba32f(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
 	{
-		const uint32_t dstwidth  = _width;
-		const uint32_t dstheight = _height;
+		const uint32_t dstWidth  = _width;
+		const uint32_t dstHeight = _height;
 
-		if (0 == dstwidth
-		||  0 == dstheight)
+		if (0 == dstWidth
+		||  0 == dstHeight)
 		{
 			return;
 		}
@@ -2941,10 +2949,10 @@ namespace bimg
 		const simd128_t wflip  = simd_ild(0, 0, 0, 0x80000000);
 		const simd128_t wadd   = simd_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
 
-		for (uint32_t yy = 0, ystep = _pitch; yy < dstheight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _pitch; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
-			for (uint32_t xx = 0; xx < dstwidth; ++xx, rgba += 4, dst += 4)
+			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 4, dst += 4)
 			{
 				const simd128_t abgr0  = simd_splat(rgba);
 				const simd128_t abgr0m = simd_and(abgr0, umask);

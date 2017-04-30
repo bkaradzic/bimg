@@ -283,7 +283,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		);
 
@@ -292,7 +292,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		);
 
@@ -301,7 +301,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		);
 
