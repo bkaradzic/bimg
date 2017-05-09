@@ -865,10 +865,8 @@ namespace bimg
 			, 1 < _input.m_numMips
 			);
 
-		const uint8_t  bpp = getBitsPerPixel(_dstFormat);
 		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
 
-		uint8_t* dst = (uint8_t*)output->m_data	;
 		for (uint16_t side = 0; side < numSides; ++side)
 		{
 			for (uint8_t lod = 0, num = _input.m_numMips; lod < num; ++lod)
@@ -876,7 +874,11 @@ namespace bimg
 				ImageMip mip;
 				if (imageGetRawData(_input, side, lod, _input.m_data, _input.m_size, mip) )
 				{
-					bool ok = imageConvert(dst
+					ImageMip dstMip;
+					imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
+					uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
+
+					bool ok = imageConvert(dstData
 							, _dstFormat
 							, mip.m_data
 							, mip.m_format
@@ -888,8 +890,6 @@ namespace bimg
 							, getName(output->m_format)
 							);
 					BX_UNUSED(ok);
-
-					dst += mip.m_width*mip.m_height*bpp/8;
 				}
 			}
 		}

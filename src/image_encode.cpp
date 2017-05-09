@@ -311,17 +311,36 @@ namespace bimg
 
 	bool imageResizeRgba32fLinear(ImageContainer* _dst, const ImageContainer* _src)
 	{
-		int result = stbir_resize_float_generic(
-			  (const float*)_src->m_data, _src->m_width, _src->m_height, _src->m_width*16
-			, (      float*)_dst->m_data, _dst->m_width, _dst->m_height, _dst->m_width*16
-			, 4, 3
-			, 0
-			, STBIR_EDGE_CLAMP
-			, STBIR_FILTER_DEFAULT
-			, STBIR_COLORSPACE_LINEAR
-			, NULL
-			);
-		return 1 == result;
+		const uint16_t numSides = _src->m_numLayers * (_src->m_cubeMap ? 6 : 1);
+
+		for (uint16_t side = 0; side < numSides; ++side)
+		{
+			bimg::ImageMip srcMip;
+			bimg::imageGetRawData(*_src, side, 0, _src->m_data, _src->m_size, srcMip);
+			const float* srcData = (const float*)(srcMip.m_data);
+
+			bimg::ImageMip dstMip;
+			bimg::imageGetRawData(*_dst, side, 0, _dst->m_data, _dst->m_size, dstMip);
+			float* dstData = (float*)(dstMip.m_data);
+
+			int result = stbir_resize_float_generic(
+				  (const float*)srcData, _src->m_width, _src->m_height, _src->m_width*16
+				, (      float*)dstData, _dst->m_width, _dst->m_height, _dst->m_width*16
+				, 4, 3
+				, 0
+				, STBIR_EDGE_CLAMP
+				, STBIR_FILTER_DEFAULT
+				, STBIR_COLORSPACE_LINEAR
+				, NULL
+				);
+
+			if (1 != result)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 } // namespace bimg
