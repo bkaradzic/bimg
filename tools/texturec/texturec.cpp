@@ -22,6 +22,9 @@
 #include <bx/crtimpl.h>
 #include <bx/uint32_t.h>
 
+#define BIMG_TEXTUREC_VERSION_MAJOR 1
+#define BIMG_TEXTUREC_VERSION_MINOR 0
+
 struct Options
 {
 	Options()
@@ -404,14 +407,6 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 	return output;
 }
 
-#define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 0
-
-#define BIMG_TEXTUREC_VERSION_STR                          \
-			     BX_STRINGIZE(BIMG_TEXTUREC_VERSION_MAJOR) \
-			"."  BX_STRINGIZE(BIMG_TEXTUREC_VERSION_MINOR) \
-			"."  BX_STRINGIZE(BIMG_API_VERSION)
-
 void help(const char* _error = NULL)
 {
 	if (NULL != _error)
@@ -420,9 +415,12 @@ void help(const char* _error = NULL)
 	}
 
 	fprintf(stderr
-		, "texturec, bgfx texture compiler tool, version " BIMG_TEXTUREC_VERSION_STR "\n"
+		, "texturec, bgfx texture compiler tool, version %d.%d.%d.\n"
 		  "Copyright 2011-2017 Branimir Karadzic. All rights reserved.\n"
 		  "License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause\n\n"
+		, BIMG_TEXTUREC_VERSION_MAJOR
+		, BIMG_TEXTUREC_VERSION_MINOR
+		, BIMG_API_VERSION
 		);
 
 	fprintf(stderr
@@ -438,6 +436,8 @@ void help(const char* _error = NULL)
 
 		  "\n"
 		  "Options:\n"
+		  "  -h, --help               Help.\n"
+		  "  -v, --version            Version information only.\n"
 		  "  -f <file path>           Input file path.\n"
 		  "  -o <file path>           Output file path (file will be written in KTX format).\n"
 		  "  -t <format>              Output format type (BC1/2/3/4/5, ETC1, PVR14, etc.).\n"
@@ -460,7 +460,12 @@ int main(int _argc, const char* _argv[])
 
 	if (cmdLine.hasArg('v', "version") )
 	{
-		fprintf(stderr, "texturec, bgfx texture compiler tool, version " BIMG_TEXTUREC_VERSION_STR "\n");
+		fprintf(stderr
+			, "texturec, bgfx texture compiler tool, version %d.%d.%d.\n"
+			, BIMG_TEXTUREC_VERSION_MAJOR
+			, BIMG_TEXTUREC_VERSION_MINOR
+			, BIMG_API_VERSION
+			);
 		return EXIT_SUCCESS;
 	}
 
