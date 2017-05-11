@@ -9,6 +9,8 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
+#define BIMG_API_VERSION 1
+
 namespace bx
 {
 	struct AllocatorI;

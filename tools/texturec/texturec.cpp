@@ -384,6 +384,14 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 	return output;
 }
 
+#define BIMG_TEXTUREC_VERSION_MAJOR 1
+#define BIMG_TEXTUREC_VERSION_MINOR 0
+
+#define BIMG_TEXTUREC_VERSION_STR                          \
+			     BX_STRINGIZE(BIMG_TEXTUREC_VERSION_MAJOR) \
+			"."  BX_STRINGIZE(BIMG_TEXTUREC_VERSION_MINOR) \
+			"."  BX_STRINGIZE(BIMG_API_VERSION)
+
 void help(const char* _error = NULL)
 {
 	if (NULL != _error)
@@ -392,7 +400,7 @@ void help(const char* _error = NULL)
 	}
 
 	fprintf(stderr
-		, "texturec, bgfx texture compiler tool\n"
+		, "texturec, bgfx texture compiler tool, version " BIMG_TEXTUREC_VERSION_STR "\n"
 		  "Copyright 2011-2017 Branimir Karadzic. All rights reserved.\n"
 		  "License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause\n\n"
 		);
@@ -429,6 +437,12 @@ void help(const char* _error = NULL)
 int main(int _argc, const char* _argv[])
 {
 	bx::CommandLine cmdLine(_argc, _argv);
+
+	if (cmdLine.hasArg('v', "version") )
+	{
+		fprintf(stderr, "texturec, bgfx texture compiler tool, version " BIMG_TEXTUREC_VERSION_STR "\n");
+		return EXIT_SUCCESS;
+	}
 
 	if (cmdLine.hasArg('h', "help") )
 	{
