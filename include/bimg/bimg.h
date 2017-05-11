@@ -267,7 +267,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		);
 
@@ -276,7 +276,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		);
 
@@ -312,7 +312,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		);
 
@@ -331,7 +331,7 @@ namespace bimg
 		, uint32_t _width
 		, uint32_t _height
 		, uint32_t _bpp
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		);
 
@@ -412,7 +412,7 @@ namespace bimg
 		  bx::WriterI* _writer
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, const void* _src
 		, bool _grayscale
 		, bool _yflip
@@ -481,7 +481,7 @@ namespace bimg
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _dstPitch
 		, TextureFormat::Enum _format
 		);
 
@@ -491,7 +491,7 @@ namespace bimg
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _dstPitch
 		, TextureFormat::Enum _format
 		);
 

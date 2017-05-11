@@ -335,7 +335,7 @@ namespace bimg
 		}
 	}
 
-	void imageRgba8Downsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba8Downsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
@@ -349,27 +349,27 @@ namespace bimg
 		uint8_t* dst = (uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstHeight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 			{
-				float rr = bx::fpow(rgba[       0], 2.2f);
-				float gg = bx::fpow(rgba[       1], 2.2f);
-				float bb = bx::fpow(rgba[       2], 2.2f);
-				float aa =          rgba[       3];
-				rr      += bx::fpow(rgba[       4], 2.2f);
-				gg      += bx::fpow(rgba[       5], 2.2f);
-				bb      += bx::fpow(rgba[       6], 2.2f);
-				aa      +=          rgba[       7];
-				rr      += bx::fpow(rgba[_pitch+0], 2.2f);
-				gg      += bx::fpow(rgba[_pitch+1], 2.2f);
-				bb      += bx::fpow(rgba[_pitch+2], 2.2f);
-				aa      +=          rgba[_pitch+3];
-				rr      += bx::fpow(rgba[_pitch+4], 2.2f);
-				gg      += bx::fpow(rgba[_pitch+5], 2.2f);
-				bb      += bx::fpow(rgba[_pitch+6], 2.2f);
-				aa      +=          rgba[_pitch+7];
+				float rr = bx::fpow(rgba[          0], 2.2f);
+				float gg = bx::fpow(rgba[          1], 2.2f);
+				float bb = bx::fpow(rgba[          2], 2.2f);
+				float aa =          rgba[          3];
+				rr      += bx::fpow(rgba[          4], 2.2f);
+				gg      += bx::fpow(rgba[          5], 2.2f);
+				bb      += bx::fpow(rgba[          6], 2.2f);
+				aa      +=          rgba[          7];
+				rr      += bx::fpow(rgba[_srcPitch+0], 2.2f);
+				gg      += bx::fpow(rgba[_srcPitch+1], 2.2f);
+				bb      += bx::fpow(rgba[_srcPitch+2], 2.2f);
+				aa      +=          rgba[_srcPitch+3];
+				rr      += bx::fpow(rgba[_srcPitch+4], 2.2f);
+				gg      += bx::fpow(rgba[_srcPitch+5], 2.2f);
+				bb      += bx::fpow(rgba[_srcPitch+6], 2.2f);
+				aa      +=          rgba[_srcPitch+7];
 
 				rr *= 0.25f;
 				gg *= 0.25f;
@@ -386,7 +386,7 @@ namespace bimg
 		}
 	}
 
-	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
@@ -411,15 +411,15 @@ namespace bimg
 		const simd128_t linear = simd_ld(2.2f, 2.2f, 2.2f, 1.0f);
 		const simd128_t quater = simd_splat(0.25f);
 
-		for (uint32_t yy = 0, ystep = _pitch*2; yy < dstHeight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 			{
 				const simd128_t abgr0  = simd_splat(rgba);
 				const simd128_t abgr1  = simd_splat(rgba+4);
-				const simd128_t abgr2  = simd_splat(rgba+_pitch);
-				const simd128_t abgr3  = simd_splat(rgba+_pitch+4);
+				const simd128_t abgr2  = simd_splat(rgba+_srcPitch);
+				const simd128_t abgr3  = simd_splat(rgba+_srcPitch+4);
 
 				const simd128_t abgr0m = simd_and(abgr0, umask);
 				const simd128_t abgr1m = simd_and(abgr1, umask);
@@ -467,12 +467,12 @@ namespace bimg
 		}
 	}
 
-	void imageRgba32fToLinear(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba32fToLinear(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
 		      uint8_t* dst = (      uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0; yy < _height; ++yy, src += _pitch)
+		for (uint32_t yy = 0; yy < _height; ++yy, src += _srcPitch)
 		{
 			for (uint32_t xx = 0; xx < _width; ++xx, dst += 16)
 			{
@@ -682,16 +682,13 @@ namespace bimg
 		const uint8_t* src = (uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
-		for (uint32_t yy = 0; yy < _height; ++yy, src += _srcPitch, dst += _dstPitch)
-		{
-			bx::memCopy(dst, src, pitch);
-		}
+		bx::memCopy(dst, src, pitch, _height, _srcPitch, _dstPitch);
 	}
 
-	void imageCopy(void* _dst, uint32_t _width, uint32_t _height, uint32_t _bpp, uint32_t _pitch, const void* _src)
+	void imageCopy(void* _dst, uint32_t _width, uint32_t _height, uint32_t _bpp, uint32_t _srcPitch, const void* _src)
 	{
 		const uint32_t dstPitch = _width*_bpp/8;
-		imageCopy(_dst, _height, _pitch, _src, dstPitch);
+		imageCopy(_dst, _height, _srcPitch, _src, dstPitch);
 	}
 
 	struct PackUnpack
@@ -2902,7 +2899,7 @@ namespace bimg
 		}
 	}
 
-	void imageRgba8ToRgba32fRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src)
+	void imageRgba8ToRgba32fRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width;
 		const uint32_t dstHeight = _height;
@@ -2916,7 +2913,7 @@ namespace bimg
 		float* dst = (float*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0, ystep = _pitch; yy < dstHeight; ++yy, src += ystep)
+		for (uint32_t yy = 0, ystep = _srcPitch; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 4, dst += 4)
@@ -3152,7 +3149,7 @@ namespace bimg
 		return false;
 	}
 
-	void imageWriteTga(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _src, bool _grayscale, bool _yflip, bx::Error* _err)
+	void imageWriteTga(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, bool _grayscale, bool _yflip, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
@@ -3173,16 +3170,16 @@ namespace bimg
 		uint32_t dstPitch = _width*bpp/8;
 		if (_yflip)
 		{
-			uint8_t* data = (uint8_t*)_src + _pitch*_height - _pitch;
+			uint8_t* data = (uint8_t*)_src + _srcPitch*_height - _srcPitch;
 			for (uint32_t yy = 0; yy < _height; ++yy)
 			{
 				bx::write(_writer, data, dstPitch, _err);
-				data -= _pitch;
+				data -= _srcPitch;
 			}
 		}
-		else if (_pitch == dstPitch)
+		else if (_srcPitch == dstPitch)
 		{
-			bx::write(_writer, _src, _height*_pitch, _err);
+			bx::write(_writer, _src, _height*_srcPitch, _err);
 		}
 		else
 		{
@@ -3190,7 +3187,7 @@ namespace bimg
 			for (uint32_t yy = 0; yy < _height; ++yy)
 			{
 				bx::write(_writer, data, dstPitch, _err);
-				data += _pitch;
+				data += _srcPitch;
 			}
 		}
 	}
