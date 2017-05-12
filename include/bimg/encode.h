@@ -44,7 +44,7 @@ namespace bimg
 		, void* _dst
 		, uint32_t _width
 		, uint32_t _height
-		, uint32_t _pitch
+		, uint32_t _srcPitch
 		, float _edge
 		, const void* _src
 		);

@@ -236,7 +236,7 @@ namespace bimg
 		return max(min(_val, _max), _min);
 	}
 
-	void imageMakeDist(bx::AllocatorI* _allocator, void* _dst, uint32_t _width, uint32_t _height, uint32_t _pitch, float _edge, const void* _src)
+	void imageMakeDist(bx::AllocatorI* _allocator, void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, float _edge, const void* _src)
 	{
 		const uint32_t numPixels = _width*_height;
 
@@ -246,7 +246,7 @@ namespace bimg
 
 		for (uint32_t yy = 0; yy < _height; ++yy)
 		{
-			const uint8_t* src = (const uint8_t*)_src + yy*_pitch;
+			const uint8_t* src = (const uint8_t*)_src + yy*_srcPitch;
 			double* dst = &imgIn[yy*_width];
 			for (uint32_t xx = 0; xx < _width; ++xx)
 			{
