@@ -23,7 +23,7 @@
 #include <bx/uint32_t.h>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 0
+#define BIMG_TEXTUREC_VERSION_MINOR 2
 
 struct Options
 {
@@ -69,6 +69,7 @@ struct Options
 
 bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData, uint32_t _inputSize, const Options& _options)
 {
+	bool succeeded = true;
 	const uint8_t* inputData = (uint8_t*)_inputData;
 
 	bimg::ImageContainer* output = NULL;
@@ -84,34 +85,50 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			outputFormat = _options.format;
 		}
 
-		bool passThru = inputFormat == outputFormat;
+		const bimg::ImageBlockInfo&  inputBlockInfo  = bimg::getBlockInfo(inputFormat);
+		const bimg::ImageBlockInfo&  outputBlockInfo = bimg::getBlockInfo(outputFormat);
+		const uint32_t blockWidth  = outputBlockInfo.blockWidth;
+		const uint32_t blockHeight = outputBlockInfo.blockHeight;
+		const uint32_t minBlockX   = outputBlockInfo.minBlockX;
+		const uint32_t minBlockY   = outputBlockInfo.minBlockY;
+		uint32_t outputWidth  = bx::uint32_max(blockWidth  * minBlockX, ( (input->m_width  + blockWidth  - 1) / blockWidth )*blockWidth);
+		uint32_t outputHeight = bx::uint32_max(blockHeight * minBlockY, ( (input->m_height + blockHeight - 1) / blockHeight)*blockHeight);
 
-		if (input->m_width  > _options.maxSize
-		||  input->m_height > _options.maxSize)
+		if (outputWidth  > _options.maxSize
+		||  outputHeight > _options.maxSize)
 		{
-			passThru = false;
-
-			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input);
-
-			uint32_t width;
-			uint32_t height;
-
-			if (input->m_width > input->m_height)
+			if (outputWidth > outputHeight)
 			{
-				width  = _options.maxSize;
-				height = input->m_height * width / input->m_width;
+				outputHeight = outputHeight * _options.maxSize / outputWidth;
+				outputWidth  = _options.maxSize;
 			}
 			else
 			{
-				height = _options.maxSize;
-				width  = input->m_width * height / input->m_height;
+				outputWidth  = outputWidth * _options.maxSize / outputHeight;
+				outputHeight = _options.maxSize;
 			}
+		}
+
+		const bool needResize = false
+			|| input->m_width  != outputWidth
+			|| input->m_height != outputHeight
+			;
+
+		const bool passThru = true
+			&& inputFormat == outputFormat
+			&& !needResize
+			&& (1 < input->m_numMips) == _options.mips
+			;
+
+		if (needResize)
+		{
+			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input);
 
 			bimg::ImageContainer* dst = bimg::imageAlloc(
 				  _allocator
 				, bimg::TextureFormat::RGBA32F
-				, uint16_t(width)
-				, uint16_t(height)
+				, uint16_t(outputWidth)
+				, uint16_t(outputHeight)
 				, 1
 				, input->m_numLayers
 				, input->m_cubeMap
@@ -127,8 +144,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			bimg::imageFree(dst);
 		}
 
-		if (passThru
-		&& (1 < input->m_numMips) == _options.mips)
+		if (passThru)
 		{
 			output = bimg::imageConvert(_allocator, outputFormat, *input);
 			bimg::imageFree(input);
@@ -149,7 +165,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		const uint8_t  numMips  = output->m_numMips;
 		const uint16_t numSides = output->m_numLayers * (output->m_cubeMap ? 6 : 1);
 
-		for (uint16_t side = 0; side < numSides; ++side)
+		for (uint16_t side = 0; side < numSides && succeeded; ++side)
 		{
 			bimg::ImageMip mip;
 			if (bimg::imageGetRawData(*input, side, 0, input->m_data, input->m_size, mip) )
@@ -247,7 +263,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					BX_FREE(_allocator, rgbaDst);
 				}
 				else if (!bimg::isCompressed(input->m_format)
-					 &&  8 != bimg::getBlockInfo(input->m_format).rBits)
+					 &&  8 != inputBlockInfo.rBits)
 				{
 					uint32_t size = bimg::imageGetSize(
 						  NULL
@@ -308,13 +324,19 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 								, rgba32f
 								);
 
-							bimg::imageEncodeFromRgba32f(_allocator
+							succeeded = bimg::imageEncodeFromRgba32f(_allocator
 								, dstData
 								, rgbaDst
 								, dstMip.m_width
 								, dstMip.m_height
 								, outputFormat
 								);
+
+							if (!succeeded)
+							{
+								break;
+							}
+
 						}
 					}
 
@@ -402,6 +424,13 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		}
 
 		bimg::imageFree(input);
+	}
+
+	if (!succeeded
+	&&  NULL != output)
+	{
+		bimg::imageFree(output);
+		output = NULL;
 	}
 
 	return output;
