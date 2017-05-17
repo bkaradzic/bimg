@@ -23,7 +23,7 @@
 #include <bx/uint32_t.h>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 2
+#define BIMG_TEXTUREC_VERSION_MINOR 3
 
 struct Options
 {
@@ -31,6 +31,7 @@ struct Options
 		: maxSize(UINT32_MAX)
 		, edge(0.0f)
 		, format(bimg::TextureFormat::Count)
+		, quality(bimg::Quality::Default)
 		, mips(false)
 		, normalMap(false)
 		, iqa(false)
@@ -61,6 +62,7 @@ struct Options
 	uint32_t maxSize;
 	float edge;
 	bimg::TextureFormat::Enum format;
+	bimg::Quality::Enum quality;
 	bool mips;
 	bool normalMap;
 	bool iqa;
@@ -230,6 +232,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, dstMip.m_width
 						, dstMip.m_height
 						, outputFormat
+						, _options.quality
 						);
 
 					for (uint8_t lod = 1; lod < numMips; ++lod)
@@ -257,6 +260,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_width
 							, dstMip.m_height
 							, outputFormat
+							, _options.quality
 							);
 					}
 
@@ -294,6 +298,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, dstMip.m_width
 						, dstMip.m_height
 						, outputFormat
+						, _options.quality
 						);
 
 					if (1 < numMips)
@@ -330,6 +335,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 								, dstMip.m_width
 								, dstMip.m_height
 								, outputFormat
+								, _options.quality
 								);
 
 							if (!succeeded)
@@ -374,7 +380,13 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					bimg::imageGetRawData(*output, side, 0, output->m_data, output->m_size, dstMip);
 					dstData = const_cast<uint8_t*>(dstMip.m_data);
-					bimg::imageEncodeFromRgba8(dstData, rgba, dstMip.m_width, dstMip.m_height, outputFormat);
+					bimg::imageEncodeFromRgba8(dstData
+						, rgba
+						, dstMip.m_width
+						, dstMip.m_height
+						, outputFormat
+						, _options.quality
+						);
 
 					for (uint8_t lod = 1; lod < numMips; ++lod)
 					{
@@ -393,6 +405,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_width
 							, dstMip.m_height
 							, outputFormat
+							, _options.quality
 							);
 					}
 
@@ -470,6 +483,7 @@ void help(const char* _error = NULL)
 		  "  -f <file path>           Input file path.\n"
 		  "  -o <file path>           Output file path (file will be written in KTX format).\n"
 		  "  -t <format>              Output format type (BC1/2/3/4/5, ETC1, PVR14, etc.).\n"
+		  "  -q <quality>             Encoding quality (default, fastest, highest).\n"
 		  "  -m, --mips               Generate mip-maps.\n"
 		  "  -n, --normalmap          Input texture is normal map.\n"
 		  "      --sdf <edge>         Compute SDF texture.\n"
@@ -554,6 +568,20 @@ int main(int _argc, const char* _argv[])
 		if (!bimg::isValid(options.format) )
 		{
 			help("Invalid format specified.");
+			return EXIT_FAILURE;
+		}
+	}
+
+	const char* quality = cmdLine.findOption('q');
+	if (NULL != quality)
+	{
+		switch (bx::toLower(quality[0]) )
+		{
+		case 'h': options.quality = bimg::Quality::Highest; break;
+		case 'f': options.quality = bimg::Quality::Fastest; break;
+		case 'd': options.quality = bimg::Quality::Default; break;
+		default:
+			help("Invalid quality specified.");
 			return EXIT_FAILURE;
 		}
 	}

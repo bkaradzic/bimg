@@ -10,6 +10,18 @@
 
 namespace bimg
 {
+	struct Quality
+	{
+		enum Enum
+		{
+			Default,
+			Highest,
+			Fastest,
+
+			Count
+		};
+	};
+
 	///
 	bool imageEncodeFromRgba8(
 		  void* _dst
@@ -17,6 +29,7 @@ namespace bimg
 		, uint32_t _width
 		, uint32_t _height
 		, TextureFormat::Enum _format
+		, Quality::Enum _quality
 		);
 
 	///
@@ -27,7 +40,8 @@ namespace bimg
 		, uint32_t _width
 		, uint32_t _height
 		, TextureFormat::Enum _format
-	);
+		, Quality::Enum _quality
+		);
 
 	///
 	void imageRgba32f11to01(
@@ -36,7 +50,7 @@ namespace bimg
 		, uint32_t _height
 		, uint32_t _pitch
 		, const void* _src
-	);
+		);
 
 	///
 	void imageMakeDist(

@@ -3,6 +3,7 @@
  * License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause
  */
 
+#include <bimg/encode.h>
 #include "bimg_p.h"
 
 #include <libsquish/squish.h>
@@ -26,7 +27,15 @@ extern "C" {
 
 namespace bimg
 {
-	bool imageEncodeFromRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format)
+	static uint32_t s_squishQuality[] =
+	{
+		squish::kColourClusterFit,          // Default
+		squish::kColourIterativeClusterFit, // Highest
+		squish::kColourRangeFit,            // Fastest
+	};
+	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_squishQuality) );
+
+	bool imageEncodeFromRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format, Quality::Enum _quality)
 	{
 		switch (_format)
 		{
@@ -36,11 +45,12 @@ namespace bimg
 		case TextureFormat::BC4:
 		case TextureFormat::BC5:
 			squish::CompressImage( (const uint8_t*)_src, _width, _height, _dst
-				, _format == TextureFormat::BC2 ? squish::kDxt3
-				: _format == TextureFormat::BC3 ? squish::kDxt5
-				: _format == TextureFormat::BC4 ? squish::kBc4
-				: _format == TextureFormat::BC5 ? squish::kBc5
-				:                                 squish::kDxt1
+				, s_squishQuality[_quality]
+				| (_format == TextureFormat::BC2 ? squish::kDxt3
+				:  _format == TextureFormat::BC3 ? squish::kDxt5
+				:  _format == TextureFormat::BC4 ? squish::kBc4
+				:  _format == TextureFormat::BC5 ? squish::kBc5
+				:                                  squish::kDxt1)
 				);
 			return true;
 
@@ -121,7 +131,7 @@ namespace bimg
 		return imageConvert(_dst, _format, _src, TextureFormat::RGBA8, _width, _height);
 	}
 
-	bool imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format)
+	bool imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format, Quality::Enum _quality)
 	{
 		const uint8_t* src = (const uint8_t*)_src;
 
@@ -163,7 +173,7 @@ namespace bimg
 					}
 				}
 
-				imageEncodeFromRgba8(_dst, temp, _width, _height, _format);
+				imageEncodeFromRgba8(_dst, temp, _width, _height, _format, _quality);
 				BX_FREE(_allocator, temp);
 			}
 			return true;
