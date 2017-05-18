@@ -9,7 +9,7 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
-#define BIMG_API_VERSION UINT32_C(1)
+#define BIMG_API_VERSION UINT32_C(2)
 
 namespace bx
 {

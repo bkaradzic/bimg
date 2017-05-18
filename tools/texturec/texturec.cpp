@@ -22,6 +22,8 @@
 #include <bx/crtimpl.h>
 #include <bx/uint32_t.h>
 
+#include <string>
+
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
 #define BIMG_TEXTUREC_VERSION_MINOR 3
 
@@ -69,9 +71,10 @@ struct Options
 	bool sdf;
 };
 
-bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData, uint32_t _inputSize, const Options& _options)
+bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData, uint32_t _inputSize, const Options& _options, bx::Error* _err)
 {
-	bool succeeded = true;
+	BX_ERROR_SCOPE(_err);
+
 	const uint8_t* inputData = (uint8_t*)_inputData;
 
 	bimg::ImageContainer* output = NULL;
@@ -167,7 +170,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		const uint8_t  numMips  = output->m_numMips;
 		const uint16_t numSides = output->m_numLayers * (output->m_cubeMap ? 6 : 1);
 
-		for (uint16_t side = 0; side < numSides && succeeded; ++side)
+		for (uint16_t side = 0; side < numSides && _err->isOk(); ++side)
 		{
 			bimg::ImageMip mip;
 			if (bimg::imageGetRawData(*input, side, 0, input->m_data, input->m_size, mip) )
@@ -233,9 +236,10 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, dstMip.m_height
 						, outputFormat
 						, _options.quality
+						, _err
 						);
 
-					for (uint8_t lod = 1; lod < numMips; ++lod)
+					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
 					{
 						bimg::imageRgba32fDownsample2x2NormalMap(rgba
 							, dstMip.m_width
@@ -261,6 +265,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_height
 							, outputFormat
 							, _options.quality
+							, _err
 							);
 					}
 
@@ -299,9 +304,11 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, dstMip.m_height
 						, outputFormat
 						, _options.quality
+						, _err
 						);
 
-					if (1 < numMips)
+					if (1 < numMips
+					&&  _err->isOk() )
 					{
 						bimg::imageRgba32fToLinear(rgba32f
 							, mip.m_width
@@ -310,7 +317,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, rgba32f
 							);
 
-						for (uint8_t lod = 1; lod < numMips; ++lod)
+						for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
 						{
 							bimg::imageRgba32fLinearDownsample2x2(rgba32f
 								, dstMip.m_width
@@ -329,20 +336,15 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 								, rgba32f
 								);
 
-							succeeded = bimg::imageEncodeFromRgba32f(_allocator
+							bimg::imageEncodeFromRgba32f(_allocator
 								, dstData
 								, rgbaDst
 								, dstMip.m_width
 								, dstMip.m_height
 								, outputFormat
 								, _options.quality
+								, _err
 								);
-
-							if (!succeeded)
-							{
-								break;
-							}
-
 						}
 					}
 
@@ -386,9 +388,10 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, dstMip.m_height
 						, outputFormat
 						, _options.quality
+						, _err
 						);
 
-					for (uint8_t lod = 1; lod < numMips; ++lod)
+					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
 					{
 						bimg::imageRgba8Downsample2x2(rgba
 							, dstMip.m_width
@@ -406,6 +409,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_height
 							, outputFormat
 							, _options.quality
+							, _err
 							);
 					}
 
@@ -439,7 +443,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		bimg::imageFree(input);
 	}
 
-	if (!succeeded
+	if (!_err->isOk()
 	&&  NULL != output)
 	{
 		bimg::imageFree(output);
@@ -449,11 +453,16 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 	return output;
 }
 
-void help(const char* _error = NULL)
+void help(const char* _error = NULL, bool _showHelp = true)
 {
 	if (NULL != _error)
 	{
 		fprintf(stderr, "Error:\n%s\n\n", _error);
+
+		if (!_showHelp)
+		{
+			return;
+		}
 	}
 
 	fprintf(stderr
@@ -495,6 +504,21 @@ void help(const char* _error = NULL)
 		  "\n"
 		  "For additional information, see https://github.com/bkaradzic/bgfx\n"
 		);
+}
+
+void help(const char* _str, const bx::Error& _err)
+{
+	std::string str;
+	if (_str != NULL)
+	{
+		str.append(_str);
+		str.append(" ");
+	}
+
+	const bx::StringView& sv = _err.getMessage();
+	str.append(sv.getPtr(), sv.getTerm() - sv.getPtr() );
+
+	help(str.c_str(), false);
 }
 
 int main(int _argc, const char* _argv[])
@@ -586,10 +610,11 @@ int main(int _argc, const char* _argv[])
 		}
 	}
 
+	bx::Error err;
 	bx::CrtFileReader reader;
-	if (!bx::open(&reader, inputFileName) )
+	if (!bx::open(&reader, inputFileName, &err) )
 	{
-		help("Failed to open input file.");
+		help("Failed to open input file.", err);
 		return EXIT_FAILURE;
 	}
 
@@ -598,24 +623,23 @@ int main(int _argc, const char* _argv[])
 	uint32_t inputSize = (uint32_t)bx::getSize(&reader);
 	uint8_t* inputData = (uint8_t*)BX_ALLOC(&allocator, inputSize);
 
-	bx::Error err;
 	bx::read(&reader, inputData, inputSize, &err);
 	bx::close(&reader);
 
 	if (!err.isOk() )
 	{
-		help("Failed to read input file.");
+		help("Failed to read input file.", err);
 		return EXIT_FAILURE;
 	}
 
-	bimg::ImageContainer* output = convert(&allocator, inputData, inputSize, options);
+	bimg::ImageContainer* output = convert(&allocator, inputData, inputSize, options, &err);
 
 	BX_FREE(&allocator, inputData);
 
 	if (NULL != output)
 	{
 		bx::CrtFileWriter writer;
-		if (bx::open(&writer, outputFileName) )
+		if (bx::open(&writer, outputFileName, false, &err) )
 		{
 			if (NULL != bx::strFindI(saveAs, "ktx") )
 			{
@@ -626,7 +650,7 @@ int main(int _argc, const char* _argv[])
 		}
 		else
 		{
-			help("Failed to open output file.");
+			help("Failed to open output file.", err);
 			return EXIT_FAILURE;
 		}
 
@@ -634,7 +658,7 @@ int main(int _argc, const char* _argv[])
 	}
 	else
 	{
-		help("No output generated.");
+		help(NULL, err);
 		return EXIT_FAILURE;
 	}
 
