@@ -589,6 +589,7 @@ int main(int _argc, const char* _argv[])
 
 	const char* saveAs = cmdLine.findOption("as");
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".ktx") : saveAs;
+	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".dds") : saveAs;
 	if (NULL == saveAs)
 	{
 		help("Output file format must be specified.");
@@ -683,10 +684,20 @@ int main(int _argc, const char* _argv[])
 		{
 			if (NULL != bx::strFindI(saveAs, "ktx") )
 			{
-				bimg::imageWriteKtx(&writer, *output, output->m_data, output->m_size);
+				bimg::imageWriteKtx(&writer, *output, output->m_data, output->m_size, &err);
+			}
+			else if (NULL != bx::strFindI(saveAs, "dds") )
+			{
+				bimg::imageWriteDds(&writer, *output, output->m_data, output->m_size, &err);
 			}
 
 			bx::close(&writer);
+
+			if (!err.isOk() )
+			{
+				help(NULL, err);
+				return EXIT_FAILURE;
+			}
 		}
 		else
 		{

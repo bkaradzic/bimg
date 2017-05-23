@@ -9,7 +9,7 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
-#define BIMG_API_VERSION UINT32_C(3)
+#define BIMG_API_VERSION UINT32_C(4)
 
 namespace bx
 {
@@ -423,6 +423,15 @@ namespace bimg
 		, bool _grayscale
 		, bool _yflip
 		, bx::Error* _err = NULL
+		);
+
+	///
+	int32_t imageWriteDds(
+		  bx::WriterI* _writer
+		, ImageContainer& _imageContainer
+		, const void* _data
+		, uint32_t _size
+		, bx::Error* _err
 		);
 
 	///

@@ -1961,7 +1961,7 @@ namespace bimg
 		{ DDS_FORMAT_B4G4R4A4_UNORM,      TextureFormat::RGBA4,      false },
 		{ DDS_FORMAT_B5G5R5A1_UNORM,      TextureFormat::RGB5A1,     false },
 		{ DDS_FORMAT_R10G10B10A2_UNORM,   TextureFormat::RGB10A2,    false },
-		{ DDS_FORMAT_R11G11B10_FLOAT,     TextureFormat::RG11B10F, false },
+		{ DDS_FORMAT_R11G11B10_FLOAT,     TextureFormat::RG11B10F,   false },
 	};
 
 	struct TranslateDdsPixelFormat
@@ -3199,6 +3199,110 @@ namespace bimg
 			{
 				total += bx::write(_writer, data, dstPitch, _err);
 				data += _srcPitch;
+			}
+		}
+
+		return total;
+	}
+
+	static int32_t imageWriteDdsHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, bx::Error* _err)
+	{
+		uint32_t dxgiFormat = 0;
+		for (uint32_t ii = 0; ii < BX_COUNTOF(s_translateDxgiFormat); ++ii)
+		{
+			if (s_translateDxgiFormat[ii].m_textureFormat == _format)
+			{
+				dxgiFormat = s_translateDxgiFormat[ii].m_format;
+				break;
+			}
+		}
+
+		if (0 == dxgiFormat)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "DDS: DXGI format not supported.");
+			return 0;
+		}
+
+		const uint32_t bpp = getBitsPerPixel(_format);
+
+		uint32_t total = 0;
+		total += bx::write(_writer, uint32_t(DDS_MAGIC), _err);
+		total += bx::write(_writer, uint32_t(DDS_HEADER_SIZE), _err);
+		total += bx::write(_writer, uint32_t(0
+			| DDSD_HEIGHT
+			| DDSD_WIDTH
+			| DDSD_DEPTH
+			| DDSD_PITCH
+			| DDSD_MIPMAPCOUNT
+			| DDSD_PIXELFORMAT
+			| DDSD_CAPS
+			)
+			, _err
+			);
+		total += bx::write(_writer, _height, _err);
+		total += bx::write(_writer, _width, _err);
+		total += bx::write(_writer, _width*bpp/8, _err);
+		total += bx::write(_writer, _depth, _err);
+		total += bx::write(_writer, uint32_t(_numMips), _err);
+
+		total += bx::writeRep(_writer, 0, 44, _err);
+
+		total += bx::write(_writer, uint32_t(8*sizeof(uint32_t) ), _err); // pixelFormatSize
+		total += bx::write(_writer, uint32_t(DDPF_FOURCC), _err);
+		total += bx::write(_writer, uint32_t(DDS_DX10), _err);
+		total += bx::write(_writer, bpp, _err);
+		total += bx::writeRep(_writer, 0, 4*sizeof(uint32_t), _err); // bitmask
+
+		uint32_t caps[4] =
+		{
+			uint32_t(DDSCAPS_TEXTURE | (1 < _numMips ? DDSCAPS_MIPMAP : 0) ),
+			uint32_t(_cubeMap ? DDSCAPS2_CUBEMAP|DDS_CUBEMAP_ALLFACES : 0),
+			0,
+			0,
+		};
+		total += bx::write(_writer, caps, sizeof(caps) );
+
+		total += bx::writeRep(_writer, 0, 4, _err);
+
+		total += bx::write(_writer, dxgiFormat);
+
+		total += bx::write(_writer, uint32_t(0), _err); // dims
+		total += bx::write(_writer, uint32_t(0), _err); // miscFlags
+		total += bx::write(_writer, uint32_t(1), _err); // arraySize
+		total += bx::write(_writer, uint32_t(0), _err); // miscFlags2
+
+		return total;
+	}
+
+	int32_t imageWriteDds(bx::WriterI* _writer, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		int32_t total = 0;
+		total += imageWriteDdsHeader(_writer
+			, TextureFormat::Enum(_imageContainer.m_format)
+			, _imageContainer.m_cubeMap
+			, _imageContainer.m_width
+			, _imageContainer.m_height
+			, _imageContainer.m_depth
+			, _imageContainer.m_numMips
+			, _err
+			);
+
+		if (!_err->isOk() )
+		{
+			return total;
+		}
+
+		for (uint8_t side = 0, numSides = _imageContainer.m_cubeMap ? 6 : 1; side < numSides && _err->isOk(); ++side)
+		{
+			for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num && _err->isOk(); ++lod)
+			{
+				ImageMip mip;
+				if (imageGetRawData(_imageContainer, side, lod, _data, _size, mip) )
+				{
+					total += bx::write(_writer, mip.m_data, mip.m_size, _err);
+				}
 			}
 		}
 
