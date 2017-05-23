@@ -38,6 +38,7 @@ struct Options
 		, normalMap(false)
 		, iqa(false)
 		, sdf(false)
+		, alphaTest(false)
 	{
 	}
 
@@ -69,6 +70,7 @@ struct Options
 	bool normalMap;
 	bool iqa;
 	bool sdf;
+	bool alphaTest;
 };
 
 bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData, uint32_t _inputSize, const Options& _options, bx::Error* _err)
@@ -123,6 +125,10 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			&& inputFormat == outputFormat
 			&& !needResize
 			&& (1 < input->m_numMips) == _options.mips
+			&& !_options.sdf
+			&& !_options.alphaTest
+			&& !_options.normalMap
+			&& !_options.iqa
 			;
 
 		if (needResize)
@@ -373,6 +379,18 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, mip.m_format
 						);
 
+					float coverage = 0.0f;
+					if (_options.alphaTest)
+					{
+						coverage = bimg::imageAlphaTestCoverage(bimg::TextureFormat::RGBA8
+							, mip.m_width
+							, mip.m_height
+							, mip.m_width*4
+							, rgba
+							, _options.edge
+							);
+					}
+
 					void* ref = NULL;
 					if (_options.iqa)
 					{
@@ -399,6 +417,18 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_width*4
 							, rgba
 							);
+
+						if (_options.alphaTest)
+						{
+							bimg::imageScaleAlphaToCoverage(bimg::TextureFormat::RGBA8
+								, dstMip.m_width
+								, dstMip.m_height
+								, dstMip.m_width*4
+								, rgba
+								, coverage
+								, _options.edge
+								);
+						}
 
 						bimg::imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
 						dstData = const_cast<uint8_t*>(dstMip.m_data);
@@ -496,7 +526,8 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "  -m, --mips               Generate mip-maps.\n"
 		  "  -n, --normalmap          Input texture is normal map.\n"
 		  "      --sdf <edge>         Compute SDF texture.\n"
-		  "      --iqa                Image Quality Assesment\n"
+		  "      --ref <alpha>        Alpha reference value.\n"
+		  "      --iqa                Image Quality Assessment\n"
 		  "      --max <max size>     Maximum width/height (image will be scaled down and\n"
 		  "                           aspect ratio will be preserved.\n"
 		  "      --as <extension>     Save as.\n"
@@ -571,6 +602,15 @@ int main(int _argc, const char* _argv[])
 	{
 		options.sdf  = true;
 		options.edge = (float)atof(edgeOpt);
+	}
+	else
+	{
+		const char* alphaRef = cmdLine.findOption("ref");
+		if (NULL != alphaRef)
+		{
+			options.alphaTest = true;
+			options.edge      = (float)atof(alphaRef);
+		}
 	}
 
 	options.mips      = cmdLine.hasArg('m',  "mips");

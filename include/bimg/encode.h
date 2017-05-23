@@ -79,6 +79,28 @@ namespace bimg
 		, const ImageContainer* _src
 		);
 
+	///
+	float imageAlphaTestCoverage(
+		  TextureFormat::Enum _format
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, float _alphaRef
+		, float _scale = 1.0f
+		);
+
+	///
+	void imageScaleAlphaToCoverage(
+		  TextureFormat::Enum _format
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, void* _src
+		, float _coverage
+		, float _alphaRef
+		);
+
 } // namespace bimg
 
 #endif // BIMG_ENCODE_H_HEADER_GUARD

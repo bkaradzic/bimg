@@ -361,4 +361,115 @@ namespace bimg
 		return true;
 	}
 
+	static float getAlpha(UnpackFn _unpack, const void* _data)
+	{
+		float rgba[4];
+		_unpack(rgba, _data);
+		return rgba[3];
+	}
+
+	float imageAlphaTestCoverage(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, float _alphaRef, float _scale)
+	{
+		UnpackFn unpack = getUnpack(_format);
+		if (NULL == unpack)
+		{
+			return 0.0f;
+		}
+
+		float coverage = 0.0f;
+		const uint8_t* src = (const uint8_t*)_src;
+		const uint32_t xstep = getBitsPerPixel(_format) / 8;
+		const float numSamples = 8.0f;
+
+		for (uint32_t yy = 0, ystep = _srcPitch; yy < _height-1; ++yy, src += ystep)
+		{
+			const uint8_t* data = src;
+			for (uint32_t xx = 0; xx < _width-1; ++xx, data += xstep)
+			{
+				float alpha00 = _scale * getAlpha(unpack, data);
+				float alpha10 = _scale * getAlpha(unpack, data+xstep);
+				float alpha01 = _scale * getAlpha(unpack, data+ystep);
+				float alpha11 = _scale * getAlpha(unpack, data+ystep+xstep);
+
+				for (float fy = 0.5f/numSamples; fy < 1.0f; fy += 1.0f)
+				{
+					for (float fx = 0.5f/numSamples; fx < 1.0f; fx += 1.0f)
+					{
+						float alpha = 0.0f
+							+ alpha00 * (1.0f - fx) * (1.0f - fy)
+							+ alpha10 * (       fx) * (1.0f - fy)
+							+ alpha01 * (1.0f - fx) * (       fy)
+							+ alpha11 * (       fx) * (       fy)
+							;
+
+						if (alpha > _alphaRef)
+						{
+							coverage += 1.0f;
+						}
+					}
+				}
+			}
+		}
+
+		return coverage / float(_width*_height*numSamples*numSamples);
+	}
+
+	void imageScaleAlphaToCoverage(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _srcPitch, void* _src, float _desiredCoverage, float _alphaRef)
+	{
+		PackFn   pack   = getPack(_format);
+		UnpackFn unpack = getUnpack(_format);
+		if (NULL == pack
+		||  NULL == unpack)
+		{
+			return;
+		}
+
+		float min   = 0.0f;
+		float max   = 4.0f;
+		float scale = 1.0f;
+
+		for (uint32_t ii = 0; ii < 8; ++ii)
+		{
+			float coverage = imageAlphaTestCoverage(
+				  _format
+				, _width
+				, _height
+				, _srcPitch
+				, _src
+				, _alphaRef
+				, scale
+				);
+
+			if (coverage < _desiredCoverage)
+			{
+				min = scale;
+			}
+			else if (coverage > _desiredCoverage)
+			{
+				max = scale;
+			}
+			else
+			{
+				break;
+			}
+
+			scale = (min + max) * 0.5f;
+		}
+
+		uint8_t* src = (uint8_t*)_src;
+		const uint32_t xstep = getBitsPerPixel(_format) / 8;
+
+		for (uint32_t yy = 0, ystep = _srcPitch; yy < _height; ++yy, src += ystep)
+		{
+			uint8_t* data = src;
+			for (uint32_t xx = 0; xx < _width; ++xx, data += xstep)
+			{
+				float rgba[4];
+				unpack(rgba, data);
+				rgba[3] = bx::fsaturate(rgba[3]*scale);
+				pack(data, rgba);
+			}
+		}
+	}
+
 } // namespace bimg

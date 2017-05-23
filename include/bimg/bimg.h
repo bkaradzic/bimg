@@ -9,7 +9,7 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
-#define BIMG_API_VERSION UINT32_C(2)
+#define BIMG_API_VERSION UINT32_C(3)
 
 namespace bx
 {
@@ -336,6 +336,12 @@ namespace bimg
 		);
 
 	///
+	PackFn getPack(TextureFormat::Enum _format);
+
+	///
+	UnpackFn getUnpack(TextureFormat::Enum _format);
+
+	///
 	bool imageConvert(
 		  TextureFormat::Enum _dstFormat
 		, TextureFormat::Enum _srcFormat
@@ -408,7 +414,7 @@ namespace bimg
 		);
 
 	///
-	void imageWriteTga(
+	int32_t imageWriteTga(
 		  bx::WriterI* _writer
 		, uint32_t _width
 		, uint32_t _height
@@ -420,7 +426,7 @@ namespace bimg
 		);
 
 	///
-	void imageWriteKtx(
+	int32_t imageWriteKtx(
 		  bx::WriterI* _writer
 		, TextureFormat::Enum _format
 		, bool _cubeMap
@@ -433,7 +439,7 @@ namespace bimg
 		);
 
 	///
-	void imageWriteKtx(
+	int32_t imageWriteKtx(
 		  bx::WriterI* _writer
 		, ImageContainer& _imageContainer
 		, const void* _data
