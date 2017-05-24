@@ -505,22 +505,28 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		);
 
 	fprintf(stderr
-		, "Usage: texturec -f <in> -o <out> [-t <format>]\n"
+		, "Usage: texturec -f <in> -o <out> [-t <texture format>]\n"
 
 		  "\n"
-		  "Supported input file types:\n"
-		  "    *.png                  Portable Network Graphics\n"
-		  "    *.tga                  Targa\n"
-		  "    *.dds                  Direct Draw Surface\n"
-		  "    *.ktx                  Khronos Texture\n"
-		  "    *.pvr                  PowerVR\n"
+		  "Supported file formats:\n"
+		  "    *.bmp (input)          Windows Bitmap.\n"
+		  "    *.dds (input, output)  Direct Draw Surface.\n"
+		  "    *.exr (input)          OpenEXR.\n"
+		  "    *.gif (input)          Graphics Interchange Format.\n"
+		  "    *.jpg (input)          JPEG Interchange Format.\n"
+		  "    *.hdr (input)          Radiance RGBE.\n"
+		  "    *.ktx (input, output)  Khronos Texture.\n"
+		  "    *.png (input)          Portable Network Graphics.\n"
+		  "    *.psd (input)          Photoshop Document.\n"
+		  "    *.pvr (input)          PowerVR.\n"
+		  "    *.tga (input)          Targa.\n"
 
 		  "\n"
 		  "Options:\n"
 		  "  -h, --help               Help.\n"
 		  "  -v, --version            Version information only.\n"
 		  "  -f <file path>           Input file path.\n"
-		  "  -o <file path>           Output file path (file will be written in KTX format).\n"
+		  "  -o <file path>           Output file path.\n"
 		  "  -t <format>              Output format type (BC1/2/3/4/5, ETC1, PVR14, etc.).\n"
 		  "  -q <quality>             Encoding quality (default, fastest, highest).\n"
 		  "  -m, --mips               Generate mip-maps.\n"
@@ -659,9 +665,14 @@ int main(int _argc, const char* _argv[])
 		return EXIT_FAILURE;
 	}
 
-	bx::CrtAllocator allocator;
-
 	uint32_t inputSize = (uint32_t)bx::getSize(&reader);
+	if (0 == inputSize)
+	{
+		help("Failed to read input file.", err);
+		return EXIT_FAILURE;
+	}
+
+	bx::CrtAllocator allocator;
 	uint8_t* inputData = (uint8_t*)BX_ALLOC(&allocator, inputSize);
 
 	bx::read(&reader, inputData, inputSize, &err);

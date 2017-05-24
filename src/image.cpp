@@ -1849,40 +1849,48 @@ namespace bimg
 #define DDS_FORMAT_BC7_UNORM_SRGB      99
 #define DDS_FORMAT_B4G4R4A4_UNORM      115
 
-#define DDSD_CAPS                   0x00000001
-#define DDSD_HEIGHT                 0x00000002
-#define DDSD_WIDTH                  0x00000004
-#define DDSD_PITCH                  0x00000008
-#define DDSD_PIXELFORMAT            0x00001000
-#define DDSD_MIPMAPCOUNT            0x00020000
-#define DDSD_LINEARSIZE             0x00080000
-#define DDSD_DEPTH                  0x00800000
+#define DDS_DX10_DIMENSION_TEXTURE2D 3
+#define DDS_DX10_DIMENSION_TEXTURE3D 4
+#define DDS_DX10_MISC_TEXTURECUBE    4
 
-#define DDPF_ALPHAPIXELS            0x00000001
-#define DDPF_ALPHA                  0x00000002
-#define DDPF_FOURCC                 0x00000004
-#define DDPF_INDEXED                0x00000020
-#define DDPF_RGB                    0x00000040
-#define DDPF_YUV                    0x00000200
-#define DDPF_LUMINANCE              0x00020000
+#define DDSD_CAPS                  0x00000001
+#define DDSD_HEIGHT                0x00000002
+#define DDSD_WIDTH                 0x00000004
+#define DDSD_PITCH                 0x00000008
+#define DDSD_PIXELFORMAT           0x00001000
+#define DDSD_MIPMAPCOUNT           0x00020000
+#define DDSD_LINEARSIZE            0x00080000
+#define DDSD_DEPTH                 0x00800000
 
-#define DDSCAPS_COMPLEX             0x00000008
-#define DDSCAPS_TEXTURE             0x00001000
-#define DDSCAPS_MIPMAP              0x00400000
+#define DDPF_ALPHAPIXELS           0x00000001
+#define DDPF_ALPHA                 0x00000002
+#define DDPF_FOURCC                0x00000004
+#define DDPF_INDEXED               0x00000020
+#define DDPF_RGB                   0x00000040
+#define DDPF_YUV                   0x00000200
+#define DDPF_LUMINANCE             0x00020000
 
-#define DDSCAPS2_CUBEMAP            0x00000200
-#define DDSCAPS2_CUBEMAP_POSITIVEX  0x00000400
-#define DDSCAPS2_CUBEMAP_NEGATIVEX  0x00000800
-#define DDSCAPS2_CUBEMAP_POSITIVEY  0x00001000
-#define DDSCAPS2_CUBEMAP_NEGATIVEY  0x00002000
-#define DDSCAPS2_CUBEMAP_POSITIVEZ  0x00004000
-#define DDSCAPS2_CUBEMAP_NEGATIVEZ  0x00008000
+#define DDSCAPS_COMPLEX            0x00000008
+#define DDSCAPS_TEXTURE            0x00001000
+#define DDSCAPS_MIPMAP             0x00400000
 
-#define DDS_CUBEMAP_ALLFACES (DDSCAPS2_CUBEMAP_POSITIVEX|DDSCAPS2_CUBEMAP_NEGATIVEX \
-							 |DDSCAPS2_CUBEMAP_POSITIVEY|DDSCAPS2_CUBEMAP_NEGATIVEY \
-							 |DDSCAPS2_CUBEMAP_POSITIVEZ|DDSCAPS2_CUBEMAP_NEGATIVEZ)
+#define DDSCAPS2_VOLUME            0x00200000
+#define DDSCAPS2_CUBEMAP           0x00000200
+#define DDSCAPS2_CUBEMAP_POSITIVEX 0x00000400
+#define DDSCAPS2_CUBEMAP_NEGATIVEX 0x00000800
+#define DDSCAPS2_CUBEMAP_POSITIVEY 0x00001000
+#define DDSCAPS2_CUBEMAP_NEGATIVEY 0x00002000
+#define DDSCAPS2_CUBEMAP_POSITIVEZ 0x00004000
+#define DDSCAPS2_CUBEMAP_NEGATIVEZ 0x00008000
 
-#define DDSCAPS2_VOLUME             0x00200000
+#define DSCAPS2_CUBEMAP_ALLSIDES (0      \
+			| DDSCAPS2_CUBEMAP_POSITIVEX \
+			| DDSCAPS2_CUBEMAP_NEGATIVEX \
+			| DDSCAPS2_CUBEMAP_POSITIVEY \
+			| DDSCAPS2_CUBEMAP_NEGATIVEY \
+			| DDSCAPS2_CUBEMAP_POSITIVEZ \
+			| DDSCAPS2_CUBEMAP_NEGATIVEZ \
+			)
 
 	struct TranslateDdsFormat
 	{
@@ -1988,79 +1996,93 @@ namespace bimg
 
 	bool imageParseDds(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader)
 	{
-		uint32_t headerSize;
-		bx::read(_reader, headerSize);
+		bx::Error* _err = NULL;
+		BX_ERROR_SCOPE(_err);
+		int32_t total = 0;
 
-		if (headerSize < DDS_HEADER_SIZE)
+		uint32_t headerSize;
+		total += bx::read(_reader, headerSize, _err);
+
+		if (!_err->isOk()
+		||  headerSize < DDS_HEADER_SIZE)
 		{
 			return false;
 		}
 
 		uint32_t flags;
-		bx::read(_reader, flags);
+		total += bx::read(_reader, flags, _err);
 
-		if ( (flags & (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) ) != (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) )
+		if (!_err->isOk()
+		|| (flags & (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) ) != (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) )
 		{
 			return false;
 		}
 
 		uint32_t height;
-		bx::read(_reader, height);
+		total += bx::read(_reader, height, _err);
 
 		uint32_t width;
-		bx::read(_reader, width);
+		total += bx::read(_reader, width, _err);
 
 		uint32_t pitch;
-		bx::read(_reader, pitch);
+		total += bx::read(_reader, pitch, _err);
 
 		uint32_t depth;
-		bx::read(_reader, depth);
+		total += bx::read(_reader, depth, _err);
 
 		uint32_t mips;
-		bx::read(_reader, mips);
+		total += bx::read(_reader, mips, _err);
 
 		bx::skip(_reader, 44); // reserved
+		total += 44;
 
 		uint32_t pixelFormatSize;
-		bx::read(_reader, pixelFormatSize);
+		total += bx::read(_reader, pixelFormatSize, _err);
 
 		uint32_t pixelFlags;
-		bx::read(_reader, pixelFlags);
+		total += bx::read(_reader, pixelFlags, _err);
 
 		uint32_t fourcc;
-		bx::read(_reader, fourcc);
+		total += bx::read(_reader, fourcc, _err);
 
 		uint32_t bitCount;
-		bx::read(_reader, bitCount);
+		total += bx::read(_reader, bitCount, _err);
 
 		uint32_t bitmask[4];
-		bx::read(_reader, bitmask, sizeof(bitmask) );
+		total += bx::read(_reader, bitmask, sizeof(bitmask), _err);
 
 		uint32_t caps[4];
-		bx::read(_reader, caps);
+		total += bx::read(_reader, caps, _err);
 
-		bx::skip(_reader, 4); // reserved
+		bx::skip(_reader, 4);
+		total += 4; // reserved
+
+		if (!_err->isOk() )
+		{
+			return false;
+		}
 
 		uint32_t dxgiFormat = 0;
 		uint32_t arraySize = 1;
 		if (DDPF_FOURCC == pixelFlags
-		&&  DDS_DX10 == fourcc)
+		&&  DDS_DX10    == fourcc)
 		{
-			bx::read(_reader, dxgiFormat);
+			total += bx::read(_reader, dxgiFormat, _err);
 
 			uint32_t dims;
-			bx::read(_reader, dims);
+			total += bx::read(_reader, dims, _err);
 
 			uint32_t miscFlags;
-			bx::read(_reader, miscFlags);
+			total += bx::read(_reader, miscFlags, _err);
 
-			bx::read(_reader, arraySize);
+			total += bx::read(_reader, arraySize, _err);
 
 			uint32_t miscFlags2;
-			bx::read(_reader, miscFlags2);
+			total += bx::read(_reader, miscFlags2, _err);
 		}
 
-		if ( (caps[0] & DDSCAPS_TEXTURE) == 0)
+		if (!_err->isOk()
+		|| (caps[0] & DDSCAPS_TEXTURE) == 0)
 		{
 			return false;
 		}
@@ -2068,7 +2090,7 @@ namespace bimg
 		bool cubeMap = 0 != (caps[1] & DDSCAPS2_CUBEMAP);
 		if (cubeMap)
 		{
-			if ( (caps[1] & DDS_CUBEMAP_ALLFACES) != DDS_CUBEMAP_ALLFACES)
+			if ( (caps[1] & DSCAPS2_CUBEMAP_ALLSIDES) != DSCAPS2_CUBEMAP_ALLSIDES)
 			{
 				// partial cube map is not supported.
 				return false;
@@ -3207,6 +3229,8 @@ namespace bimg
 
 	static int32_t imageWriteDdsHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		uint32_t dxgiFormat = 0;
 		for (uint32_t ii = 0; ii < BX_COUNTOF(s_translateDxgiFormat); ++ii)
 		{
@@ -3227,49 +3251,67 @@ namespace bimg
 
 		uint32_t total = 0;
 		total += bx::write(_writer, uint32_t(DDS_MAGIC), _err);
+
+		uint32_t headerStart = total;
 		total += bx::write(_writer, uint32_t(DDS_HEADER_SIZE), _err);
 		total += bx::write(_writer, uint32_t(0
 			| DDSD_HEIGHT
 			| DDSD_WIDTH
-			| DDSD_DEPTH
-			| DDSD_PITCH
-			| DDSD_MIPMAPCOUNT
 			| DDSD_PIXELFORMAT
 			| DDSD_CAPS
+			| (1 < _depth            ? DDSD_DEPTH       : 0)
+			| (1 < _numMips          ? DDSD_MIPMAPCOUNT : 0)
+			| (isCompressed(_format) ? DDSD_LINEARSIZE  : DDSD_PITCH)
 			)
 			, _err
 			);
+		const uint32_t pitchOrLinearSize = isCompressed(_format)
+			? _width*_height*bpp/8
+			: _width*bpp/8
+			;
+
 		total += bx::write(_writer, _height, _err);
 		total += bx::write(_writer, _width, _err);
-		total += bx::write(_writer, _width*bpp/8, _err);
+		total += bx::write(_writer, pitchOrLinearSize, _err);
 		total += bx::write(_writer, _depth, _err);
 		total += bx::write(_writer, uint32_t(_numMips), _err);
 
-		total += bx::writeRep(_writer, 0, 44, _err);
+		total += bx::writeRep(_writer, 0, 44, _err); // reserved1
 
 		total += bx::write(_writer, uint32_t(8*sizeof(uint32_t) ), _err); // pixelFormatSize
 		total += bx::write(_writer, uint32_t(DDPF_FOURCC), _err);
 		total += bx::write(_writer, uint32_t(DDS_DX10), _err);
-		total += bx::write(_writer, bpp, _err);
-		total += bx::writeRep(_writer, 0, 4*sizeof(uint32_t), _err); // bitmask
+		total += bx::writeRep(_writer, 0, 5*sizeof(uint32_t), _err); // bitmask
 
 		uint32_t caps[4] =
 		{
-			uint32_t(DDSCAPS_TEXTURE | (1 < _numMips ? DDSCAPS_MIPMAP : 0) ),
-			uint32_t(_cubeMap ? DDSCAPS2_CUBEMAP|DDS_CUBEMAP_ALLFACES : 0),
+			uint32_t(DDSCAPS_TEXTURE | (1 < _numMips ? DDSCAPS_COMPLEX|DDSCAPS_MIPMAP : 0) ),
+			uint32_t(_cubeMap ? DDSCAPS2_CUBEMAP|DSCAPS2_CUBEMAP_ALLSIDES : 0),
 			0,
 			0,
 		};
 		total += bx::write(_writer, caps, sizeof(caps) );
 
-		total += bx::writeRep(_writer, 0, 4, _err);
+		total += bx::writeRep(_writer, 0, 4, _err); // reserved2
+
+		BX_WARN(total-headerStart == DDS_HEADER_SIZE
+			, "DDS: Failed to write header size %d (expected: %d)."
+			, total-headerStart
+			, DDS_HEADER_SIZE
+			);
 
 		total += bx::write(_writer, dxgiFormat);
-
-		total += bx::write(_writer, uint32_t(0), _err); // dims
-		total += bx::write(_writer, uint32_t(0), _err); // miscFlags
+		total += bx::write(_writer, uint32_t(1 < _depth ? DDS_DX10_DIMENSION_TEXTURE3D : DDS_DX10_DIMENSION_TEXTURE2D), _err); // dims
+		total += bx::write(_writer, uint32_t(_cubeMap   ? DDS_DX10_MISC_TEXTURECUBE    : 0), _err); // miscFlags
 		total += bx::write(_writer, uint32_t(1), _err); // arraySize
 		total += bx::write(_writer, uint32_t(0), _err); // miscFlags2
+
+		BX_WARN(total-headerStart == DDS_HEADER_SIZE+20
+			, "DDS: Failed to write header size %d (expected: %d)."
+			, total-headerStart
+			, DDS_HEADER_SIZE+20
+			);
+		BX_UNUSED(headerStart);
 
 		return total;
 	}
