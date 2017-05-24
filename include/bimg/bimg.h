@@ -9,7 +9,7 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
-#define BIMG_API_VERSION UINT32_C(4)
+#define BIMG_API_VERSION UINT32_C(5)
 
 namespace bx
 {
@@ -460,6 +460,7 @@ namespace bimg
 	bool imageParse(
 		  ImageContainer& _imageContainer
 		, bx::ReaderSeekerI* _reader
+		, bx::Error* _err
 		);
 
 	///
@@ -467,6 +468,7 @@ namespace bimg
 		  ImageContainer& _imageContainer
 		, const void* _data
 		, uint32_t _size
+		, bx::Error* _err = NULL
 		);
 
 	///
@@ -474,6 +476,7 @@ namespace bimg
 		  bx::AllocatorI* _allocator
 		, const void* _src
 		, uint32_t _size
+		, bx::Error* _err
 		);
 
 	///
@@ -481,6 +484,7 @@ namespace bimg
 		  bx::AllocatorI* _allocator
 		, const void* _src
 		, uint32_t _size
+		, bx::Error* _err
 		);
 
 	///
@@ -488,6 +492,7 @@ namespace bimg
 		  bx::AllocatorI* _allocator
 		, const void* _src
 		, uint32_t _size
+		, bx::Error* _err
 		);
 
 	///

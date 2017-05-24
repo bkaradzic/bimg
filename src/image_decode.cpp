@@ -67,8 +67,10 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 
 namespace bimg
 {
-	static ImageContainer* imageParseLodePng(bx::AllocatorI* _allocator, const void* _data, uint32_t _size)
+	static ImageContainer* imageParseLodePng(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		static uint8_t pngMagic[] = { 0x89, 0x50, 0x4E, 0x47, 0x0d, 0x0a };
 
 		if (0 != bx::memCmp(_data, pngMagic, sizeof(pngMagic) ) )
@@ -225,8 +227,10 @@ namespace bimg
 		return output;
 	}
 
-	static ImageContainer* imageParseTinyExr(bx::AllocatorI* _allocator, const void* _data, uint32_t _size)
+	static ImageContainer* imageParseTinyExr(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		EXRVersion exrVersion;
 		int result = ParseEXRVersionFromMemory(&exrVersion, (uint8_t*)_data, _size);
 		if (TINYEXR_SUCCESS != result)
@@ -362,8 +366,10 @@ namespace bimg
 		return output;
 	}
 
-	static ImageContainer* imageParseStbImage(bx::AllocatorI* _allocator, const void* _data, uint32_t _size)
+	static ImageContainer* imageParseStbImage(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		const int isHdr = stbi_is_hdr_from_memory((const uint8_t*)_data, (int)_size);
 
 		void* data;
@@ -406,14 +412,16 @@ namespace bimg
 		return output;
 	}
 
-	ImageContainer* imageParse(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, TextureFormat::Enum _dstFormat)
+	ImageContainer* imageParse(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, TextureFormat::Enum _dstFormat, bx::Error* _err)
 	{
-		ImageContainer* input = imageParseDds     (_allocator, _data, _size)        ;
-		input = NULL == input ? imageParseKtx     (_allocator, _data, _size) : input;
-		input = NULL == input ? imageParsePvr3    (_allocator, _data, _size) : input;
-		input = NULL == input ? imageParseLodePng (_allocator, _data, _size) : input;
-		input = NULL == input ? imageParseTinyExr (_allocator, _data, _size) : input;
-		input = NULL == input ? imageParseStbImage(_allocator, _data, _size) : input;
+		BX_ERROR_SCOPE(_err);
+
+		ImageContainer* input = imageParseDds     (_allocator, _data, _size, _err)        ;
+		input = NULL == input ? imageParseKtx     (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParsePvr3    (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseLodePng (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseTinyExr (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseStbImage(_allocator, _data, _size, _err) : input;
 
 		if (NULL == input)
 		{

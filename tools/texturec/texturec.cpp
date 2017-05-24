@@ -25,7 +25,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 3
+#define BIMG_TEXTUREC_VERSION_MINOR 4
 
 struct Options
 {
@@ -80,7 +80,12 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 	const uint8_t* inputData = (uint8_t*)_inputData;
 
 	bimg::ImageContainer* output = NULL;
-	bimg::ImageContainer* input  = bimg::imageParse(_allocator, inputData, _inputSize);
+	bimg::ImageContainer* input  = bimg::imageParse(_allocator, inputData, _inputSize, bimg::TextureFormat::Count, _err);
+
+	if (!_err->isOk() )
+	{
+		return NULL;
+	}
 
 	if (NULL != input)
 	{

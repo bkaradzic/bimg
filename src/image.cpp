@@ -252,14 +252,13 @@ namespace bimg
 		const uint16_t minBlockX   = blockInfo.minBlockX;
 		const uint16_t minBlockY   = blockInfo.minBlockY;
 
-		_width  = bx::uint16_max(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth)*blockWidth);
+		_width  = bx::uint16_max(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth )*blockWidth);
 		_height = bx::uint16_max(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
 		_depth  = bx::uint16_max(1, _depth);
 
-		uint32_t max = bx::uint32_max(_width, bx::uint32_max(_height, _depth) );
-		uint32_t numMips = bx::uint32_max(1, uint8_t(bx::flog2(float(max) ) ) );
+		uint8_t numMips = calcNumMips(true, _width, _height, _depth);
 
-		return uint8_t(numMips);
+		return numMips;
 	}
 
 	uint32_t imageGetSize(TextureInfo* _info, uint16_t _width, uint16_t _height, uint16_t _depth, bool _cubeMap, bool _hasMips, uint16_t _numLayers, TextureFormat::Enum _format)
@@ -904,10 +903,10 @@ namespace bimg
 		return output;
 	}
 
-	typedef bool (*ParseFn)(ImageContainer&, bx::ReaderSeekerI*);
+	typedef bool (*ParseFn)(ImageContainer&, bx::ReaderSeekerI*, bx::Error*);
 
 	template<uint32_t magicT, ParseFn parseFnT>
-	ImageContainer* imageParseT(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	ImageContainer* imageParseT(bx::AllocatorI* _allocator, const void* _src, uint32_t _size, bx::Error* _err)
 	{
 		bx::MemoryReader reader(_src, _size);
 
@@ -916,7 +915,7 @@ namespace bimg
 
 		ImageContainer imageContainer;
 		if (magicT != magic
-		|| !parseFnT(imageContainer, &reader) )
+		|| !parseFnT(imageContainer, &reader, _err) )
 		{
 			return NULL;
 		}
@@ -1747,7 +1746,7 @@ namespace bimg
 		_depth     = bx::uint16_max(1, _depth);
 		_numLayers = bx::uint16_max(1, _numLayers);
 
-		const uint8_t numMips = _hasMips ? imageGetNumMips(_format, _width, _height) : 1;
+		const uint8_t numMips = _hasMips ? imageGetNumMips(_format, _width, _height, _depth) : 1;
 		uint32_t size = imageGetSize(NULL, _width, _height, _depth, _cubeMap, _hasMips, _numLayers, _format);
 
 		ImageContainer* imageContainer = (ImageContainer*)BX_ALLOC(_allocator, size + sizeof(ImageContainer) );
@@ -1994,9 +1993,8 @@ namespace bimg
 		{ 32, { 0xffffffff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R32U    },
 	};
 
-	bool imageParseDds(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader)
+	bool imageParseDds(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader, bx::Error* _err)
 	{
-		bx::Error* _err = NULL;
 		BX_ERROR_SCOPE(_err);
 		int32_t total = 0;
 
@@ -2012,9 +2010,14 @@ namespace bimg
 		uint32_t flags;
 		total += bx::read(_reader, flags, _err);
 
-		if (!_err->isOk()
-		|| (flags & (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) ) != (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) )
+		if (!_err->isOk() )
 		{
+			return false;
+		}
+
+		if ( (flags & (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) ) != (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) )
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "DDS: Invalid flags.");
 			return false;
 		}
 
@@ -2081,9 +2084,14 @@ namespace bimg
 			total += bx::read(_reader, miscFlags2, _err);
 		}
 
-		if (!_err->isOk()
-		|| (caps[0] & DDSCAPS_TEXTURE) == 0)
+		if (!_err->isOk() )
 		{
+			return false;
+		}
+
+		if ( (caps[0] & DDSCAPS_TEXTURE) == 0)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "DDS: Unsupported caps.");
 			return false;
 		}
 
@@ -2093,6 +2101,7 @@ namespace bimg
 			if ( (caps[1] & DSCAPS2_CUBEMAP_ALLSIDES) != DSCAPS2_CUBEMAP_ALLSIDES)
 			{
 				// partial cube map is not supported.
+				BX_ERROR_SET(_err, BIMG_ERROR, "DDS: Incomplete cubemap.");
 				return false;
 			}
 		}
@@ -2144,6 +2153,12 @@ namespace bimg
 			}
 		}
 
+		if (TextureFormat::Unknown == format)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "DDS: Unknown texture format.");
+			return false;
+		}
+
 		_imageContainer.m_allocator = NULL;
 		_imageContainer.m_data      = NULL;
 		_imageContainer.m_size      = 0;
@@ -2160,12 +2175,12 @@ namespace bimg
 		_imageContainer.m_ktxLE     = false;
 		_imageContainer.m_srgb      = srgb;
 
-		return TextureFormat::Unknown != format;
+		return true;
 	}
 
-	ImageContainer* imageParseDds(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	ImageContainer* imageParseDds(bx::AllocatorI* _allocator, const void* _src, uint32_t _size, bx::Error* _err)
 	{
-		return imageParseT<DDS_MAGIC, imageParseDds>(_allocator, _src, _size);
+		return imageParseT<DDS_MAGIC, imageParseDds>(_allocator, _src, _size, _err);
 	}
 
 // KTX
@@ -2380,8 +2395,10 @@ namespace bimg
 		{ KTX_RGB, TextureFormat::RGB8 },
 	};
 
-	bool imageParseKtx(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader)
+	bool imageParseKtx(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		uint8_t identifier[8];
 		bx::read(_reader, identifier);
 
@@ -2478,9 +2495,9 @@ namespace bimg
 		return TextureFormat::Unknown != format;
 	}
 
-	ImageContainer* imageParseKtx(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	ImageContainer* imageParseKtx(bx::AllocatorI* _allocator, const void* _src, uint32_t _size, bx::Error* _err)
 	{
-		return imageParseT<KTX_MAGIC, imageParseKtx>(_allocator, _src, _size);
+		return imageParseT<KTX_MAGIC, imageParseKtx>(_allocator, _src, _size, _err);
 	}
 
 // PVR3
@@ -2564,8 +2581,10 @@ namespace bimg
 		{ PVR3_RGB10A2,          PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGB10A2 },
 	};
 
-	bool imageParsePvr3(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader)
+	bool imageParsePvr3(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		uint32_t flags;
 		bx::read(_reader, flags);
 
@@ -2634,27 +2653,29 @@ namespace bimg
 		return TextureFormat::Unknown != format;
 	}
 
-	ImageContainer* imageParsePvr3(bx::AllocatorI* _allocator, const void* _src, uint32_t _size)
+	ImageContainer* imageParsePvr3(bx::AllocatorI* _allocator, const void* _src, uint32_t _size, bx::Error* _err)
 	{
-		return imageParseT<PVR3_MAGIC, imageParsePvr3>(_allocator, _src, _size);
+		return imageParseT<PVR3_MAGIC, imageParsePvr3>(_allocator, _src, _size, _err);
 	}
 
-	bool imageParse(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader)
+	bool imageParse(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		uint32_t magic;
-		bx::read(_reader, magic);
+		bx::read(_reader, magic, _err);
 
 		if (DDS_MAGIC == magic)
 		{
-			return imageParseDds(_imageContainer, _reader);
+			return imageParseDds(_imageContainer, _reader, _err);
 		}
 		else if (KTX_MAGIC == magic)
 		{
-			return imageParseKtx(_imageContainer, _reader);
+			return imageParseKtx(_imageContainer, _reader, _err);
 		}
 		else if (PVR3_MAGIC == magic)
 		{
-			return imageParsePvr3(_imageContainer, _reader);
+			return imageParsePvr3(_imageContainer, _reader, _err);
 		}
 		else if (BIMG_CHUNK_MAGIC_TEX == magic)
 		{
@@ -2685,17 +2706,21 @@ namespace bimg
 			_imageContainer.m_ktxLE     = false;
 			_imageContainer.m_srgb      = false;
 
-			return true;
+			return _err->isOk();
 		}
 
 		BX_TRACE("Unrecognized image format (magic: 0x%08x)!", magic);
+		BX_ERROR_SET(_err, BIMG_ERROR, "Unrecognized image format.");
+
 		return false;
 	}
 
-	bool imageParse(ImageContainer& _imageContainer, const void* _data, uint32_t _size)
+	bool imageParse(ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		bx::MemoryReader reader(_data, _size);
-		return imageParse(_imageContainer, &reader);
+		return imageParse(_imageContainer, &reader, _err);
 	}
 
 	void imageDecodeToBgra8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _dstPitch, TextureFormat::Enum _srcFormat)
