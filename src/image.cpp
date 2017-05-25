@@ -1974,23 +1974,25 @@ namespace bimg
 	struct TranslateDdsPixelFormat
 	{
 		uint32_t m_bitCount;
+		uint32_t m_flags;
 		uint32_t m_bitmask[4];
 		TextureFormat::Enum m_textureFormat;
 	};
 
 	static const TranslateDdsPixelFormat s_translateDdsPixelFormat[] =
 	{
-		{  8, { 0x000000ff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R8      },
-		{ 16, { 0x0000ffff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R16U    },
-		{ 16, { 0x00000f00, 0x000000f0, 0x0000000f, 0x0000f000 }, TextureFormat::RGBA4   },
-		{ 16, { 0x0000f800, 0x000007e0, 0x0000001f, 0x00000000 }, TextureFormat::R5G6B5  },
-		{ 16, { 0x00007c00, 0x000003e0, 0x0000001f, 0x00008000 }, TextureFormat::RGB5A1  },
-		{ 24, { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::RGB8    },
-		{ 32, { 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }, TextureFormat::BGRA8   },
-		{ 32, { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::BGRA8   },
-		{ 32, { 0x000003ff, 0x000ffc00, 0x3ff00000, 0xc0000000 }, TextureFormat::RGB10A2 },
-		{ 32, { 0x0000ffff, 0xffff0000, 0x00000000, 0x00000000 }, TextureFormat::RG16    },
-		{ 32, { 0xffffffff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R32U    },
+		{  8, DDPF_LUMINANCE,            { 0x000000ff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R8      },
+		{ 16, DDPF_RGB,                  { 0x0000ffff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R16U    },
+		{ 16, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x00000f00, 0x000000f0, 0x0000000f, 0x0000f000 }, TextureFormat::RGBA4   },
+		{ 16, DDPF_RGB,                  { 0x0000f800, 0x000007e0, 0x0000001f, 0x00000000 }, TextureFormat::R5G6B5  },
+		{ 16, DDPF_RGB,                  { 0x00007c00, 0x000003e0, 0x0000001f, 0x00008000 }, TextureFormat::RGB5A1  },
+		{ 24, DDPF_RGB,                  { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::RGB8    },
+		{ 32, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 }, TextureFormat::RGBA8   },
+		{ 32, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }, TextureFormat::BGRA8   }, // D3DFMT_A8R8G8B8
+		{ 32, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::BGRA8   }, // D3DFMT_X8R8G8B8
+		{ 32, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x000003ff, 0x000ffc00, 0x3ff00000, 0xc0000000 }, TextureFormat::RGB10A2 },
+		{ 32, DDPF_RGB,                  { 0x0000ffff, 0xffff0000, 0x00000000, 0x00000000 }, TextureFormat::RG16    },
+		{ 32, DDPF_RGB,                  { 0xffffffff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R32U    },
 	};
 
 	bool imageParseDds(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader, bx::Error* _err)
@@ -3256,20 +3258,34 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
-		uint32_t dxgiFormat = 0;
-		for (uint32_t ii = 0; ii < BX_COUNTOF(s_translateDxgiFormat); ++ii)
+		uint32_t ddspf      = UINT32_MAX;
+		uint32_t dxgiFormat = UINT32_MAX;
+
+		for (uint32_t ii = 0; ii < BX_COUNTOF(s_translateDdsPixelFormat); ++ii)
 		{
-			if (s_translateDxgiFormat[ii].m_textureFormat == _format)
+			if (s_translateDdsPixelFormat[ii].m_textureFormat == _format)
 			{
-				dxgiFormat = s_translateDxgiFormat[ii].m_format;
+				ddspf = ii;
 				break;
 			}
 		}
 
-		if (0 == dxgiFormat)
+		if (UINT32_MAX == ddspf)
 		{
-			BX_ERROR_SET(_err, BIMG_ERROR, "DDS: DXGI format not supported.");
-			return 0;
+			for (uint32_t ii = 0; ii < BX_COUNTOF(s_translateDxgiFormat); ++ii)
+			{
+				if (s_translateDxgiFormat[ii].m_textureFormat == _format)
+				{
+					dxgiFormat = s_translateDxgiFormat[ii].m_format;
+					break;
+				}
+			}
+
+			if (UINT32_MAX == dxgiFormat)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "DDS: DXGI format not supported.");
+				return 0;
+			}
 		}
 
 		const uint32_t bpp = getBitsPerPixel(_format);
@@ -3303,10 +3319,24 @@ namespace bimg
 
 		total += bx::writeRep(_writer, 0, 44, _err); // reserved1
 
-		total += bx::write(_writer, uint32_t(8*sizeof(uint32_t) ), _err); // pixelFormatSize
-		total += bx::write(_writer, uint32_t(DDPF_FOURCC), _err);
-		total += bx::write(_writer, uint32_t(DDS_DX10), _err);
-		total += bx::writeRep(_writer, 0, 5*sizeof(uint32_t), _err); // bitmask
+		if (UINT32_MAX != ddspf)
+		{
+			const TranslateDdsPixelFormat& pf = s_translateDdsPixelFormat[ddspf];
+
+			total += bx::write(_writer, uint32_t(8*sizeof(uint32_t) ), _err); // pixelFormatSize
+			total += bx::write(_writer, pf.m_flags, _err);
+			total += bx::write(_writer, uint32_t(0), _err);
+			total += bx::write(_writer, pf.m_bitCount, _err);
+			total += bx::write(_writer, pf.m_bitmask, _err);
+		}
+		else
+		{
+			total += bx::write(_writer, uint32_t(8*sizeof(uint32_t) ), _err); // pixelFormatSize
+			total += bx::write(_writer, uint32_t(DDPF_FOURCC), _err);
+			total += bx::write(_writer, uint32_t(DDS_DX10), _err);
+			total += bx::write(_writer, uint32_t(0), _err); // bitCount
+			total += bx::writeRep(_writer, 0, 4*sizeof(uint32_t), _err); // bitmask
+		}
 
 		uint32_t caps[4] =
 		{
@@ -3325,18 +3355,21 @@ namespace bimg
 			, DDS_HEADER_SIZE
 			);
 
-		total += bx::write(_writer, dxgiFormat);
-		total += bx::write(_writer, uint32_t(1 < _depth ? DDS_DX10_DIMENSION_TEXTURE3D : DDS_DX10_DIMENSION_TEXTURE2D), _err); // dims
-		total += bx::write(_writer, uint32_t(_cubeMap   ? DDS_DX10_MISC_TEXTURECUBE    : 0), _err); // miscFlags
-		total += bx::write(_writer, uint32_t(1), _err); // arraySize
-		total += bx::write(_writer, uint32_t(0), _err); // miscFlags2
+		if (UINT32_MAX != dxgiFormat)
+		{
+			total += bx::write(_writer, dxgiFormat);
+			total += bx::write(_writer, uint32_t(1 < _depth ? DDS_DX10_DIMENSION_TEXTURE3D : DDS_DX10_DIMENSION_TEXTURE2D), _err); // dims
+			total += bx::write(_writer, uint32_t(_cubeMap   ? DDS_DX10_MISC_TEXTURECUBE    : 0), _err); // miscFlags
+			total += bx::write(_writer, uint32_t(1), _err); // arraySize
+			total += bx::write(_writer, uint32_t(0), _err); // miscFlags2
 
-		BX_WARN(total-headerStart == DDS_HEADER_SIZE+20
-			, "DDS: Failed to write header size %d (expected: %d)."
-			, total-headerStart
-			, DDS_HEADER_SIZE+20
-			);
-		BX_UNUSED(headerStart);
+			BX_WARN(total-headerStart == DDS_HEADER_SIZE+20
+				, "DDS: Failed to write header size %d (expected: %d)."
+				, total-headerStart
+				, DDS_HEADER_SIZE+20
+				);
+			BX_UNUSED(headerStart);
+		}
 
 		return total;
 	}
