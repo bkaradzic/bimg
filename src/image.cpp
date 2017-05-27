@@ -931,17 +931,20 @@ namespace bimg
 			);
 
 		const uint16_t numSides = imageContainer.m_numLayers * (imageContainer.m_cubeMap ? 6 : 1);
-		uint8_t* dst = (uint8_t*)output->m_data;
 
 		for (uint16_t side = 0; side < numSides; ++side)
 		{
 			for (uint8_t lod = 0, num = imageContainer.m_numMips; lod < num; ++lod)
 			{
-				ImageMip mip;
-				if (imageGetRawData(imageContainer, side, lod, _src, _size, mip) )
+				ImageMip dstMip;
+				if (imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip) )
 				{
-					bx::memCopy(dst, mip.m_data, mip.m_size);
-					dst += mip.m_size;
+					ImageMip mip;
+					if (imageGetRawData(imageContainer, side, lod, _src, _size, mip) )
+					{
+						uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
+						bx::memCopy(dstData, mip.m_data, mip.m_size);
+					}
 				}
 			}
 		}
