@@ -677,7 +677,7 @@ int main(int _argc, const char* _argv[])
 		return EXIT_FAILURE;
 	}
 
-	bx::CrtAllocator allocator;
+	bx::DefaultAllocator allocator;
 	uint8_t* inputData = (uint8_t*)BX_ALLOC(&allocator, inputSize);
 
 	bx::read(&reader, inputData, inputSize, &err);
