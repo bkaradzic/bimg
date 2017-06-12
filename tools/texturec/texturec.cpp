@@ -663,7 +663,7 @@ int main(int _argc, const char* _argv[])
 	}
 
 	bx::Error err;
-	bx::CrtFileReader reader;
+	bx::FileReader reader;
 	if (!bx::open(&reader, inputFileName, &err) )
 	{
 		help("Failed to open input file.", err);
@@ -695,7 +695,7 @@ int main(int _argc, const char* _argv[])
 
 	if (NULL != output)
 	{
-		bx::CrtFileWriter writer;
+		bx::FileWriter writer;
 		if (bx::open(&writer, outputFileName, false, &err) )
 		{
 			if (NULL != bx::strFindI(saveAs, "ktx") )
