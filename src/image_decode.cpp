@@ -100,7 +100,7 @@ namespace bimg
 			{
 				case 1:
 					format    = bimg::TextureFormat::R1;
-					palette   = true;
+					palette   = false;
 					supported = true;
 					break;
 
@@ -159,6 +159,18 @@ namespace bimg
 							supported = true;
 							break;
 
+						case LCT_RGB:
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								uint16_t* rgba = (uint16_t*)data + ii*3;
+								rgba[0] = bx::toHostEndian(rgba[0], false);
+								rgba[1] = bx::toHostEndian(rgba[1], false);
+								rgba[2] = bx::toHostEndian(rgba[2], false);
+							}
+							format = bimg::TextureFormat::RGBA16;
+							supported = true;
+							break;
+
 						case LCT_RGBA:
 							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
 							{
@@ -172,7 +184,6 @@ namespace bimg
 							supported = true;
 							break;
 
-						case LCT_RGB:
 						case LCT_PALETTE:
 							break;
 					}
@@ -184,18 +195,37 @@ namespace bimg
 
 			if (supported)
 			{
+				const uint8_t* copyData = data;
+
+				TextureFormat::Enum dstFormat = format;
+				if (1 == state.info_raw.bitdepth)
+				{
+					dstFormat = bimg::TextureFormat::R8;
+					copyData  = NULL;
+				}
+				else if (16      == state.info_raw.bitdepth
+					 &&  LCT_RGB == state.info_raw.colortype)
+				{
+					dstFormat = bimg::TextureFormat::RGBA16;
+					copyData  = NULL;
+				}
+				else if (palette)
+				{
+					copyData = NULL;
+				}
+
 				output = imageAlloc(_allocator
-					, bimg::TextureFormat::R1 == format ? bimg::TextureFormat::R8 : format
+					, dstFormat
 					, uint16_t(width)
 					, uint16_t(height)
 					, 0
 					, 1
 					, false
 					, false
-					, palette ? NULL : data
+					, copyData
 					);
 
-				if (bimg::TextureFormat::R1 == format)
+				if (1 == state.info_raw.bitdepth)
 				{
 					for (uint32_t ii = 0, num = width*height/8; ii < num; ++ii)
 					{
@@ -209,6 +239,14 @@ namespace bimg
 						dst[5] = value & 0x20 ? 255 : 0;
 						dst[6] = value & 0x40 ? 255 : 0;
 						dst[7] = value & 0x80 ? 255 : 0;
+					}
+				}
+				else if (16      == state.info_raw.bitdepth
+					 &&  LCT_RGB == state.info_raw.colortype)
+				{
+					for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+					{
+						bx::memCopy( (uint16_t*)output->m_data + ii*4, (uint16_t*)data + ii*3, 6);
 					}
 				}
 				else if (palette)

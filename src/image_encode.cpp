@@ -135,13 +135,13 @@ namespace bimg
 		}
 	}
 
-	void imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
+	void imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, TextureFormat::Enum _dstFormat, Quality::Enum _quality, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
 		const uint8_t* src = (const uint8_t*)_src;
 
-		switch (_format)
+		switch (_dstFormat)
 		{
 		case TextureFormat::RGBA8:
 			{
@@ -179,15 +179,24 @@ namespace bimg
 					}
 				}
 
-				imageEncodeFromRgba8(_dst, temp, _width, _height, _format, _quality);
+				imageEncodeFromRgba8(_dst, temp, _width, _height, _dstFormat, _quality);
 				BX_FREE(_allocator, temp);
 			}
 			break;
 
 		default:
-			if (!imageConvert(_dst, _format, _src, TextureFormat::RGBA32F, _width, _height) )
+			if (!imageConvert(_dst, _dstFormat, _src, TextureFormat::RGBA32F, _width, _height) )
 			{
-				BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				uint8_t* temp = (uint8_t*)BX_ALLOC(_allocator, _width*_height*4);
+				if (imageConvert(temp, TextureFormat::RGBA8, _src, TextureFormat::RGBA32F, _width, _height) )
+				{
+					imageEncodeFromRgba8(_dst, temp, _width, _height, _dstFormat, _quality, _err);
+				}
+				else
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				}
+				BX_FREE(_allocator, temp);
 			}
 			break;
 		}
