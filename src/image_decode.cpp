@@ -248,7 +248,12 @@ namespace bimg
 				{
 					for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
 					{
-						bx::memCopy( (uint16_t*)output->m_data + ii*4, (uint16_t*)data + ii*3, 6);
+						const uint16_t* src = (uint16_t*)data + ii*3;
+						      uint16_t* dst = (uint16_t*)output->m_data + ii*4;
+						dst[0] = src[0];
+						dst[1] = src[1];
+						dst[2] = src[2];
+						dst[3] = UINT16_MAX;
 					}
 				}
 				else if (palette)
