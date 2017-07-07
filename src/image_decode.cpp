@@ -338,14 +338,12 @@ namespace bimg
 					uint32_t stepG = 0;
 					uint32_t stepB = 0;
 					uint32_t stepA = 0;
-					bx::PackFn pack = asFloat ? bx::packR32F : bx::packR16F;
 
 					if (UINT8_MAX != idxG)
 					{
 						srcBpp += 32;
 						dstBpp = asFloat ? 64 : 32;
 						format = asFloat ? TextureFormat::RG32F : TextureFormat::RG16F;
-						pack   = asFloat ? bx::packRg32F : bx::packRg16F;
 						stepG  = 1;
 					}
 
@@ -354,7 +352,6 @@ namespace bimg
 						srcBpp += 32;
 						dstBpp = asFloat ? 128 : 64;
 						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
-						pack   = asFloat ? bx::packRgba32F : bx::packRgba16F;
 						stepB  = 1;
 					}
 
@@ -363,7 +360,6 @@ namespace bimg
 						srcBpp += 32;
 						dstBpp = asFloat ? 128 : 64;
 						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
-						pack   = asFloat ? bx::packRgba32F : bx::packRgba16F;
 						stepA  = 1;
 					}
 
@@ -371,28 +367,57 @@ namespace bimg
 					width  = exrImage.width;
 					height = exrImage.height;
 
-					const float  zero = 0.0f;
-					const float* srcR = UINT8_MAX == idxR ? &zero : (const float*)(exrImage.images)[idxR];
-					const float* srcG = UINT8_MAX == idxG ? &zero : (const float*)(exrImage.images)[idxG];
-					const float* srcB = UINT8_MAX == idxB ? &zero : (const float*)(exrImage.images)[idxB];
-					const float* srcA = UINT8_MAX == idxA ? &zero : (const float*)(exrImage.images)[idxA];
-
-					const uint32_t bytesPerPixel = dstBpp/8;
-					for (uint32_t ii = 0, num = exrImage.width * exrImage.height; ii < num; ++ii)
+					if (asFloat)
 					{
-						float rgba[4] =
-						{
-							*srcR,
-							*srcG,
-							*srcB,
-							*srcA,
-						};
-						pack(&data[ii * bytesPerPixel], rgba);
+						const float  zero = 0.0f;
+						const float* srcR = UINT8_MAX == idxR ? &zero : (const float*)(exrImage.images)[idxR];
+						const float* srcG = UINT8_MAX == idxG ? &zero : (const float*)(exrImage.images)[idxG];
+						const float* srcB = UINT8_MAX == idxB ? &zero : (const float*)(exrImage.images)[idxB];
+						const float* srcA = UINT8_MAX == idxA ? &zero : (const float*)(exrImage.images)[idxA];
 
-						srcR += stepR;
-						srcG += stepG;
-						srcB += stepB;
-						srcA += stepA;
+						const uint32_t bytesPerPixel = dstBpp/8;
+						for (uint32_t ii = 0, num = exrImage.width * exrImage.height; ii < num; ++ii)
+						{
+							float rgba[4] =
+							{
+								*srcR,
+								*srcG,
+								*srcB,
+								*srcA,
+							};
+							bx::memCopy(&data[ii * bytesPerPixel], rgba, bytesPerPixel);
+
+							srcR += stepR;
+							srcG += stepG;
+							srcB += stepB;
+							srcA += stepA;
+						}
+					}
+					else
+					{
+						const uint16_t  zero = 0;
+						const uint16_t* srcR = UINT8_MAX == idxR ? &zero : (const uint16_t*)(exrImage.images)[idxR];
+						const uint16_t* srcG = UINT8_MAX == idxG ? &zero : (const uint16_t*)(exrImage.images)[idxG];
+						const uint16_t* srcB = UINT8_MAX == idxB ? &zero : (const uint16_t*)(exrImage.images)[idxB];
+						const uint16_t* srcA = UINT8_MAX == idxA ? &zero : (const uint16_t*)(exrImage.images)[idxA];
+
+						const uint32_t bytesPerPixel = dstBpp/8;
+						for (uint32_t ii = 0, num = exrImage.width * exrImage.height; ii < num; ++ii)
+						{
+							uint16_t rgba[4] =
+							{
+								*srcR,
+								*srcG,
+								*srcB,
+								*srcA,
+							};
+							bx::memCopy(&data[ii * bytesPerPixel], rgba, bytesPerPixel);
+
+							srcR += stepR;
+							srcG += stepG;
+							srcB += stepB;
+							srcA += stepA;
+						}
 					}
 				}
 
