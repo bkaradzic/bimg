@@ -2413,7 +2413,6 @@ namespace bimg
 		if (identifier[1] != '1'
 		&&  identifier[2] != '1')
 		{
-			BX_ERROR_SET(_err, BIMG_ERROR, "Unknown KTX identifier.");
 			return false;
 		}
 

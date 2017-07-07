@@ -264,6 +264,10 @@ namespace bimg
 					}
 				}
 			}
+			else
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "PNG: Unsupported format.");
+			}
 		}
 
 		lodepng_state_cleanup(&state);
@@ -420,11 +424,23 @@ namespace bimg
 						}
 					}
 				}
+				else
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Couldn't find R channel.");
+				}
 
 				FreeEXRImage(&exrImage);
 			}
+			else
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image.");
+			}
 
 			FreeEXRHeader(&exrHeader);
+		}
+		else
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse header.");
 		}
 
 		ImageContainer* output = NULL;
