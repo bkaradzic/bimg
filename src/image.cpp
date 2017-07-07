@@ -2209,6 +2209,7 @@ namespace bimg
 #define KTX_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG          0x8C03
 #define KTX_COMPRESSED_RGBA_PVRTC_2BPPV2_IMG          0x9137
 #define KTX_COMPRESSED_RGBA_PVRTC_4BPPV2_IMG          0x9138
+#define KTX_COMPRESSED_RGB_S3TC_DXT1_EXT              0x83F0
 #define KTX_COMPRESSED_RGBA_S3TC_DXT1_EXT             0x83F1
 #define KTX_COMPRESSED_RGBA_S3TC_DXT3_EXT             0x83F2
 #define KTX_COMPRESSED_RGBA_S3TC_DXT5_EXT             0x83F3
@@ -2395,9 +2396,11 @@ namespace bimg
 
 	static const KtxFormatInfo2 s_translateKtxFormat2[] =
 	{
-		{ KTX_A8,  TextureFormat::A8   },
-		{ KTX_RED, TextureFormat::R8   },
-		{ KTX_RGB, TextureFormat::RGB8 },
+		{ KTX_A8,                           TextureFormat::A8    },
+		{ KTX_RED,                          TextureFormat::R8    },
+		{ KTX_RGB,                          TextureFormat::RGB8  },
+		{ KTX_RGBA,                         TextureFormat::RGBA8 },
+		{ KTX_COMPRESSED_RGB_S3TC_DXT1_EXT, TextureFormat::BC1   },
 	};
 
 	bool imageParseKtx(ImageContainer& _imageContainer, bx::ReaderSeekerI* _reader, bx::Error* _err)
@@ -2410,6 +2413,7 @@ namespace bimg
 		if (identifier[1] != '1'
 		&&  identifier[2] != '1')
 		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unknown KTX identifier.");
 			return false;
 		}
 
@@ -2497,7 +2501,13 @@ namespace bimg
 		_imageContainer.m_ktxLE     = fromLittleEndian;
 		_imageContainer.m_srgb      = false;
 
-		return TextureFormat::Unknown != format;
+		if (TextureFormat::Unknown == format)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unrecognized image format.");
+			return false;
+		}
+
+		return true;
 	}
 
 	ImageContainer* imageParseKtx(bx::AllocatorI* _allocator, const void* _src, uint32_t _size, bx::Error* _err)
