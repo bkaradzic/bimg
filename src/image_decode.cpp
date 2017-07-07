@@ -338,12 +338,14 @@ namespace bimg
 					uint32_t stepG = 0;
 					uint32_t stepB = 0;
 					uint32_t stepA = 0;
+					bx::PackFn pack = asFloat ? bx::packR32F : bx::packR16F;
 
 					if (UINT8_MAX != idxG)
 					{
 						srcBpp += 32;
 						dstBpp = asFloat ? 64 : 32;
 						format = asFloat ? TextureFormat::RG32F : TextureFormat::RG16F;
+						pack   = asFloat ? bx::packRg32F : bx::packRg16F;
 						stepG  = 1;
 					}
 
@@ -352,6 +354,7 @@ namespace bimg
 						srcBpp += 32;
 						dstBpp = asFloat ? 128 : 64;
 						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
+						pack   = asFloat ? bx::packRgba32F : bx::packRgba16F;
 						stepB  = 1;
 					}
 
@@ -360,10 +363,13 @@ namespace bimg
 						srcBpp += 32;
 						dstBpp = asFloat ? 128 : 64;
 						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
+						pack   = asFloat ? bx::packRgba32F : bx::packRgba16F;
 						stepA  = 1;
 					}
 
-					data = (uint8_t*)BX_ALLOC(_allocator, exrImage.width * exrImage.height * dstBpp/8);
+					data   = (uint8_t*)BX_ALLOC(_allocator, exrImage.width * exrImage.height * dstBpp/8);
+					width  = exrImage.width;
+					height = exrImage.height;
 
 					const float  zero = 0.0f;
 					const float* srcR = UINT8_MAX == idxR ? &zero : (const float*)(exrImage.images)[idxR];
@@ -381,7 +387,7 @@ namespace bimg
 							*srcB,
 							*srcA,
 						};
-						bx::memCopy(&data[ii * bytesPerPixel], rgba, bytesPerPixel);
+						pack(&data[ii * bytesPerPixel], rgba);
 
 						srcR += stepR;
 						srcG += stepG;
@@ -396,17 +402,21 @@ namespace bimg
 			FreeEXRHeader(&exrHeader);
 		}
 
-		ImageContainer* output = imageAlloc(_allocator
-			, format
-			, uint16_t(width)
-			, uint16_t(height)
-			, 0
-			, 1
-			, false
-			, false
-			, data
-			);
-		BX_FREE(_allocator, data);
+		ImageContainer* output = NULL;
+		if (NULL != data)
+		{
+			output = imageAlloc(_allocator
+				, format
+				, uint16_t(width)
+				, uint16_t(height)
+				, 0
+				, 1
+				, false
+				, false
+				, data
+				);
+			BX_FREE(_allocator, data);
+		}
 
 		return output;
 	}
