@@ -3421,7 +3421,7 @@ namespace bimg
 		return total;
 	}
 
-	static int32_t imageWriteKtxHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, bx::Error* _err)
+	static int32_t imageWriteKtxHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, uint32_t _numLayers, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
@@ -3438,7 +3438,7 @@ namespace bimg
 		total += bx::write(_writer, _width, _err);
 		total += bx::write(_writer, _height, _err);
 		total += bx::write(_writer, _depth, _err);
-		total += bx::write(_writer, uint32_t(0), _err); // numberOfArrayElements
+		total += bx::write(_writer, _numLayers, _err); // numberOfArrayElements
 		total += bx::write(_writer, _cubeMap ? uint32_t(6) : uint32_t(0), _err);
 		total += bx::write(_writer, uint32_t(_numMips), _err);
 		total += bx::write(_writer, uint32_t(0), _err); // Meta-data size.
@@ -3447,12 +3447,12 @@ namespace bimg
 		return total;
 	}
 
-	int32_t imageWriteKtx(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, const void* _src, bx::Error* _err)
+	int32_t imageWriteKtx(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, uint32_t _numLayers, const void* _src, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
 		int32_t total = 0;
-		total += imageWriteKtxHeader(_writer, _format, _cubeMap, _width, _height, _depth, _numMips, _err);
+		total += imageWriteKtxHeader(_writer, _format, _cubeMap, _width, _height, _depth, _numMips, _numLayers, _err);
 
 		if (!_err->isOk() )
 		{
@@ -3467,23 +3467,31 @@ namespace bimg
 		const uint32_t minBlockY   = blockInfo.minBlockY;
 
 		const uint8_t* src = (const uint8_t*)_src;
+
+		const uint32_t numLayers = bx::uint32_max(_numLayers, 1);
+		const uint32_t numSides = _cubeMap ? 6 : 1;
+
 		uint32_t width  = _width;
 		uint32_t height = _height;
 		uint32_t depth  = _depth;
 
-		for (uint8_t lod = 0, num = _numMips; lod < num && _err->isOk(); ++lod)
+		for (uint8_t lod = 0; lod < _numMips && _err->isOk(); ++lod)
 		{
 			width  = bx::uint32_max(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
 			height = bx::uint32_max(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 			depth  = bx::uint32_max(1, depth);
 
-			uint32_t size = width*height*depth*bpp/8;
+			const uint32_t mipSize = width*height*depth*bpp/8;
+			const uint32_t size = mipSize*numLayers*numSides;
 			total += bx::write(_writer, size, _err);
 
-			for (uint8_t side = 0, numSides = _cubeMap ? 6 : 1; side < numSides && _err->isOk(); ++side)
+			for (uint32_t layer = 0; layer < numLayers && _err->isOk(); ++layer)
 			{
-				total += bx::write(_writer, src, size, _err);
-				src += size;
+				for (uint8_t side = 0; side < numSides && _err->isOk(); ++side)
+				{
+					total += bx::write(_writer, src, size, _err);
+					src += size;
+				}
 			}
 
 			width  >>= 1;
@@ -3506,6 +3514,7 @@ namespace bimg
 			, _imageContainer.m_height
 			, _imageContainer.m_depth
 			, _imageContainer.m_numMips
+			, _imageContainer.m_numLayers
 			, _err
 			);
 
@@ -3514,17 +3523,26 @@ namespace bimg
 			return total;
 		}
 
-		for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num && _err->isOk(); ++lod)
+		const uint32_t numMips   = _imageContainer.m_numMips;
+		const uint32_t numLayers = bx::uint32_max(_imageContainer.m_numLayers, 1);
+		const uint32_t numSides  = _imageContainer.m_cubeMap ? 6 : 1;
+
+		for (uint8_t lod = 0; lod < numMips && _err->isOk(); ++lod)
 		{
 			ImageMip mip;
 			imageGetRawData(_imageContainer, 0, lod, _data, _size, mip);
-			total += bx::write(_writer, mip.m_size, _err);
 
-			for (uint8_t side = 0, numSides = _imageContainer.m_cubeMap ? 6 : 1; side < numSides && _err->isOk(); ++side)
+			const uint32_t size = mip.m_size*numSides*numLayers;
+			total += bx::write(_writer, size, _err);
+
+			for (uint32_t layer = 0; layer < numLayers && _err->isOk(); ++layer)
 			{
-				if (imageGetRawData(_imageContainer, side, lod, _data, _size, mip) )
+				for (uint8_t side = 0; side < numSides && _err->isOk(); ++side)
 				{
-					total += bx::write(_writer, mip.m_data, mip.m_size, _err);
+					if (imageGetRawData(_imageContainer, layer*numSides + side, lod, _data, _size, mip) )
+					{
+						total += bx::write(_writer, mip.m_data, mip.m_size, _err);
+					}
 				}
 			}
 		}
