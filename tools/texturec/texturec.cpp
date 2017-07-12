@@ -7,6 +7,7 @@
 #include <bx/allocator.h>
 #include <bx/readerwriter.h>
 #include <bx/endian.h>
+#include <bx/fpumath.h>
 
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -25,7 +26,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 4
+#define BIMG_TEXTUREC_VERSION_MINOR 5
 
 struct Options
 {
@@ -72,6 +73,26 @@ struct Options
 	bool sdf;
 	bool alphaTest;
 };
+
+void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
+{
+	const uint8_t* src = (const uint8_t*)_src;
+	uint8_t* dst = (uint8_t*)_dst;
+
+	for (uint32_t yy = 0, ystep = _srcPitch; yy < _height; ++yy, src += ystep)
+	{
+		const float* rgba = (const float*)&src[0];
+		for (uint32_t xx = 0; xx < _width; ++xx, rgba += 4, dst += 16)
+		{
+			float xyz[3];
+
+			xyz[0]  = rgba[0];
+			xyz[1]  = rgba[1];
+			xyz[2]  = rgba[2];
+			bx::vec3Norm( (float*)dst, xyz);
+		}
+	}
+}
 
 bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData, uint32_t _inputSize, const Options& _options, bx::Error* _err)
 {
@@ -232,6 +253,13 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							}
 						}
 					}
+
+					imageRgba32fNormalize(rgba
+						, dstMip.m_width
+						, dstMip.m_height
+						, dstMip.m_width*16
+						, rgba
+						);
 
 					bimg::imageRgba32f11to01(rgbaDst
 						, dstMip.m_width

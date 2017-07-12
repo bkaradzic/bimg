@@ -3079,10 +3079,6 @@ namespace bimg
 			bx::memCopy(_dst, _src, _dstPitch*_height);
 			break;
 
-		case TextureFormat::RGBA8:
-			imageRgba8ToRgba32f(_dst, _width, _height, _width*4, _src);
-			break;
-
 		default:
 			if (isCompressed(_format) )
 			{
@@ -3539,7 +3535,7 @@ namespace bimg
 			{
 				for (uint8_t side = 0; side < numSides && _err->isOk(); ++side)
 				{
-					if (imageGetRawData(_imageContainer, layer*numSides + side, lod, _data, _size, mip) )
+					if (imageGetRawData(_imageContainer, uint16_t(layer*numSides + side), lod, _data, _size, mip) )
 					{
 						total += bx::write(_writer, mip.m_data, mip.m_size, _err);
 					}
