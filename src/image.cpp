@@ -471,12 +471,13 @@ namespace bimg
 		      uint8_t* dst = (      uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0; yy < _height; ++yy, src += _srcPitch)
+		for (uint32_t yy = 0; yy < _height; ++yy, src += _srcPitch, dst += _width*16)
 		{
-			for (uint32_t xx = 0; xx < _width; ++xx, dst += 16)
+			for (uint32_t xx = 0; xx < _width; ++xx)
 			{
-				      float* fd = (      float*)dst;
-				const float* fs = (const float*)src;
+				const uint32_t offset = xx * 16;
+				      float* fd = (      float*)(dst + offset);
+				const float* fs = (const float*)(src + offset);
 
 				fd[0] = bx::fpow(fs[0], 1.0f/2.2f);
 				fd[1] = bx::fpow(fs[1], 1.0f/2.2f);
@@ -491,12 +492,13 @@ namespace bimg
 		      uint8_t* dst = (      uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
-		for (uint32_t yy = 0; yy < _height; ++yy, src += _srcPitch)
+		for (uint32_t yy = 0; yy < _height; ++yy, src += _srcPitch, dst += _width*16)
 		{
-			for (uint32_t xx = 0; xx < _width; ++xx, dst += 16)
+			for (uint32_t xx = 0; xx < _width; ++xx)
 			{
-				      float* fd = (      float*)dst;
-				const float* fs = (const float*)src;
+				const uint32_t offset = xx * 16;
+				      float* fd = (      float*)(dst + offset);
+				const float* fs = (const float*)(src + offset);
 
 				fd[0] = bx::fpow(fs[0], 2.2f);
 				fd[1] = bx::fpow(fs[1], 2.2f);
