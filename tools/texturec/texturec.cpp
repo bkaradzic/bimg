@@ -570,6 +570,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "      --max <max size>     Maximum width/height (image will be scaled down and\n"
 		  "                           aspect ratio will be preserved.\n"
 		  "      --as <extension>     Save as.\n"
+		  "      --validate           *DEBUG* Validate that output image produced matches after loading.\n"
 
 		  "\n"
 		  "For additional information, see https://github.com/bkaradzic/bgfx\n"
@@ -690,6 +691,8 @@ int main(int _argc, const char* _argv[])
 		}
 	}
 
+	const bool validate = cmdLine.hasArg("validate");
+
 	bx::Error err;
 	bx::FileReader reader;
 	if (!bx::open(&reader, inputFileName, &err) )
@@ -747,6 +750,83 @@ int main(int _argc, const char* _argv[])
 		{
 			help("Failed to open output file.", err);
 			return bx::kExitFailure;
+		}
+
+		if (validate)
+		{
+			if (!bx::open(&reader, outputFileName, &err) )
+			{
+				help("Failed to validate file.", err);
+				return bx::kExitFailure;
+			}
+
+			inputSize = (uint32_t)bx::getSize(&reader);
+			if (0 == inputSize)
+			{
+				help("Failed to validate file.", err);
+				return bx::kExitFailure;
+			}
+
+			inputData = (uint8_t*)BX_ALLOC(&allocator, inputSize);
+			bx::read(&reader, inputData, inputSize, &err);
+			bx::close(&reader);
+
+			bimg::ImageContainer* input = bimg::imageParse(&allocator, inputData, inputSize, bimg::TextureFormat::Count, &err);
+			if (!err.isOk() )
+			{
+				help("Failed to validate file.", err);
+				return bx::kExitFailure;
+			}
+
+			if (false
+			||  input->m_format    != output->m_format
+			||  input->m_size      != output->m_size
+			||  input->m_width     != output->m_width
+			||  input->m_height    != output->m_height
+			||  input->m_depth     != output->m_depth
+			||  input->m_numLayers != output->m_numLayers
+			||  input->m_numMips   != output->m_numMips
+			||  input->m_hasAlpha  != output->m_hasAlpha
+			||  input->m_cubeMap   != output->m_cubeMap
+			   )
+			{
+				help("Validation failed, image headers are different.");
+				return bx::kExitFailure;
+			}
+
+			{
+				const uint8_t  numMips  = output->m_numMips;
+				const uint16_t numSides = output->m_numLayers * (output->m_cubeMap ? 6 : 1);
+
+				for (uint8_t lod = 0; lod < numMips; ++lod)
+				{
+					for (uint16_t side = 0; side < numSides; ++side)
+					{
+						bimg::ImageMip srcMip;
+						bool hasSrc = bimg::imageGetRawData(*input, side, lod, input->m_data, input->m_size, srcMip);
+
+						bimg::ImageMip dstMip;
+						bool hasDst = bimg::imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
+
+						if (false
+						||  hasSrc        != hasDst
+						||  srcMip.m_size != dstMip.m_size
+						   )
+						{
+							help("Validation failed, image mip/layer/side are different.");
+							return bx::kExitFailure;
+						}
+
+						if (0 != bx::memCmp(srcMip.m_data, dstMip.m_data, srcMip.m_size) )
+						{
+							help("Validation failed, image content are different.");
+							return bx::kExitFailure;
+						}
+					}
+				}
+			}
+
+			BX_FREE(&allocator, inputData);
 		}
 
 		bimg::imageFree(output);
