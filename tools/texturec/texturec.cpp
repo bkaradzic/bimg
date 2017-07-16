@@ -7,7 +7,7 @@
 #include <bx/allocator.h>
 #include <bx/readerwriter.h>
 #include <bx/endian.h>
-#include <bx/fpumath.h>
+#include <bx/math.h>
 
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -20,7 +20,7 @@
 
 #include <bx/bx.h>
 #include <bx/commandline.h>
-#include <bx/crtimpl.h>
+#include <bx/file.h>
 #include <bx/uint32_t.h>
 
 #include <string>
