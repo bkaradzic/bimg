@@ -615,6 +615,9 @@ namespace bimg
 							uint16_t u16;
 							bx::readHE(&reader, u16, littleEndian, &err);
 
+							uint16_t pad;
+							bx::read(&reader, pad, &err);
+
 							switch (u16)
 							{
 							default:
