@@ -1756,21 +1756,22 @@ namespace bimg
 
 		ImageContainer* imageContainer = (ImageContainer*)BX_ALLOC(_allocator, size + sizeof(ImageContainer) );
 
-		imageContainer->m_allocator = _allocator;
-		imageContainer->m_data      = imageContainer + 1;
-		imageContainer->m_format    = _format;
-		imageContainer->m_size      = size;
-		imageContainer->m_offset    = 0;
-		imageContainer->m_width     = _width;
-		imageContainer->m_height    = _height;
-		imageContainer->m_depth     = _depth;
-		imageContainer->m_numLayers = _numLayers;
-		imageContainer->m_numMips   = numMips;
-		imageContainer->m_hasAlpha  = false;
-		imageContainer->m_cubeMap   = _cubeMap;
-		imageContainer->m_ktx       = false;
-		imageContainer->m_ktxLE     = false;
-		imageContainer->m_srgb      = false;
+		imageContainer->m_allocator   = _allocator;
+		imageContainer->m_data        = imageContainer + 1;
+		imageContainer->m_format      = _format;
+		imageContainer->m_orientation = Orientation::R0;
+		imageContainer->m_size        = size;
+		imageContainer->m_offset      = 0;
+		imageContainer->m_width       = _width;
+		imageContainer->m_height      = _height;
+		imageContainer->m_depth       = _depth;
+		imageContainer->m_numLayers   = _numLayers;
+		imageContainer->m_numMips     = numMips;
+		imageContainer->m_hasAlpha    = false;
+		imageContainer->m_cubeMap     = _cubeMap;
+		imageContainer->m_ktx         = false;
+		imageContainer->m_ktxLE       = false;
+		imageContainer->m_srgb        = false;
 
 		if (NULL != _data)
 		{
@@ -2171,21 +2172,22 @@ namespace bimg
 			return false;
 		}
 
-		_imageContainer.m_allocator = NULL;
-		_imageContainer.m_data      = NULL;
-		_imageContainer.m_size      = 0;
-		_imageContainer.m_offset    = (uint32_t)bx::seek(_reader);
-		_imageContainer.m_width     = width;
-		_imageContainer.m_height    = height;
-		_imageContainer.m_depth     = depth;
-		_imageContainer.m_format    = format;
-		_imageContainer.m_numLayers = uint16_t(arraySize);
-		_imageContainer.m_numMips   = uint8_t( (caps[0] & DDSCAPS_MIPMAP) ? mips : 1);
-		_imageContainer.m_hasAlpha  = hasAlpha;
-		_imageContainer.m_cubeMap   = cubeMap;
-		_imageContainer.m_ktx       = false;
-		_imageContainer.m_ktxLE     = false;
-		_imageContainer.m_srgb      = srgb;
+		_imageContainer.m_allocator   = NULL;
+		_imageContainer.m_data        = NULL;
+		_imageContainer.m_size        = 0;
+		_imageContainer.m_offset      = (uint32_t)bx::seek(_reader);
+		_imageContainer.m_width       = width;
+		_imageContainer.m_height      = height;
+		_imageContainer.m_depth       = depth;
+		_imageContainer.m_format      = format;
+		_imageContainer.m_orientation = Orientation::R0;
+		_imageContainer.m_numLayers   = uint16_t(arraySize);
+		_imageContainer.m_numMips     = uint8_t( (caps[0] & DDSCAPS_MIPMAP) ? mips : 1);
+		_imageContainer.m_hasAlpha    = hasAlpha;
+		_imageContainer.m_cubeMap     = cubeMap;
+		_imageContainer.m_ktx         = false;
+		_imageContainer.m_ktxLE       = false;
+		_imageContainer.m_srgb        = srgb;
 
 		return true;
 	}
@@ -2491,21 +2493,22 @@ namespace bimg
 			}
 		}
 
-		_imageContainer.m_allocator = NULL;
-		_imageContainer.m_data      = NULL;
-		_imageContainer.m_size      = 0;
-		_imageContainer.m_offset    = (uint32_t)offset;
-		_imageContainer.m_width     = width;
-		_imageContainer.m_height    = height;
-		_imageContainer.m_depth     = depth;
-		_imageContainer.m_format    = format;
-		_imageContainer.m_numLayers = uint16_t(bx::uint32_max(numberOfArrayElements, 1) );
-		_imageContainer.m_numMips   = uint8_t(bx::uint32_max(numMips, 1) );
-		_imageContainer.m_hasAlpha  = hasAlpha;
-		_imageContainer.m_cubeMap   = numFaces > 1;
-		_imageContainer.m_ktx       = true;
-		_imageContainer.m_ktxLE     = fromLittleEndian;
-		_imageContainer.m_srgb      = false;
+		_imageContainer.m_allocator   = NULL;
+		_imageContainer.m_data        = NULL;
+		_imageContainer.m_size        = 0;
+		_imageContainer.m_offset      = (uint32_t)offset;
+		_imageContainer.m_width       = width;
+		_imageContainer.m_height      = height;
+		_imageContainer.m_depth       = depth;
+		_imageContainer.m_format      = format;
+		_imageContainer.m_orientation = Orientation::R0;
+		_imageContainer.m_numLayers   = uint16_t(bx::uint32_max(numberOfArrayElements, 1) );
+		_imageContainer.m_numMips     = uint8_t(bx::uint32_max(numMips, 1) );
+		_imageContainer.m_hasAlpha    = hasAlpha;
+		_imageContainer.m_cubeMap     = numFaces > 1;
+		_imageContainer.m_ktx         = true;
+		_imageContainer.m_ktxLE       = fromLittleEndian;
+		_imageContainer.m_srgb        = false;
 
 		if (TextureFormat::Unknown == format)
 		{
@@ -2655,21 +2658,22 @@ namespace bimg
 			}
 		}
 
-		_imageContainer.m_allocator = NULL;
-		_imageContainer.m_data      = NULL;
-		_imageContainer.m_size      = 0;
-		_imageContainer.m_offset    = (uint32_t)offset;
-		_imageContainer.m_width     = width;
-		_imageContainer.m_height    = height;
-		_imageContainer.m_depth     = depth;
-		_imageContainer.m_format    = format;
-		_imageContainer.m_numLayers = 1;
-		_imageContainer.m_numMips   = uint8_t(bx::uint32_max(numMips, 1) );
-		_imageContainer.m_hasAlpha  = hasAlpha;
-		_imageContainer.m_cubeMap   = numFaces > 1;
-		_imageContainer.m_ktx       = false;
-		_imageContainer.m_ktxLE     = false;
-		_imageContainer.m_srgb      = colorSpace > 0;
+		_imageContainer.m_allocator   = NULL;
+		_imageContainer.m_data        = NULL;
+		_imageContainer.m_size        = 0;
+		_imageContainer.m_offset      = (uint32_t)offset;
+		_imageContainer.m_width       = width;
+		_imageContainer.m_height      = height;
+		_imageContainer.m_depth       = depth;
+		_imageContainer.m_format      = format;
+		_imageContainer.m_orientation = Orientation::R0;
+		_imageContainer.m_numLayers   = 1;
+		_imageContainer.m_numMips     = uint8_t(bx::uint32_max(numMips, 1) );
+		_imageContainer.m_hasAlpha    = hasAlpha;
+		_imageContainer.m_cubeMap     = numFaces > 1;
+		_imageContainer.m_ktx         = false;
+		_imageContainer.m_ktxLE       = false;
+		_imageContainer.m_srgb        = colorSpace > 0;
 
 		return TextureFormat::Unknown != format;
 	}
@@ -2703,9 +2707,10 @@ namespace bimg
 			TextureCreate tc;
 			bx::read(_reader, tc);
 
-			_imageContainer.m_format = tc.m_format;
-			_imageContainer.m_offset = UINT32_MAX;
-			_imageContainer.m_allocator = NULL;
+			_imageContainer.m_format      = tc.m_format;
+			_imageContainer.m_orientation = Orientation::R0;
+			_imageContainer.m_offset      = UINT32_MAX;
+			_imageContainer.m_allocator   = NULL;
 			if (NULL == tc.m_mem)
 			{
 				_imageContainer.m_data = NULL;
