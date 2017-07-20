@@ -610,7 +610,12 @@ namespace bimg
 					case 0x112: // orientation
 						if (3 == format)
 						{
-							switch (data)
+							bx::seek(&reader, -4);
+
+							uint16_t u16;
+							bx::readHE(&reader, u16, littleEndian, &err);
+
+							switch (u16)
 							{
 							default:
 							case 1: orientation = Orientation::R0;   break; // Horizontal (normal)
