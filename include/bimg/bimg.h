@@ -143,6 +143,10 @@ namespace bimg
 			R90,
 			R180,
 			R270,
+			HFlip,
+			HFlipR90,
+			HFlipR270,
+			VFlip,
 		};
 	};
 

@@ -1995,6 +1995,7 @@ namespace bimg
 		{ 16, DDPF_RGB,                  { 0x0000f800, 0x000007e0, 0x0000001f, 0x00000000 }, TextureFormat::R5G6B5  },
 		{ 16, DDPF_RGB,                  { 0x00007c00, 0x000003e0, 0x0000001f, 0x00008000 }, TextureFormat::RGB5A1  },
 		{ 24, DDPF_RGB,                  { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::RGB8    },
+		{ 32, DDPF_RGB,                  { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::BGRA8   },
 		{ 32, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 }, TextureFormat::RGBA8   },
 		{ 32, DDPF_BUMPDUDV,             { 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 }, TextureFormat::RGBA8S  },
 		{ 32, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }, TextureFormat::BGRA8   }, // D3DFMT_A8R8G8B8

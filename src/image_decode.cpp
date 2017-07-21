@@ -621,14 +621,14 @@ namespace bimg
 							switch (u16)
 							{
 							default:
-							case 1: orientation = Orientation::R0;   break; // Horizontal (normal)
-							case 2: orientation = Orientation::R0;   break; // Mirror horizontal
-							case 3: orientation = Orientation::R180; break; // Rotate 180
-							case 4: orientation = Orientation::R0;   break; // Mirror vertical
-							case 5: orientation = Orientation::R0;   break; // Mirror horizontal and rotate 270 CW
-							case 6: orientation = Orientation::R90;  break; // Rotate 90 CW
-							case 7: orientation = Orientation::R0;   break; // Mirror horizontal and rotate 90 CW
-							case 8: orientation = Orientation::R270; break; // Rotate 270 CW
+							case 1: orientation = Orientation::R0;        break; // Horizontal (normal)
+							case 2: orientation = Orientation::HFlip;     break; // Mirror horizontal
+							case 3: orientation = Orientation::R180;      break; // Rotate 180
+							case 4: orientation = Orientation::VFlip;     break; // Mirror vertical
+							case 5: orientation = Orientation::HFlipR270; break; // Mirror horizontal and rotate 270 CW
+							case 6: orientation = Orientation::R90;       break; // Rotate 90 CW
+							case 7: orientation = Orientation::HFlipR90;  break; // Mirror horizontal and rotate 90 CW
+							case 8: orientation = Orientation::R270;      break; // Rotate 270 CW
 							}
 						}
 						break;
