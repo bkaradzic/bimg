@@ -21,4 +21,9 @@ project "bimg"
 			"-fPIC",
 		}
 
+	configuration { "ios-*" }
+		buildoptions {
+			"-fembed-bitcode",
+		}
+
 	configuration {}
