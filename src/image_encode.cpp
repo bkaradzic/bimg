@@ -35,12 +35,18 @@ namespace bimg
 	};
 	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_squishQuality) );
 
-	void imageEncodeFromRgba8(void* _dstX, const void* _srcX, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
+	void imageEncodeFromRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
 	{
-		const uint8_t* src = (const uint8_t*)_srcX;
-		uint8_t* dst = (uint8_t*)_dstX;
+		const uint8_t* src = (const uint8_t*)_src;
+		uint8_t* dst = (uint8_t*)_dst;
 
-		for (uint32_t zz = 0; zz < _depth && _err->isOk(); ++zz)
+		const uint32_t srcPitch = _width*4;
+		const uint32_t srcSlice = _height*srcPitch;
+		const uint32_t dstBpp   = getBitsPerPixel(_format);
+		const uint32_t dstPitch = _width*dstBpp/8;
+		const uint32_t dstSlice = _height*dstPitch;
+
+		for (uint32_t zz = 0; zz < _depth && _err->isOk(); ++zz, src += srcSlice, dst += dstSlice)
 		{
 			switch (_format)
 			{
@@ -75,18 +81,17 @@ namespace bimg
 				{
 					const uint32_t blockWidth  = (_width +3)/4;
 					const uint32_t blockHeight = (_height+3)/4;
-					const uint32_t pitch = _width*4;
 					uint64_t* dstBlock = (uint64_t*)dst;
 					for (uint32_t yy = 0; yy < blockHeight; ++yy)
 					{
 						for (uint32_t xx = 0; xx < blockWidth; ++xx)
 						{
 							uint8_t block[4*4*4];
-							const uint8_t* ptr = &src[(yy*pitch+xx*4)*4];
+							const uint8_t* ptr = &src[(yy*srcPitch+xx*4)*4];
 
 							for (uint32_t ii = 0; ii < 16; ++ii)
 							{ // BGRx
-								bx::memCopy(&block[ii*4], &ptr[(ii%4)*pitch + (ii&~3)], 4);
+								bx::memCopy(&block[ii*4], &ptr[(ii%4)*srcPitch + (ii&~3)], 4);
 								bx::xchg(block[ii*4+0], block[ii*4+2]);
 							}
 
@@ -121,11 +126,11 @@ namespace bimg
 				break;
 
 			case TextureFormat::BGRA8:
-				imageSwizzleBgra8(dst, _width, _height, _width*4, src);
+				imageSwizzleBgra8(dst, _width, _height, srcPitch, src);
 				break;
 
 			case TextureFormat::RGBA8:
-				bx::memCopy(dst, src, _width*_height*4);
+				bx::memCopy(dst, src, srcSlice);
 				break;
 
 			default:
