@@ -341,7 +341,7 @@ namespace bimg
 				  (const float*)srcData, _src->m_width, _src->m_height, _src->m_width*16
 				, (      float*)dstData, _dst->m_width, _dst->m_height, _dst->m_width*16
 				, 4, 3
-				, 0
+				, STBIR_FLAG_ALPHA_PREMULTIPLIED
 				, STBIR_EDGE_CLAMP
 				, STBIR_FILTER_DEFAULT
 				, STBIR_COLORSPACE_LINEAR
