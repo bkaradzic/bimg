@@ -451,6 +451,18 @@ namespace bimg
 		);
 
 	///
+	int32_t imageWritePng(
+		  bx::WriterI* _writer
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, bool _grayscale
+		, bool _yflip
+		, bx::Error* _err = NULL
+		);
+
+	///
 	int32_t imageWriteDds(
 		  bx::WriterI* _writer
 		, ImageContainer& _imageContainer
