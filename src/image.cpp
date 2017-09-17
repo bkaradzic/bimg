@@ -4,6 +4,7 @@
  */
 
 #include "bimg_p.h"
+#include <bx/hash.h>
 
 namespace bimg
 {
@@ -3283,7 +3284,7 @@ namespace bimg
 		uint32_t dstPitch = _width*bpp/8;
 		if (_yflip)
 		{
-			uint8_t* data = (uint8_t*)_src + _srcPitch*_height - _srcPitch;
+			const uint8_t* data = (const uint8_t*)_src + _srcPitch*_height - _srcPitch;
 			for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
 			{
 				total += bx::write(_writer, data, dstPitch, _err);
@@ -3296,13 +3297,129 @@ namespace bimg
 		}
 		else
 		{
-			uint8_t* data = (uint8_t*)_src;
+			const uint8_t* data = (const uint8_t*)_src;
 			for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
 			{
 				total += bx::write(_writer, data, dstPitch, _err);
 				data += _srcPitch;
 			}
 		}
+
+		return total;
+	}
+
+	template<typename Ty>
+	class HashWriter : public bx::WriterI
+	{
+	public:
+		HashWriter(bx::WriterI* _writer)
+			: m_writer(_writer)
+		{
+		}
+
+		void begin()
+		{
+			m_hash.begin();
+		}
+
+		uint32_t end()
+		{
+			return m_hash.end();
+		}
+
+		virtual int32_t write(const void* _data, int32_t _size, bx::Error* _err) override
+		{
+			m_hash.add(_data, _size);
+			return m_writer->write(_data, _size, _err);
+		}
+
+	private:
+		Ty m_hash;
+		bx::WriterI* m_writer;
+	};
+
+	int32_t imageWritePng(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, bool _grayscale, bool _yflip, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		HashWriter<bx::HashCrc32> writer(_writer);
+
+		int32_t total = 0;
+		total += bx::write(&writer, "\x89PNG\r\n\x1a\n", _err);
+
+		total += bx::write(&writer, bx::toBigEndian<uint32_t>(13), _err);
+		writer.begin();
+		total += bx::write(&writer, "IHDR", _err);
+		total += bx::write(&writer, bx::toBigEndian(_width),  _err);
+		total += bx::write(&writer, bx::toBigEndian(_height), _err);
+		total += bx::write(&writer, "\x08\x06", _err);
+		total += bx::writeRep(&writer, 0, 3, _err);
+		total += bx::write(&writer, bx::toBigEndian(writer.end() ), _err);
+
+		const uint8_t* src = (const uint8_t*)_src;
+		const uint32_t bpp = _grayscale ? 8 : 32;
+		const uint32_t stride = _width*bpp/8;
+		const uint16_t zlen   = bx::toLittleEndian<uint16_t>(stride + 1);
+		const uint16_t zlenC  = bx::toLittleEndian<uint16_t>(~zlen);
+
+		total += bx::write(&writer, bx::toBigEndian<uint32_t>(_height*(stride+6)+6), _err);
+
+		writer.begin();
+		total += bx::write(&writer, "IDAT", _err);
+		total += bx::write(&writer, "\x78\x9c", _err);
+
+		bx::HashAdler32 chksum;
+		chksum.begin();
+
+		const uint8_t* data = (const uint8_t*)_src;
+		int32_t step = int32_t(_srcPitch);
+		if (_yflip)
+		{
+			data += _srcPitch*_height - _srcPitch;
+			step = -step;
+		}
+
+		for (uint32_t ii = 0; ii < _height && _err->isOk(); ++ii)
+		{
+			chksum.add(0);
+			chksum.add(&src[ii*_srcPitch], stride);
+
+			total += bx::write(&writer, uint8_t(ii == _height-1 ? 1 : 0), _err);
+
+			total += bx::write(&writer, zlen,  _err);
+			total += bx::write(&writer, zlenC, _err);
+
+			total += bx::write(&writer, uint8_t(0), _err);
+
+			if (_grayscale)
+			{
+				total += bx::write(&writer, data, stride, _err);
+			}
+			else
+			{
+				for (uint32_t xx = 0; xx < _width; ++xx)
+				{
+					const uint8_t* bgra = &data[xx*4];
+					const uint8_t bb = bgra[0];
+					const uint8_t gg = bgra[1];
+					const uint8_t rr = bgra[2];
+					const uint8_t aa = bgra[3];
+					total += bx::write(&writer, rr, _err);
+					total += bx::write(&writer, gg, _err);
+					total += bx::write(&writer, bb, _err);
+					total += bx::write(&writer, aa, _err);
+				}
+			}
+
+			data += step;
+		}
+		total += bx::write(&writer, bx::toBigEndian(chksum.end() ), _err);
+		total += bx::write(&writer, bx::toBigEndian(writer.end() ), _err);
+
+		writer.begin();
+		total += bx::write(&writer, uint32_t(0), _err);
+		total += bx::write(&writer, "IEND", _err);
+		total += bx::write(&writer, bx::toBigEndian(writer.end() ), _err);
 
 		return total;
 	}
