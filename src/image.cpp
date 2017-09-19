@@ -3359,7 +3359,7 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 		const uint32_t bpp = _grayscale ? 8 : 32;
 		const uint32_t stride = _width*bpp/8;
-		const uint16_t zlen   = bx::toLittleEndian<uint16_t>(stride + 1);
+		const uint16_t zlen   = bx::toLittleEndian<uint16_t>(uint16_t(stride + 1) );
 		const uint16_t zlenC  = bx::toLittleEndian<uint16_t>(~zlen);
 
 		total += bx::write(&writer, bx::toBigEndian<uint32_t>(_height*(stride+6)+6), _err);
