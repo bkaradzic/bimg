@@ -3355,7 +3355,7 @@ namespace bimg
 		total += bx::writeRep(&writerC, 0, 3, _err);
 		total += bx::write(_writer, bx::toBigEndian(writerC.end() ), _err);
 
-		const uint32_t bpp = _grayscale ? 8 : 32;
+		const uint32_t bpp    = _grayscale ? 8 : 32;
 		const uint32_t stride = _width*bpp/8;
 		const uint16_t zlen   = bx::toLittleEndian<uint16_t>(stride + 1);
 		const uint16_t zlenC  = bx::toLittleEndian<uint16_t>(~zlen);
@@ -3366,8 +3366,6 @@ namespace bimg
 		total += bx::write(&writerC, "IDAT", _err);
 		total += bx::write(&writerC, "\x78\x9c", _err);
 
-		HashWriter<bx::HashAdler32> writerA(&writerC);
-
 		const uint8_t* data = (const uint8_t*)_src;
 		int32_t step = int32_t(_srcPitch);
 		if (_yflip)
@@ -3375,6 +3373,8 @@ namespace bimg
 			data += _srcPitch*_height - _srcPitch;
 			step = -step;
 		}
+
+		HashWriter<bx::HashAdler32> writerA(&writerC);
 
 		for (uint32_t ii = 0; ii < _height && _err->isOk(); ++ii)
 		{
