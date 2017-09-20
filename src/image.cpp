@@ -629,14 +629,16 @@ namespace bimg
 		imageRgba32fDownsample2x2NormalMapRef(_dst, _width, _height, _srcPitch, _src);
 	}
 
-	void imageSwizzleBgra8Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
+	void imageSwizzleBgra8Ref(void* _dst, uint32_t _dstPitch, uint32_t _width, uint32_t _height, const void* _src, uint32_t _srcPitch)
 	{
-		const uint8_t* src = (uint8_t*) _src;
-		const uint8_t* next = src + _srcPitch;
-		uint8_t* dst = (uint8_t*)_dst;
+		const uint8_t* srcData = (uint8_t*) _src;
+		uint8_t* dstData = (uint8_t*)_dst;
 
-		for (uint32_t yy = 0; yy < _height; ++yy, src = next, next += _srcPitch)
+		for (uint32_t yy = 0; yy < _height; ++yy, srcData += _srcPitch, dstData += _dstPitch)
 		{
+			const uint8_t* src = srcData;
+			uint8_t* dst = dstData;
+
 			for (uint32_t xx = 0; xx < _width; ++xx, src += 4, dst += 4)
 			{
 				uint8_t rr = src[0];
@@ -651,7 +653,7 @@ namespace bimg
 		}
 	}
 
-	void imageSwizzleBgra8(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
+	void imageSwizzleBgra8(void* _dst, uint32_t _dstPitch, uint32_t _width, uint32_t _height, const void* _src, uint32_t _srcPitch)
 	{
 		// Test can we do four 4-byte pixels at the time.
 		if (0 != (_width&0x3)
@@ -663,7 +665,7 @@ namespace bimg
 			BX_WARN(bx::isAligned(_src, 16), "Source %p is not 16-byte aligned.", _src);
 			BX_WARN(bx::isAligned(_dst, 16), "Destination %p is not 16-byte aligned.", _dst);
 			BX_WARN(_width < 4, "Image width must be multiple of 4 (width %d).", _width);
-			imageSwizzleBgra8Ref(_dst, _width, _height, _srcPitch, _src);
+			imageSwizzleBgra8Ref(_dst, _dstPitch, _width, _height, _src, _srcPitch);
 			return;
 		}
 
@@ -671,14 +673,16 @@ namespace bimg
 
 		const simd128_t mf0f0 = simd_isplat(0xff00ff00);
 		const simd128_t m0f0f = simd_isplat(0x00ff00ff);
-		const uint8_t* src = (uint8_t*) _src;
-		const uint8_t* next = src + _srcPitch;
-		uint8_t* dst = (uint8_t*)_dst;
+		const uint32_t  width = _width/4;
 
-		const uint32_t width = _width/4;
+		const uint8_t* srcData = (uint8_t*) _src;
+		uint8_t* dstData = (uint8_t*)_dst;
 
-		for (uint32_t yy = 0; yy < _height; ++yy, src = next, next += _srcPitch)
+		for (uint32_t yy = 0; yy < _height; ++yy, srcData += _srcPitch, dstData += _dstPitch)
 		{
+			const uint8_t* src = srcData;
+			uint8_t* dst = dstData;
+
 			for (uint32_t xx = 0; xx < width; ++xx, src += 16, dst += 16)
 			{
 				const simd128_t tabgr = simd_ld(src);
@@ -2964,11 +2968,18 @@ namespace bimg
 			break;
 
 		case TextureFormat::RGBA8:
-			imageSwizzleBgra8(_dst, _width, _height, _dstPitch, _src);
+			{
+				const uint32_t srcPitch = _width * 4;
+				imageSwizzleBgra8(_dst, _dstPitch, _width, _height, _src, srcPitch);
+			}
 			break;
 
 		case TextureFormat::BGRA8:
-			bx::memCopy(_dst, _src, _dstPitch*_height);
+			{
+				const uint32_t srcPitch = _width * 4;
+				const uint32_t size = bx::uint32_min(srcPitch, _dstPitch);
+				bx::memCopy(_dst, _src, size, _height, srcPitch, _dstPitch);
+			}
 			break;
 
 		default:
@@ -2990,16 +3001,26 @@ namespace bimg
 		switch (_srcFormat)
 		{
 		case TextureFormat::RGBA8:
-			bx::memCopy(_dst, _src, _dstPitch*_height);
+			{
+				const uint32_t srcPitch = _width * 4;
+				const uint32_t size = bx::uint32_min(srcPitch, _dstPitch);
+				bx::memCopy(_dst, _src, size, _height, srcPitch, _dstPitch);
+			}
 			break;
 
 		case TextureFormat::BGRA8:
-			imageSwizzleBgra8(_dst, _width, _height, _dstPitch, _src);
+			{
+				const uint32_t srcPitch = _width * 4;
+				imageSwizzleBgra8(_dst, _dstPitch, _width, _height, _src, srcPitch);
+			}
 			break;
 
 		default:
-			imageDecodeToBgra8(_dst, _src, _width, _height, _dstPitch, _srcFormat);
-			imageSwizzleBgra8(_dst, _width, _height, _dstPitch, _dst);
+			{
+				const uint32_t srcPitch = _width * 4;
+				imageDecodeToBgra8(_dst, _src, _width, _height, _dstPitch, _srcFormat);
+				imageSwizzleBgra8(_dst, _dstPitch, _width, _height, _dst, srcPitch);
+			}
 			break;
 		}
 	}
