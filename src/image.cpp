@@ -3430,8 +3430,8 @@ namespace bimg
 		total += bx::write(&writerC, bx::toBigEndian(writerA.end() ), _err);
 		total += bx::write(_writer,  bx::toBigEndian(writerC.end() ), _err);
 
-		writerC.begin();
 		total += bx::write(&writerC, uint32_t(0), _err);
+		writerC.begin();
 		total += bx::write(&writerC, "IEND", _err);
 		total += bx::write(_writer,  bx::toBigEndian(writerC.end() ), _err);
 
