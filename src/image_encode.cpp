@@ -126,11 +126,11 @@ namespace bimg
 				break;
 
 			case TextureFormat::BGRA8:
-				imageSwizzleBgra8(dst, _width, _height, srcPitch, src);
+				imageSwizzleBgra8(dst, dstPitch, _width, _height, src, srcPitch);
 				break;
 
 			case TextureFormat::RGBA8:
-				bx::memCopy(dst, src, srcSlice);
+				bx::memCopy(_dst, _src, srcPitch, _height, srcPitch, dstPitch);
 				break;
 
 			default:
