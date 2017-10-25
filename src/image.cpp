@@ -288,7 +288,7 @@ namespace bimg
 			height = bx::uint32_max(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 			depth  = bx::uint32_max(1, depth);
 
-			size += width*height*depth*bpp/8 * sides;
+			size += uint32_t(uint64_t(width*height*depth)*bpp/8 * sides);
 
 			width  >>= 1;
 			height >>= 1;
