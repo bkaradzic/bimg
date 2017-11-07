@@ -315,8 +315,10 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					BX_FREE(_allocator, rgbaDst);
 				}
-				else if (!bimg::isCompressed(input->m_format)
-					 &&  8 != inputBlockInfo.rBits)
+				else if ( (!bimg::isCompressed(input->m_format) && 8 != inputBlockInfo.rBits)
+					 || outputFormat == bimg::TextureFormat::BC6H
+					 || outputFormat == bimg::TextureFormat::BC7
+						)
 				{
 					uint32_t size = bimg::imageGetSize(
 						  NULL

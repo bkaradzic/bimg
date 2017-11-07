@@ -66,11 +66,8 @@ namespace bimg
 				break;
 
 			case TextureFormat::BC6H:
-				nvtt::compressBC6H(src, _width, _height, 4, dst);
-				break;
-
 			case TextureFormat::BC7:
-				nvtt::compressBC7(src, _width, _height, 4, dst);
+				BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
 				break;
 
 			case TextureFormat::ETC1:
@@ -149,40 +146,53 @@ namespace bimg
 
 		const uint8_t* src = (const uint8_t*)_src;
 
-		if (!imageConvert(_dst, _dstFormat, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
+		switch (_dstFormat)
 		{
-			uint8_t* temp = (uint8_t*)BX_ALLOC(_allocator, _width*_height*_depth*4);
-			if (imageConvert(temp, TextureFormat::RGBA8, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
+		case TextureFormat::BC6H:
+			nvtt::compressBC6H(src, _width, _height, _width*16, _dst);
+			break;
+
+		case TextureFormat::BC7:
+			nvtt::compressBC7(src, _width, _height, _width*16, _dst);
+			break;
+
+		default:
+			if (!imageConvert(_dst, _dstFormat, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
 			{
-				for (uint32_t zz = 0; zz < _depth; ++zz)
+				uint8_t* temp = (uint8_t*)BX_ALLOC(_allocator, _width*_height*_depth*4);
+				if (imageConvert(temp, TextureFormat::RGBA8, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
 				{
-					const uint32_t zoffset = zz*_width*_height;
-
-					for (uint32_t yy = 0; yy < _height; ++yy)
+					for (uint32_t zz = 0; zz < _depth; ++zz)
 					{
-						const uint32_t yoffset = zoffset + yy*_width;
+						const uint32_t zoffset = zz*_width*_height;
 
-						for (uint32_t xx = 0; xx < _width; ++xx)
+						for (uint32_t yy = 0; yy < _height; ++yy)
 						{
-							const uint32_t offset = yoffset + xx;
-							const float* input = (const float*)&src[offset * 16];
-							uint8_t* output    = &temp[offset * 4];
-							output[0] = uint8_t(bx::fsaturate(input[0])*255.0f + 0.5f);
-							output[1] = uint8_t(bx::fsaturate(input[1])*255.0f + 0.5f);
-							output[2] = uint8_t(bx::fsaturate(input[2])*255.0f + 0.5f);
-							output[3] = uint8_t(bx::fsaturate(input[3])*255.0f + 0.5f);
+							const uint32_t yoffset = zoffset + yy*_width;
+
+							for (uint32_t xx = 0; xx < _width; ++xx)
+							{
+								const uint32_t offset = yoffset + xx;
+								const float* input = (const float*)&src[offset * 16];
+								uint8_t* output    = &temp[offset * 4];
+								output[0] = uint8_t(bx::fsaturate(input[0])*255.0f + 0.5f);
+								output[1] = uint8_t(bx::fsaturate(input[1])*255.0f + 0.5f);
+								output[2] = uint8_t(bx::fsaturate(input[2])*255.0f + 0.5f);
+								output[3] = uint8_t(bx::fsaturate(input[3])*255.0f + 0.5f);
+							}
 						}
 					}
+
+					imageEncodeFromRgba8(_dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+				}
+				else
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
 				}
 
-				imageEncodeFromRgba8(_dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+				BX_FREE(_allocator, temp);
 			}
-			else
-			{
-				BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
-			}
-
-			BX_FREE(_allocator, temp);
+			break;
 		}
 	}
 
