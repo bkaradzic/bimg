@@ -333,21 +333,6 @@ namespace bimg
 		BX_FREE(_allocator, gy);
 	}
 
-	inline double min(double _a, double _b)
-	{
-		return _a > _b ? _b : _a;
-	}
-
-	inline double max(double _a, double _b)
-	{
-		return _a > _b ? _a : _b;
-	}
-
-	inline double clamp(double _val, double _min, double _max)
-	{
-		return max(min(_val, _max), _min);
-	}
-
 	void imageMakeDist(bx::AllocatorI* _allocator, void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, float _edge, const void* _src)
 	{
 		const uint32_t numPixels = _width*_height;
@@ -384,7 +369,7 @@ namespace bimg
 
 		for (uint32_t ii = 0; ii < numPixels; ++ii)
 		{
-			double dist = clamp( ( (outside[ii] - inside[ii])+edgeOffset) * invEdge, 0.0, 1.0);
+			double dist = bx::clamp( ( (outside[ii] - inside[ii])+edgeOffset) * invEdge, 0.0, 1.0);
 			dst[ii] = 255-uint8_t(dist * 255.0);
 		}
 
