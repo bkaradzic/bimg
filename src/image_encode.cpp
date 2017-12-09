@@ -175,10 +175,10 @@ namespace bimg
 								const uint32_t offset = yoffset + xx;
 								const float* input = (const float*)&src[offset * 16];
 								uint8_t* output    = &temp[offset * 4];
-								output[0] = uint8_t(bx::fsaturate(input[0])*255.0f + 0.5f);
-								output[1] = uint8_t(bx::fsaturate(input[1])*255.0f + 0.5f);
-								output[2] = uint8_t(bx::fsaturate(input[2])*255.0f + 0.5f);
-								output[3] = uint8_t(bx::fsaturate(input[3])*255.0f + 0.5f);
+								output[0] = uint8_t(bx::clamp(input[0], 0.0f, 1.0f)*255.0f + 0.5f);
+								output[1] = uint8_t(bx::clamp(input[1], 0.0f, 1.0f)*255.0f + 0.5f);
+								output[2] = uint8_t(bx::clamp(input[2], 0.0f, 1.0f)*255.0f + 0.5f);
+								output[3] = uint8_t(bx::clamp(input[3], 0.0f, 1.0f)*255.0f + 0.5f);
 							}
 						}
 					}
@@ -333,21 +333,6 @@ namespace bimg
 		BX_FREE(_allocator, gy);
 	}
 
-	inline double min(double _a, double _b)
-	{
-		return _a > _b ? _b : _a;
-	}
-
-	inline double max(double _a, double _b)
-	{
-		return _a > _b ? _a : _b;
-	}
-
-	inline double clamp(double _val, double _min, double _max)
-	{
-		return max(min(_val, _max), _min);
-	}
-
 	void imageMakeDist(bx::AllocatorI* _allocator, void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, float _edge, const void* _src)
 	{
 		const uint32_t numPixels = _width*_height;
@@ -384,7 +369,7 @@ namespace bimg
 
 		for (uint32_t ii = 0; ii < numPixels; ++ii)
 		{
-			double dist = clamp( ( (outside[ii] - inside[ii])+edgeOffset) * invEdge, 0.0, 1.0);
+			double dist = bx::clamp( ( (outside[ii] - inside[ii])+edgeOffset) * invEdge, 0.0, 1.0);
 			dst[ii] = 255-uint8_t(dist * 255.0);
 		}
 
@@ -560,7 +545,7 @@ namespace bimg
 			{
 				float rgba[4];
 				unpack(rgba, data);
-				rgba[3] = bx::fsaturate(rgba[3]*scale);
+				rgba[3] = bx::clamp(rgba[3]*scale, 0.0f, 1.0f);
 				pack(data, rgba);
 			}
 		}

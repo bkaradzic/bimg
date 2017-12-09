@@ -534,6 +534,18 @@ namespace bimg
 		);
 
 	///
+	void imageDecodeToR8(
+		  bx::AllocatorI* _allocator
+		, void* _dst
+		, const void* _src
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _depth
+		, uint32_t _dstPitch
+		, TextureFormat::Enum _srcFormat
+	);
+
+	///
 	void imageDecodeToBgra8(
 		  void* _dst
 		, const void* _src

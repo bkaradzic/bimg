@@ -2775,6 +2775,31 @@ namespace bimg
 		return imageParse(_imageContainer, &reader, _err);
 	}
 
+	void imageDecodeToR8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _dstPitch, TextureFormat::Enum _srcFormat)
+	{
+		const uint8_t* src = (const uint8_t*)_src;
+		uint8_t* dst = (uint8_t*)_dst;
+
+		const uint32_t srcBpp = s_imageBlockInfo[_srcFormat].bitsPerPixel;
+		const uint32_t srcPitch = _width*srcBpp/8;
+
+		for (uint32_t zz = 0; zz < _depth; ++zz, src += _height*srcPitch, dst += _height*_dstPitch)
+		{
+			if (isCompressed(_srcFormat))
+			{
+				uint32_t size = imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, TextureFormat::RGBA8);
+				void* temp = BX_ALLOC(_allocator, size);
+				imageDecodeToRgba8(temp, _src, _width, _height, _width*4, _srcFormat);
+				imageConvert(dst, TextureFormat::R8, temp, TextureFormat::RGBA8, _width, _height, 1, _width*4);
+				BX_FREE(_allocator, temp);
+			}
+			else
+			{
+				imageConvert(dst, TextureFormat::R8, src, _srcFormat, _width, _height, 1, srcPitch);
+			}
+		}
+	}
+
 	void imageDecodeToBgra8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _dstPitch, TextureFormat::Enum _srcFormat)
 	{
 		const uint8_t* src = (const uint8_t*)_src;
