@@ -13,28 +13,6 @@ function filesexist(_srcPath, _dstPath, _files)
 	return true
 end
 
-function overridefiles(_srcPath, _dstPath, _files)
-
-	local remove = {}
-	local add = {}
-	for _, file in ipairs(_files) do
-		file = path.getrelative(_srcPath, file)
-		local filePath = path.join(_dstPath, file)
-		if not os.isfile(filePath) then return end
-
-		table.insert(remove, path.join(_srcPath, file))
-		table.insert(add, filePath)
-	end
-
-	removefiles {
-		remove,
-	}
-
-	files {
-		add,
-	}
-end
-
 project "bimg"
 	kind "StaticLib"
 
@@ -46,11 +24,23 @@ project "bimg"
 	files {
 		path.join(BIMG_DIR, "include/**"),
 		path.join(BIMG_DIR, "src/image.*"),
+		path.join(BIMG_DIR, "src/image_gnf.cpp"),
 	}
 
-	overridefiles(BIMG_DIR, path.join(BIMG_DIR, "../bimg-ext"), {
-		path.join(BIMG_DIR, "src/image_gnf.cpp"),
-	})
+--[[
+	if filesexist(BIMG_DIR, path.join(BIMG_DIR, "../bimg-ext"), {
+		path.join(BIMG_DIR, "scripts/bimg.lua"), }) then
+
+		if filesexist(BIMG_DIR, path.join(BIMG_DIR, "../bimg-ext"), {
+			path.join(BIMG_DIR, "src/image_gnf.cpp"), }) then
+
+			removefiles {
+				path.join(BIMG_DIR, "src/image_gnf.cpp"),
+			}
+		end
+
+		dofile(path.join(BIMG_DIR, "../bimg-ext/scripts/bimg.lua") )
+	end]]
 
 	configuration { "linux-*" }
 		buildoptions {
@@ -58,7 +48,3 @@ project "bimg"
 		}
 
 	configuration {}
-
-	if filesexist(BIMG_DIR, path.join(BIMG_DIR, "../bimg-ext"), { path.join(BIMG_DIR, "scripts/bimg.lua"), }) then
-		dofile(path.join(BIMG_DIR, "../bimg-ext/scripts/bimg.lua") )
-	end

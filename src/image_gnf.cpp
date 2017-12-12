@@ -16,6 +16,8 @@ namespace bimg
 
 	ImageContainer* imageParseGnf(bx::AllocatorI* _allocator, const void* _src, uint32_t _size, bx::Error* _err)
 	{
+		BX_UNUSED(_allocator);
+
 		bx::MemoryReader reader(_src, _size);
 
 		uint32_t magic;
@@ -29,7 +31,7 @@ namespace bimg
 		}
 
 		BX_ERROR_SET(_err, BIMG_ERROR, "GNF: not supported.");
-		return false;
+		return NULL;
 	}
 
 } // namespace bimg
