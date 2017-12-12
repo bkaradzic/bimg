@@ -534,6 +534,14 @@ namespace bimg
 		);
 
 	///
+	ImageContainer* imageParseGnf(
+		  bx::AllocatorI* _allocator
+		, const void* _src
+		, uint32_t _size
+		, bx::Error* _err
+		);
+
+	///
 	void imageDecodeToR8(
 		  bx::AllocatorI* _allocator
 		, void* _dst

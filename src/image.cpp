@@ -2728,6 +2728,10 @@ namespace bimg
 		{
 			return imageParsePvr3(_imageContainer, _reader, _err);
 		}
+		else if (BIMG_CHUNK_MAGIC_GNF == magic)
+		{
+			return imageParseGnf(_imageContainer, _reader, _err);
+		}
 		else if (BIMG_CHUNK_MAGIC_TEX == magic)
 		{
 			TextureCreate tc;
