@@ -27,21 +27,6 @@ project "bimg"
 		path.join(BIMG_DIR, "src/image_gnf.cpp"),
 	}
 
---[[
-	if filesexist(BIMG_DIR, path.join(BIMG_DIR, "../bimg-ext"), {
-		path.join(BIMG_DIR, "scripts/bimg.lua"), }) then
-
-		if filesexist(BIMG_DIR, path.join(BIMG_DIR, "../bimg-ext"), {
-			path.join(BIMG_DIR, "src/image_gnf.cpp"), }) then
-
-			removefiles {
-				path.join(BIMG_DIR, "src/image_gnf.cpp"),
-			}
-		end
-
-		dofile(path.join(BIMG_DIR, "../bimg-ext/scripts/bimg.lua") )
-	end]]
-
 	configuration { "linux-*" }
 		buildoptions {
 			"-fPIC",
