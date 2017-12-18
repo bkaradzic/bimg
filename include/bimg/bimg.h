@@ -484,6 +484,7 @@ namespace bimg
 		, uint32_t _height
 		, uint32_t _depth
 		, uint8_t _numMips
+		, uint32_t _numLayers
 		, const void* _src
 		, bx::Error* _err = NULL
 		);
