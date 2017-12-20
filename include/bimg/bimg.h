@@ -348,6 +348,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _height
 		, uint32_t _srcPitch
+		, uint32_t _depth
 		, const void* _src
 		, uint32_t _dstPitch
 		);
@@ -357,6 +358,7 @@ namespace bimg
 		  void* _dst
 		, uint32_t _width
 		, uint32_t _height
+		, uint32_t _depth
 		, uint32_t _bpp
 		, uint32_t _srcPitch
 		, const void* _src
