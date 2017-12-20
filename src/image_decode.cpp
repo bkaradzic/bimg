@@ -104,7 +104,9 @@ namespace bimg
 			switch (state.info_raw.bitdepth)
 			{
 				case 1:
-					format    = bimg::TextureFormat::R1;
+				case 2:
+				case 4:
+					format    = bimg::TextureFormat::R8;
 					palette   = false;
 					supported = true;
 					break;
@@ -203,10 +205,11 @@ namespace bimg
 				const uint8_t* copyData = data;
 
 				TextureFormat::Enum dstFormat = format;
-				if (1 == state.info_raw.bitdepth)
+				if (1 == state.info_raw.bitdepth
+				||  2 == state.info_raw.bitdepth
+				||  4 == state.info_raw.bitdepth)
 				{
-					dstFormat = bimg::TextureFormat::R8;
-					copyData  = NULL;
+					copyData = NULL;
 				}
 				else if (16      == state.info_raw.bitdepth
 					 &&  LCT_RGB == state.info_raw.colortype)
@@ -234,16 +237,49 @@ namespace bimg
 				{
 					for (uint32_t ii = 0, num = width*height/8; ii < num; ++ii)
 					{
-						uint8_t value = data[ii];
-						uint8_t* dst = (uint8_t*)output->m_data + ii * 8;
-						dst[0] = value & 0x01 ? 255 : 0;
-						dst[1] = value & 0x02 ? 255 : 0;
-						dst[2] = value & 0x04 ? 255 : 0;
-						dst[3] = value & 0x08 ? 255 : 0;
-						dst[4] = value & 0x10 ? 255 : 0;
-						dst[5] = value & 0x20 ? 255 : 0;
-						dst[6] = value & 0x40 ? 255 : 0;
-						dst[7] = value & 0x80 ? 255 : 0;
+						uint8_t* src = (uint8_t*)data + ii;
+						uint8_t eightBits = src[0];
+
+						uint8_t* dst = (uint8_t*)output->m_data + ii*8;
+						dst[0] = uint8_t( (eightBits>>7)&0x1)*255;
+						dst[1] = uint8_t( (eightBits>>6)&0x1)*255;
+						dst[2] = uint8_t( (eightBits>>5)&0x1)*255;
+						dst[3] = uint8_t( (eightBits>>4)&0x1)*255;
+						dst[4] = uint8_t( (eightBits>>3)&0x1)*255;
+						dst[5] = uint8_t( (eightBits>>2)&0x1)*255;
+						dst[6] = uint8_t( (eightBits>>1)&0x1)*255;
+						dst[7] = uint8_t( (eightBits   )&0x1)*255;
+
+					}
+				}
+				else if (2 == state.info_raw.bitdepth)
+				{
+					for (uint32_t ii = 0, num = width*height/4; ii < num; ++ii)
+					{
+						uint8_t* src = (uint8_t*)data + ii;
+						uint8_t eightBits = src[0];
+
+						uint8_t* dst = (uint8_t*)output->m_data + ii*4;
+						// Note: not exactly precise.
+						// Correct way: dst[0] = uint8_t(float( (eightBits>>6)&0x3)*(255.0f/4.0f) );
+						dst[0] = uint8_t(uint32_t(((eightBits>>6)&0x3)*64)&0xff);
+						dst[1] = uint8_t(uint32_t(((eightBits>>4)&0x3)*64)&0xff);
+						dst[2] = uint8_t(uint32_t(((eightBits>>2)&0x3)*64)&0xff);
+						dst[3] = uint8_t(uint32_t(((eightBits   )&0x3)*64)&0xff);
+					}
+				}
+				else if (4 == state.info_raw.bitdepth)
+				{
+					for (uint32_t ii = 0, num = width*height/2; ii < num; ++ii)
+					{
+						uint8_t* src = (uint8_t*)data + ii;
+						uint8_t eightBits = src[0];
+
+						uint8_t* dst = (uint8_t*)output->m_data + ii*2;
+						// Note: not exactly precise.
+						// Correct way: dst[0] = uint8_t(float( (eightBits>>4)&0xf)*(255.0f/16.0f) );
+						dst[0] = uint8_t(uint32_t(((eightBits>>4)&0xf)*16)&0xff);
+						dst[1] = uint8_t(uint32_t(((eightBits   )&0xf)*16)&0xff);
 					}
 				}
 				else if (16      == state.info_raw.bitdepth
@@ -661,6 +697,7 @@ namespace bimg
 		ImageContainer* input = imageParseDds     (_allocator, _data, _size, _err)        ;
 		input = NULL == input ? imageParseKtx     (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParsePvr3    (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseGnf     (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParseLodePng (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParseTinyExr (_allocator, _data, _size, _err) : input;
 		input = NULL == input ? imageParseJpeg    (_allocator, _data, _size, _err) : input;
