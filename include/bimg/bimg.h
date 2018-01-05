@@ -601,6 +601,14 @@ namespace bimg
 		, ImageMip& _mip
 		);
 
+	///
+	ImageContainer* imageCubemapFromLatLongRgba32F(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _input
+		, bool _useBilinearInterpolation
+		, bx::Error* _err
+		);
+
 } // namespace bimg
 
 #endif // BIMG_IMAGE_H_HEADER_GUARD

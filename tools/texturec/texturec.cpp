@@ -37,6 +37,7 @@ struct Options
 		, quality(bimg::Quality::Default)
 		, mips(false)
 		, normalMap(false)
+		, equirect(false)
 		, iqa(false)
 		, sdf(false)
 		, alphaTest(false)
@@ -69,6 +70,7 @@ struct Options
 	bimg::Quality::Enum quality;
 	bool mips;
 	bool normalMap;
+	bool equirect;
 	bool iqa;
 	bool sdf;
 	bool alphaTest;
@@ -158,6 +160,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			&& !_options.sdf
 			&& !_options.alphaTest
 			&& !_options.normalMap
+			&& !_options.equirect
 			&& !_options.iqa
 			;
 
@@ -199,6 +202,23 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			bimg::imageFree(input);
 			return output;
+		}
+
+		if (_options.equirect)
+		{
+			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input);
+			bimg::imageFree(input);
+
+			bimg::ImageContainer* dst = bimg::imageCubemapFromLatLongRgba32F(_allocator, *src, true, _err);
+			bimg::imageFree(src);
+
+			if (!_err->isOk() )
+			{
+				return NULL;
+			}
+
+			input = bimg::imageConvert(_allocator, outputFormat, *dst);
+			bimg::imageFree(dst);
 		}
 
 		output = bimg::imageAlloc(
@@ -630,6 +650,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "  -q <quality>             Encoding quality (default, fastest, highest).\n"
 		  "  -m, --mips               Generate mip-maps.\n"
 		  "  -n, --normalmap          Input texture is normal map.\n"
+		  "      --equirect           Input texture equirectangular projection of cubemap.\n"
 		  "      --sdf <edge>         Compute SDF texture.\n"
 		  "      --ref <alpha>        Alpha reference value.\n"
 		  "      --iqa                Image Quality Assessment\n"
@@ -728,7 +749,8 @@ int main(int _argc, const char* _argv[])
 
 	options.mips      = cmdLine.hasArg('m',  "mips");
 	options.normalMap = cmdLine.hasArg('n',  "normalmap");
-	options.iqa       = cmdLine.hasArg('\0', "iqa");
+	options.equirect  = cmdLine.hasArg("equirect");
+	options.iqa       = cmdLine.hasArg("iqa");
 
 	const char* maxSize = cmdLine.findOption("max");
 	if (NULL != maxSize)
