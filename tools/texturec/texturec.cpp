@@ -217,7 +217,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				return NULL;
 			}
 
-			input = bimg::imageConvert(_allocator, outputFormat, *dst);
+			input = bimg::imageConvert(_allocator, inputFormat, *dst);
 			bimg::imageFree(dst);
 		}
 
