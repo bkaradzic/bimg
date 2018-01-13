@@ -361,30 +361,30 @@ namespace bimg
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
-					float rr = bx::fpow(rgba[          0], 2.2f);
-					float gg = bx::fpow(rgba[          1], 2.2f);
-					float bb = bx::fpow(rgba[          2], 2.2f);
+					float rr = bx::pow(rgba[          0], 2.2f);
+					float gg = bx::pow(rgba[          1], 2.2f);
+					float bb = bx::pow(rgba[          2], 2.2f);
 					float aa =          rgba[          3];
-					rr      += bx::fpow(rgba[          4], 2.2f);
-					gg      += bx::fpow(rgba[          5], 2.2f);
-					bb      += bx::fpow(rgba[          6], 2.2f);
+					rr      += bx::pow(rgba[          4], 2.2f);
+					gg      += bx::pow(rgba[          5], 2.2f);
+					bb      += bx::pow(rgba[          6], 2.2f);
 					aa      +=          rgba[          7];
-					rr      += bx::fpow(rgba[_srcPitch+0], 2.2f);
-					gg      += bx::fpow(rgba[_srcPitch+1], 2.2f);
-					bb      += bx::fpow(rgba[_srcPitch+2], 2.2f);
+					rr      += bx::pow(rgba[_srcPitch+0], 2.2f);
+					gg      += bx::pow(rgba[_srcPitch+1], 2.2f);
+					bb      += bx::pow(rgba[_srcPitch+2], 2.2f);
 					aa      +=          rgba[_srcPitch+3];
-					rr      += bx::fpow(rgba[_srcPitch+4], 2.2f);
-					gg      += bx::fpow(rgba[_srcPitch+5], 2.2f);
-					bb      += bx::fpow(rgba[_srcPitch+6], 2.2f);
+					rr      += bx::pow(rgba[_srcPitch+4], 2.2f);
+					gg      += bx::pow(rgba[_srcPitch+5], 2.2f);
+					bb      += bx::pow(rgba[_srcPitch+6], 2.2f);
 					aa      +=          rgba[_srcPitch+7];
 
 					rr *= 0.25f;
 					gg *= 0.25f;
 					bb *= 0.25f;
 					aa *= 0.25f;
-					rr = bx::fpow(rr, 1.0f/2.2f);
-					gg = bx::fpow(gg, 1.0f/2.2f);
-					bb = bx::fpow(bb, 1.0f/2.2f);
+					rr = bx::pow(rr, 1.0f/2.2f);
+					gg = bx::pow(gg, 1.0f/2.2f);
+					bb = bx::pow(bb, 1.0f/2.2f);
 					dst[0] = (uint8_t)rr;
 					dst[1] = (uint8_t)gg;
 					dst[2] = (uint8_t)bb;
@@ -493,10 +493,10 @@ namespace bimg
 						  float* fd = (      float*)(dst + offset);
 					const float* fs = (const float*)(src + offset);
 
-					fd[0] = bx::fpow(fs[0], 1.0f/2.2f);
-					fd[1] = bx::fpow(fs[1], 1.0f/2.2f);
-					fd[2] = bx::fpow(fs[2], 1.0f/2.2f);
-					fd[3] =          fs[3];
+					fd[0] = bx::pow(fs[0], 1.0f/2.2f);
+					fd[1] = bx::pow(fs[1], 1.0f/2.2f);
+					fd[2] = bx::pow(fs[2], 1.0f/2.2f);
+					fd[3] =         fs[3];
 				}
 			}
 		}
@@ -517,10 +517,10 @@ namespace bimg
 						  float* fd = (      float*)(dst + offset);
 					const float* fs = (const float*)(src + offset);
 
-					fd[0] = bx::fpow(fs[0], 2.2f);
-					fd[1] = bx::fpow(fs[1], 2.2f);
-					fd[2] = bx::fpow(fs[2], 2.2f);
-					fd[3] =          fs[3];
+					fd[0] = bx::pow(fs[0], 2.2f);
+					fd[1] = bx::pow(fs[1], 2.2f);
+					fd[2] = bx::pow(fs[2], 2.2f);
+					fd[3] =         fs[3];
 				}
 			}
 		}
@@ -2910,7 +2910,7 @@ namespace bimg
 					{
 						float nx = temp[ii*4+2]*2.0f/255.0f - 1.0f;
 						float ny = temp[ii*4+1]*2.0f/255.0f - 1.0f;
-						float nz = bx::fsqrt(1.0f - nx*nx - ny*ny);
+						float nz = bx::sqrt(1.0f - nx*nx - ny*ny);
 						temp[ii*4+0] = uint8_t( (nz + 1.0f)*255.0f/2.0f);
 						temp[ii*4+3] = 0;
 					}
@@ -3081,10 +3081,10 @@ namespace bimg
 			const uint8_t* rgba = src;
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 4, dst += 4)
 			{
-				dst[0] = bx::fpow(rgba[0], 2.2f);
-				dst[1] = bx::fpow(rgba[1], 2.2f);
-				dst[2] = bx::fpow(rgba[2], 2.2f);
-				dst[3] =          rgba[3];
+				dst[0] = bx::pow(rgba[0], 2.2f);
+				dst[1] = bx::pow(rgba[1], 2.2f);
+				dst[2] = bx::pow(rgba[2], 2.2f);
+				dst[3] =         rgba[3];
 			}
 		}
 	}
@@ -3160,7 +3160,7 @@ namespace bimg
 							{
 								float nx = temp[ii*4+2]*2.0f/255.0f - 1.0f;
 								float ny = temp[ii*4+1]*2.0f/255.0f - 1.0f;
-								float nz = bx::fsqrt(1.0f - nx*nx - ny*ny);
+								float nz = bx::sqrt(1.0f - nx*nx - ny*ny);
 
 								const uint32_t offset = (yy*4 + ii/4)*_width*16 + (xx*4 + ii%4)*16;
 								float* block = (float*)&dst[offset];
@@ -3829,8 +3829,8 @@ namespace bimg
 
 	void latLongFromDir(float* _outU, float* _outV, const float* _in)
 	{
-		const float phi   = bx::fatan2(_in[0], _in[2]);
-		const float theta = bx::facos(_in[1]);
+		const float phi   = bx::atan2(_in[0], _in[2]);
+		const float theta = bx::acos(_in[1]);
 
 		*_outU = (bx::kPi + phi)/bx::kPi2;
 		*_outV = theta*bx::kInvPi;
