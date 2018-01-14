@@ -3827,15 +3827,6 @@ namespace bimg
 		bx::vec3Norm(_result, tmp);
 	}
 
-	void latLongFromDir(float* _outU, float* _outV, const float* _in)
-	{
-		const float phi   = bx::atan2(_in[0], _in[2]);
-		const float theta = bx::acos(_in[1]);
-
-		*_outU = (bx::kPi + phi)/bx::kPi2;
-		*_outV = theta*bx::kInvPi;
-	}
-
 	ImageContainer* imageCubemapFromLatLongRgba32F(bx::AllocatorI* _allocator, const ImageContainer& _input, bool _useBilinearInterpolation, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
@@ -3886,7 +3877,7 @@ namespace bimg
 					texelUvToDir(dir, side, uu, vv);
 
 					float srcU, srcV;
-					latLongFromDir(&srcU, &srcV, dir);
+					bx::vec3ToLatLong(&srcU, &srcV, dir);
 
 					srcU *= srcWidthMinusOne;
 					srcV *= srcHeightMinusOne;
