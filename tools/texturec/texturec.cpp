@@ -635,7 +635,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "    *.jpg (input)          JPEG Interchange Format.\n"
 		  "    *.hdr (input)          Radiance RGBE.\n"
 		  "    *.ktx (input, output)  Khronos Texture.\n"
-		  "    *.png (input)          Portable Network Graphics.\n"
+		  "    *.png (input, output)  Portable Network Graphics.\n"
 		  "    *.psd (input)          Photoshop Document.\n"
 		  "    *.pvr (input)          PowerVR.\n"
 		  "    *.tga (input)          Targa.\n"
@@ -717,6 +717,7 @@ int main(int _argc, const char* _argv[])
 	const char* saveAs = cmdLine.findOption("as");
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".ktx") : saveAs;
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".dds") : saveAs;
+	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".png") : saveAs;
 	if (NULL == saveAs)
 	{
 		help("Output file format must be specified.");
@@ -767,6 +768,19 @@ int main(int _argc, const char* _argv[])
 		if (!bimg::isValid(options.format) )
 		{
 			help("Invalid format specified.");
+			return bx::kExitFailure;
+		}
+	}
+
+	if (NULL != bx::strFindI(outputFileName, ".png") )
+	{
+		if (options.format == bimg::TextureFormat::Count)
+		{
+			options.format = bimg::TextureFormat::RGBA8;
+		}
+		else if (options.format != bimg::TextureFormat::RGBA8)
+		{
+			help("Ouput PNG format must be RGBA8.");
 			return bx::kExitFailure;
 		}
 	}
@@ -830,6 +844,19 @@ int main(int _argc, const char* _argv[])
 			else if (NULL != bx::strFindI(saveAs, "dds") )
 			{
 				bimg::imageWriteDds(&writer, *output, output->m_data, output->m_size, &err);
+			}
+			else if (NULL != bx::strFindI(saveAs, "png") )
+			{
+				bimg::ImageMip mip;
+				bimg::imageGetRawData(*output, 0, 0, output->m_data, output->m_size, mip);
+				bimg::imageWritePng(&writer
+					, mip.m_width
+					, mip.m_height
+					, mip.m_width*4
+					, mip.m_data
+					, false
+					, false
+					, &err);
 			}
 
 			bx::close(&writer);
