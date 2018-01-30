@@ -56,8 +56,9 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Warray-bounds");
 #if BX_COMPILER_GCC >= 60000
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wmisleading-indentation");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wshift-negative-value");
-#elif BX_COMPILER_GCC >= 70000
+#	if BX_COMPILER_GCC >= 70000
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wimplicit-fallthrough");
+#	endif // BX_COMPILER_GCC >= 70000
 #endif // BX_COMPILER_GCC >= 60000_
 #define STBI_MALLOC(_size)        lodepng_malloc(_size)
 #define STBI_REALLOC(_ptr, _size) lodepng_realloc(_ptr, _size)
