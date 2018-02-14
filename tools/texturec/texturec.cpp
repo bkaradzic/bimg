@@ -772,7 +772,7 @@ int main(int _argc, const char* _argv[])
 		}
 	}
 
-	if (NULL != bx::strFindI(outputFileName, ".png") )
+	if (NULL != bx::strFindI(saveAs, "png") )
 	{
 		if (options.format == bimg::TextureFormat::Count)
 		{
