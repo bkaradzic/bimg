@@ -3,6 +3,8 @@
  * License: https://github.com/bkaradzic/bimg#license-bsd-2-clause
  */
 
+#pragma once
+
 #include <bimg/bimg.h>
 #include <bx/allocator.h>
 #include <bx/readerwriter.h>
