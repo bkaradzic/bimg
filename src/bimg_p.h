@@ -3,6 +3,9 @@
  * License: https://github.com/bkaradzic/bimg#license-bsd-2-clause
  */
 
+#ifndef BIMG_P_H_HEADER_GUARD
+#define BIMG_P_H_HEADER_GUARD
+
 #include <bimg/bimg.h>
 #include <bx/allocator.h>
 #include <bx/readerwriter.h>
@@ -80,3 +83,5 @@ namespace bimg
 		);
 
 } // namespace bimg
+
+#endif // BIMG_P_H_HEADER_GUARD
