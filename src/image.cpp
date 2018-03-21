@@ -3397,9 +3397,24 @@ namespace bimg
 		bx::WriterI* m_writer;
 	};
 
-	int32_t imageWritePng(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, bool _grayscale, bool _yflip, bx::Error* _err)
+	int32_t imageWritePng(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, TextureFormat::Enum _format, bool _yflip, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
+
+		switch (_format)
+		{
+		case TextureFormat::R8:
+		case TextureFormat::RGBA8:
+		case TextureFormat::BGRA8:
+			break;
+
+		default:
+			BX_ERROR_SET(_err, BIMG_ERROR, "PNG: Unsupported texture format.");
+			return 0;
+		}
+
+		const bool grayscale = TextureFormat::R8    == _format;
+		const bool bgra      = TextureFormat::BGRA8 == _format;
 
 		int32_t total = 0;
 		total += bx::write(_writer, "\x89PNG\r\n\x1a\n", _err);
@@ -3413,7 +3428,7 @@ namespace bimg
 		total += bx::writeRep(&writerC, 0, 3, _err);
 		total += bx::write(_writer, bx::toBigEndian(writerC.end() ), _err);
 
-		const uint32_t bpp    = _grayscale ? 8 : 32;
+		const uint32_t bpp    = grayscale ? 8 : 32;
 		const uint32_t stride = _width*bpp/8;
 		const uint16_t zlen   = bx::toLittleEndian<uint16_t>(uint16_t(stride + 1) );
 		const uint16_t zlenC  = bx::toLittleEndian<uint16_t>(~zlen);
@@ -3442,24 +3457,24 @@ namespace bimg
 
 			total += bx::write(&writerA, uint8_t(0), _err);
 
-			if (_grayscale)
-			{
-				total += bx::write(&writerA, data, stride, _err);
-			}
-			else
+			if (bgra)
 			{
 				for (uint32_t xx = 0; xx < _width; ++xx)
 				{
-					const uint8_t* bgra = &data[xx*4];
-					const uint8_t bb = bgra[0];
-					const uint8_t gg = bgra[1];
-					const uint8_t rr = bgra[2];
-					const uint8_t aa = bgra[3];
+					const uint8_t* texel = &data[xx*4];
+					const uint8_t bb = texel[0];
+					const uint8_t gg = texel[1];
+					const uint8_t rr = texel[2];
+					const uint8_t aa = texel[3];
 					total += bx::write(&writerA, rr, _err);
 					total += bx::write(&writerA, gg, _err);
 					total += bx::write(&writerA, bb, _err);
 					total += bx::write(&writerA, aa, _err);
 				}
+			}
+			else
+			{
+				total += bx::write(&writerA, data, stride, _err);
 			}
 
 			data += step;

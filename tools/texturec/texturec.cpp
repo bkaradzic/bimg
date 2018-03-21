@@ -26,7 +26,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 11
+#define BIMG_TEXTUREC_VERSION_MINOR 12
 
 struct Options
 {
@@ -854,7 +854,7 @@ int main(int _argc, const char* _argv[])
 					, mip.m_height
 					, mip.m_width*4
 					, mip.m_data
-					, false
+					, bimg::TextureFormat::RGBA8
 					, false
 					, &err);
 			}
