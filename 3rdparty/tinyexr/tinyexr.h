@@ -10513,7 +10513,7 @@ static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
         return TINYEXR_ERROR_INVALID_DATA;
       }
 
-      size_t data_size = size - (offsets[tile_idx] + sizeof(int) * 5);
+      size_t data_size = size - size_t(offsets[tile_idx] + sizeof(int) * 5);
       const unsigned char *data_ptr =
           reinterpret_cast<const unsigned char *>(head + offsets[tile_idx]);
 
@@ -10584,7 +10584,7 @@ static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
         // 4 byte: scan line
         // 4 byte: data size
         // ~     : pixel data(uncompressed or compressed)
-        size_t data_size = size - (offsets[y_idx] + sizeof(int) * 2);
+        size_t data_size = size - size_t(offsets[y_idx] + sizeof(int) * 2);
         const unsigned char *data_ptr =
             reinterpret_cast<const unsigned char *>(head + offsets[y_idx]);
 
