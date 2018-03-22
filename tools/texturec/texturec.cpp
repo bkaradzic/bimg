@@ -133,17 +133,28 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		const uint32_t minBlockY   = outputBlockInfo.minBlockY;
 		uint32_t outputWidth  = bx::uint32_max(blockWidth  * minBlockX, ( (input->m_width  + blockWidth  - 1) / blockWidth )*blockWidth);
 		uint32_t outputHeight = bx::uint32_max(blockHeight * minBlockY, ( (input->m_height + blockHeight - 1) / blockHeight)*blockHeight);
+		uint32_t outputDepth  = input->m_depth;
 
 		if (outputWidth  > _options.maxSize
-		||  outputHeight > _options.maxSize)
+		||  outputHeight > _options.maxSize
+		||  outputDepth  > _options.maxSize)
 		{
-			if (outputWidth > outputHeight)
+			if (outputDepth > outputWidth
+			&&  outputDepth > outputHeight)
 			{
+				outputWidth  = outputWidth  * _options.maxSize / outputDepth;
+				outputHeight = outputHeight * _options.maxSize / outputDepth;
+				outputDepth  = _options.maxSize;
+			}
+			else if (outputWidth > outputHeight)
+			{
+				outputDepth  = outputDepth  * _options.maxSize / outputWidth;
 				outputHeight = outputHeight * _options.maxSize / outputWidth;
 				outputWidth  = _options.maxSize;
 			}
 			else
 			{
+				outputDepth  = outputDepth * _options.maxSize / outputHeight;
 				outputWidth  = outputWidth * _options.maxSize / outputHeight;
 				outputHeight = _options.maxSize;
 			}
@@ -173,7 +184,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				, bimg::TextureFormat::RGBA32F
 				, uint16_t(outputWidth)
 				, uint16_t(outputHeight)
-				, 1
+				, uint16_t(outputDepth)
 				, input->m_numLayers
 				, input->m_cubeMap
 				, false
