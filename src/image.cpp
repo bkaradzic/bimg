@@ -1833,6 +1833,7 @@ namespace bimg
 #define DDS_BC5U BX_MAKEFOURCC('B', 'C', '5', 'U')
 #define DDS_DX10 BX_MAKEFOURCC('D', 'X', '1', '0')
 
+#define DDS_R8G8B8         20
 #define DDS_A8R8G8B8       21
 #define DDS_R5G6B5         23
 #define DDS_A1R5G5B5       25
@@ -1960,6 +1961,7 @@ namespace bimg
 		{ DDS_G16R16,                TextureFormat::RG16,    false },
 		{ DDS_G16R16F,               TextureFormat::RG16F,   false },
 		{ DDS_G32R32F,               TextureFormat::RG32F,   false },
+		{ DDS_R8G8B8,                TextureFormat::RGB8,    false },
 		{ DDS_A8R8G8B8,              TextureFormat::BGRA8,   false },
 		{ DDS_A16B16G16R16,          TextureFormat::RGBA16,  false },
 		{ DDS_A16B16G16R16F,         TextureFormat::RGBA16F, false },
@@ -2027,6 +2029,7 @@ namespace bimg
 		{ 16, DDPF_RGB,                  { 0x0000f800, 0x000007e0, 0x0000001f, 0x00000000 }, TextureFormat::R5G6B5  },
 		{ 16, DDPF_RGB,                  { 0x00007c00, 0x000003e0, 0x0000001f, 0x00008000 }, TextureFormat::RGB5A1  },
 		{ 24, DDPF_RGB,                  { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::RGB8    },
+		{ 24, DDPF_RGB,                  { 0x000000ff, 0x0000ff00, 0x00ff0000, 0x00000000 }, TextureFormat::RGB8    },
 		{ 32, DDPF_RGB,                  { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::BGRA8   },
 		{ 32, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 }, TextureFormat::RGBA8   },
 		{ 32, DDPF_BUMPDUDV,             { 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000 }, TextureFormat::RGBA8S  },
@@ -2112,8 +2115,8 @@ namespace bimg
 		}
 
 		uint32_t dxgiFormat = 0;
-		uint32_t arraySize = 1;
-		if (DDPF_FOURCC == pixelFlags
+		uint32_t arraySize  = 1;
+		if (DDPF_FOURCC == (pixelFlags & DDPF_FOURCC)
 		&&  DDS_DX10    == fourcc)
 		{
 			total += bx::read(_reader, dxgiFormat, _err);
