@@ -26,7 +26,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 12
+#define BIMG_TEXTUREC_VERSION_MINOR 13
 
 struct Options
 {
@@ -331,6 +331,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_width
 							, dstMip.m_height
 							, dstMip.m_width*16
+							, bx::strideAlign(dstMip.m_width/2, blockWidth)*16
 							, rgba
 							);
 
@@ -544,6 +545,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_height
 							, dstMip.m_depth
 							, dstMip.m_width*4
+							, bx::strideAlign(dstMip.m_width/2, blockWidth)*4
 							, rgba
 							);
 

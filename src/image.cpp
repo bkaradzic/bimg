@@ -340,7 +340,7 @@ namespace bimg
 		}
 	}
 
-	void imageRgba8Downsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, const void* _src)
+	void imageRgba8Downsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
@@ -351,13 +351,13 @@ namespace bimg
 			return;
 		}
 
-		uint8_t* dst = (uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
 		for (uint32_t zz = 0; zz < _depth; ++zz)
 		{
 			for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 			{
+				uint8_t* dst = (uint8_t*)_dst + _dstPitch*yy;
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
@@ -394,7 +394,7 @@ namespace bimg
 		}
 	}
 
-	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, const void* _src)
+	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
@@ -405,7 +405,6 @@ namespace bimg
 			return;
 		}
 
-		uint8_t* dst = (uint8_t*)_dst;
 		const uint8_t* src = (const uint8_t*)_src;
 
 		using namespace bx;
@@ -423,6 +422,7 @@ namespace bimg
 		{
 			for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 			{
+				uint8_t* dst = (uint8_t*)_dst + _dstPitch*yy;
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
@@ -586,7 +586,7 @@ namespace bimg
 		imageRgba32fLinearDownsample2x2Ref(_dst, _width, _height, _depth, _srcPitch, _src);
 	}
 
-	void imageRgba32fDownsample2x2NormalMapRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
+	void imageRgba32fDownsample2x2NormalMapRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
@@ -598,12 +598,14 @@ namespace bimg
 		}
 
 		const uint8_t* src = (const uint8_t*)_src;
-		uint8_t* dst = (uint8_t*)_dst;
 
 		for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 		{
 			const float* rgba0 = (const float*)&src[0];
 			const float* rgba1 = (const float*)&src[_srcPitch];
+
+			uint8_t* dst = (uint8_t*)_dst + _dstPitch*yy;
+
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba0 += 8, rgba1 += 8, dst += 16)
 			{
 				float xyz[3];
@@ -629,9 +631,9 @@ namespace bimg
 		}
 	}
 
-	void imageRgba32fDownsample2x2NormalMap(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
+	void imageRgba32fDownsample2x2NormalMap(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
 	{
-		imageRgba32fDownsample2x2NormalMapRef(_dst, _width, _height, _srcPitch, _src);
+		imageRgba32fDownsample2x2NormalMapRef(_dst, _width, _height, _srcPitch, _dstPitch, _src);
 	}
 
 	void imageSwizzleBgra8Ref(void* _dst, uint32_t _dstPitch, uint32_t _width, uint32_t _height, const void* _src, uint32_t _srcPitch)
