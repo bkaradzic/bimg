@@ -100,6 +100,22 @@ void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32
 	}
 }
 
+float toLinear(float _a)
+{
+	const float lo     = _a / 12.92f;
+	const float hi     = bx::pow( (_a + 0.055f) / 1.055f, 2.4f);
+	const float result = bx::lerp(hi, lo, _a <= 0.04045f);
+	return result;
+}
+
+float toGamma(float _a)
+{
+	const float lo     = _a * 12.92f;
+	const float hi     = bx::pow(bx::abs(_a), 1.0f/2.4f) * 1.055f - 0.055f;
+	const float result = bx::lerp(hi, lo, _a <= 0.0031308f);
+	return result;
+}
+
 void imagePremultiplyAlpha(void* _inOut, uint32_t _width, uint32_t _height, uint32_t _depth, bimg::TextureFormat::Enum _format)
 {
 	uint8_t* inOut = (uint8_t*)_inOut;
@@ -119,9 +135,10 @@ void imagePremultiplyAlpha(void* _inOut, uint32_t _width, uint32_t _height, uint
 
 				float rgba[4];
 				unpack(rgba, &inOut[offset]);
-				rgba[0] *= rgba[3];
-				rgba[1] *= rgba[3];
-				rgba[2] *= rgba[3];
+				const float alpha = rgba[3];
+				rgba[0] = toGamma(toLinear(rgba[0]) * alpha);
+				rgba[1] = toGamma(toLinear(rgba[1]) * alpha);
+				rgba[2] = toGamma(toLinear(rgba[2]) * alpha);
 				pack(&inOut[offset], rgba);
 			}
 		}
