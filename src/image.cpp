@@ -3495,6 +3495,130 @@ namespace bimg
 		return total;
 	}
 
+	int32_t imageWriteExr(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, TextureFormat::Enum _format, bool _yflip, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		switch (_format)
+		{
+		case TextureFormat::RGBA16F:
+			break;
+
+		default:
+			BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Unsupported texture format.");
+			return 0;
+		}
+
+		int32_t total = 0;
+		total += bx::write(_writer, "v/1\x01", _err);
+		total += bx::writeLE(_writer, uint32_t(2), _err);
+
+		total += bx::write(_writer, "channels", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "chlist", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(55), _err);
+
+		const uint8_t cdata[] = { 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
+		total += bx::write(_writer, 'B', _err);
+		total += bx::write(_writer, cdata, BX_COUNTOF(cdata), _err);
+		total += bx::write(_writer, 'G', _err);
+		total += bx::write(_writer, cdata, BX_COUNTOF(cdata), _err);
+		total += bx::write(_writer, 'R', _err);
+		total += bx::write(_writer, cdata, BX_COUNTOF(cdata), _err);
+		total += bx::write(_writer, '\0', _err);
+
+		total += bx::write(_writer, "compression", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "compression", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(1), _err);
+		total += bx::write(_writer, '\0', _err); // no compression
+
+		total += bx::write(_writer, "dataWindow", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "box2i", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(16), _err);
+		total += bx::writeRep(_writer, '\0', 8, _err);
+		total += bx::writeLE(_writer, _width-1,  _err);
+		total += bx::writeLE(_writer, _height-1, _err);
+
+		total += bx::write(_writer, "displayWindow", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "box2i", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(16), _err);
+		total += bx::writeRep(_writer, '\0', 8, _err);
+		total += bx::writeLE(_writer, _width-1,  _err);
+		total += bx::writeLE(_writer, _height-1, _err);
+
+		total += bx::write(_writer, "lineOrder", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "lineOrder", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(1), _err);
+		total += bx::write(_writer, _yflip, _err);
+
+		total += bx::write(_writer, "pixelAspectRatio", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "float", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(4), _err);
+		total += bx::writeLE(_writer, 1.0f, _err);
+
+		total += bx::write(_writer, "screenWindowCenter", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "v2f", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(8), _err);
+		total += bx::writeRep(_writer, '\0', 8, _err);
+
+		total += bx::write(_writer, "screenWindowWidth", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::write(_writer, "float", _err);
+		total += bx::write(_writer, '\0', _err);
+		total += bx::writeLE(_writer, uint32_t(4), _err);
+		total += bx::writeLE(_writer, 1.0f, _err);
+
+		total += bx::write(_writer, '\0', _err);
+
+		const uint32_t exrStride = _width*6 /* sizeof(RGB16F) */;
+
+		uint64_t offset = 0;
+		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
+		{
+			total += bx::writeLE(_writer, (offset), _err);
+			offset += exrStride + 8 /* offset */;
+		}
+
+		const uint8_t* data = (const uint8_t*)_src;
+		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
+		{
+			total += bx::writeLE(_writer, yy, _err);
+			total += bx::writeLE(_writer, exrStride, _err);
+
+			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
+			{
+				total += bx::write(_writer, &data[xx*8+4], 2, _err);
+			}
+
+			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
+			{
+				total += bx::write(_writer, &data[xx*8+2], 2, _err);
+			}
+
+			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
+			{
+				total += bx::write(_writer, &data[xx*8+0], 2, _err);
+			}
+
+			data += _srcPitch;
+		}
+
+		return total;
+	}
+
 	static int32_t imageWriteDdsHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);

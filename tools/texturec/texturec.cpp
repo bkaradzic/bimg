@@ -726,7 +726,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "Supported file formats:\n"
 		  "    *.bmp (input)          Windows Bitmap.\n"
 		  "    *.dds (input, output)  Direct Draw Surface.\n"
-		  "    *.exr (input)          OpenEXR.\n"
+		  "    *.exr (input, output)  OpenEXR.\n"
 		  "    *.gif (input)          Graphics Interchange Format.\n"
 		  "    *.jpg (input)          JPEG Interchange Format.\n"
 		  "    *.hdr (input)          Radiance RGBE.\n"
@@ -815,6 +815,7 @@ int main(int _argc, const char* _argv[])
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".ktx") : saveAs;
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".dds") : saveAs;
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".png") : saveAs;
+	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".exr") : saveAs;
 	if (NULL == saveAs)
 	{
 		help("Output file format must be specified.");
@@ -879,6 +880,18 @@ int main(int _argc, const char* _argv[])
 		else if (options.format != bimg::TextureFormat::RGBA8)
 		{
 			help("Ouput PNG format must be RGBA8.");
+			return bx::kExitFailure;
+		}
+	}
+	else if (NULL != bx::strFindI(saveAs, "exr") )
+	{
+		if (options.format == bimg::TextureFormat::Count)
+		{
+			options.format = bimg::TextureFormat::RGBA16F;
+		}
+		else if (options.format != bimg::TextureFormat::RGBA16F)
+		{
+			help("Ouput EXR format must be RGBA16F.");
 			return bx::kExitFailure;
 		}
 	}
@@ -952,7 +965,20 @@ int main(int _argc, const char* _argv[])
 					, mip.m_height
 					, mip.m_width*4
 					, mip.m_data
-					, bimg::TextureFormat::RGBA8
+					, output->m_format
+					, false
+					, &err);
+			}
+			else if (NULL != bx::strFindI(saveAs, "exr") )
+			{
+				bimg::ImageMip mip;
+				bimg::imageGetRawData(*output, 0, 0, output->m_data, output->m_size, mip);
+				bimg::imageWriteExr(&writer
+					, mip.m_width
+					, mip.m_height
+					, mip.m_width*8
+					, mip.m_data
+					, output->m_format
 					, false
 					, &err);
 			}
