@@ -3499,9 +3499,13 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
+		const uint32_t bpp = getBitsPerPixel(_format);
+		uint32_t bytesPerChannel = 0;
+
 		switch (_format)
 		{
 		case TextureFormat::RGBA16F:
+			bytesPerChannel = 2;
 			break;
 
 		default:
@@ -3517,14 +3521,16 @@ namespace bimg
 		total += bx::write(_writer, '\0', _err);
 		total += bx::write(_writer, "chlist", _err);
 		total += bx::write(_writer, '\0', _err);
-		total += bx::writeLE(_writer, uint32_t(55), _err);
+		total += bx::writeLE(_writer, uint32_t(18*4+1), _err);
 
 		const uint8_t cdata[] = { 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
-		total += bx::write(_writer, 'B', _err);
+		total += bx::write(_writer, 'R', _err);
 		total += bx::write(_writer, cdata, BX_COUNTOF(cdata), _err);
 		total += bx::write(_writer, 'G', _err);
 		total += bx::write(_writer, cdata, BX_COUNTOF(cdata), _err);
-		total += bx::write(_writer, 'R', _err);
+		total += bx::write(_writer, 'B', _err);
+		total += bx::write(_writer, cdata, BX_COUNTOF(cdata), _err);
+		total += bx::write(_writer, 'A', _err);
 		total += bx::write(_writer, cdata, BX_COUNTOF(cdata), _err);
 		total += bx::write(_writer, '\0', _err);
 
@@ -3583,7 +3589,7 @@ namespace bimg
 
 		total += bx::write(_writer, '\0', _err);
 
-		const uint32_t exrStride = _width*6 /* sizeof(RGB16F) */;
+		const uint32_t exrStride = _width*bpp/8;
 
 		uint64_t offset = 0;
 		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
@@ -3600,17 +3606,22 @@ namespace bimg
 
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				total += bx::write(_writer, &data[xx*8+4], 2, _err);
+				total += bx::write(_writer, &data[xx*bpp/8+0*bytesPerChannel], bytesPerChannel, _err);
 			}
 
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				total += bx::write(_writer, &data[xx*8+2], 2, _err);
+				total += bx::write(_writer, &data[xx*bpp/8+1*bytesPerChannel], bytesPerChannel, _err);
 			}
 
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				total += bx::write(_writer, &data[xx*8+0], 2, _err);
+				total += bx::write(_writer, &data[xx*bpp/8+2*bytesPerChannel], bytesPerChannel, _err);
+			}
+
+			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
+			{
+				total += bx::write(_writer, &data[xx*bpp/8+3*bytesPerChannel], bytesPerChannel, _err);
 			}
 
 			data += _srcPitch;
