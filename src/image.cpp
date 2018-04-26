@@ -361,30 +361,30 @@ namespace bimg
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
-					float rr = bx::pow(rgba[          0], 2.2f);
-					float gg = bx::pow(rgba[          1], 2.2f);
-					float bb = bx::pow(rgba[          2], 2.2f);
-					float aa =          rgba[          3];
-					rr      += bx::pow(rgba[          4], 2.2f);
-					gg      += bx::pow(rgba[          5], 2.2f);
-					bb      += bx::pow(rgba[          6], 2.2f);
-					aa      +=          rgba[          7];
-					rr      += bx::pow(rgba[_srcPitch+0], 2.2f);
-					gg      += bx::pow(rgba[_srcPitch+1], 2.2f);
-					bb      += bx::pow(rgba[_srcPitch+2], 2.2f);
-					aa      +=          rgba[_srcPitch+3];
-					rr      += bx::pow(rgba[_srcPitch+4], 2.2f);
-					gg      += bx::pow(rgba[_srcPitch+5], 2.2f);
-					bb      += bx::pow(rgba[_srcPitch+6], 2.2f);
-					aa      +=          rgba[_srcPitch+7];
+					float rr = bx::toLinear(rgba[          0]);
+					float gg = bx::toLinear(rgba[          1]);
+					float bb = bx::toLinear(rgba[          2]);
+					float aa =              rgba[          3];
+					rr      += bx::toLinear(rgba[          4]);
+					gg      += bx::toLinear(rgba[          5]);
+					bb      += bx::toLinear(rgba[          6]);
+					aa      +=              rgba[          7];
+					rr      += bx::toLinear(rgba[_srcPitch+0]);
+					gg      += bx::toLinear(rgba[_srcPitch+1]);
+					bb      += bx::toLinear(rgba[_srcPitch+2]);
+					aa      +=              rgba[_srcPitch+3];
+					rr      += bx::toLinear(rgba[_srcPitch+4]);
+					gg      += bx::toLinear(rgba[_srcPitch+5]);
+					bb      += bx::toLinear(rgba[_srcPitch+6]);
+					aa      +=              rgba[_srcPitch+7];
 
 					rr *= 0.25f;
 					gg *= 0.25f;
 					bb *= 0.25f;
 					aa *= 0.25f;
-					rr = bx::pow(rr, 1.0f/2.2f);
-					gg = bx::pow(gg, 1.0f/2.2f);
-					bb = bx::pow(bb, 1.0f/2.2f);
+					rr = bx::toGamma(rr);
+					gg = bx::toGamma(gg);
+					bb = bx::toGamma(bb);
 					dst[0] = (uint8_t)rr;
 					dst[1] = (uint8_t)gg;
 					dst[2] = (uint8_t)bb;
@@ -392,6 +392,43 @@ namespace bimg
 				}
 			}
 		}
+	}
+
+	BX_SIMD_INLINE bx::simd128_t simd_to_linear(bx::simd128_t _a)
+	{
+		using namespace bx;
+		const simd128_t f12_92   = simd_ld(12.92f, 12.92f, 12.92f, 1.0f);
+		const simd128_t f0_055   = simd_ld(0.055f, 0.055f, 0.055f, 0.0f);
+		const simd128_t f1_055   = simd_ld(1.055f, 1.055f, 1.055f, 1.0f);
+		const simd128_t f2_4     = simd_ld(2.4f, 2.4f, 2.4f, 1.0f);
+		const simd128_t f0_04045 = simd_ld(0.04045f, 0.04045f, 0.04045f, 0.0f);
+		const simd128_t lo       = simd_div(_a, f12_92);
+		const simd128_t tmp0     = simd_add(_a, f0_055);
+		const simd128_t tmp1     = simd_div(tmp0, f1_055);
+		const simd128_t hi       = simd_pow(tmp1, f2_4);
+		const simd128_t mask     = simd_cmple(_a, f0_04045);
+		const simd128_t result   = simd_selb(mask, hi, lo);
+
+		return result;
+	}
+
+	BX_SIMD_INLINE bx::simd128_t simd_to_gamma(bx::simd128_t _a)
+	{
+		using namespace bx;
+		const simd128_t f12_92     = simd_ld(12.92f, 12.92f, 12.92f, 1.0f);
+		const simd128_t f0_055     = simd_ld(0.055f, 0.055f, 0.055f, 0.0f);
+		const simd128_t f1_055     = simd_ld(1.055f, 1.055f, 1.055f, 1.0f);
+		const simd128_t f1o2_4     = simd_ld(1.0f/2.4f, 1.0f/2.4f, 1.0f/2.4f, 1.0f);
+		const simd128_t f0_0031308 = simd_ld(0.0031308f, 0.0031308f, 0.0031308f, 0.0f);
+		const simd128_t lo         = simd_mul(_a, f12_92);
+		const simd128_t absa       = simd_abs(_a);
+		const simd128_t tmp0       = simd_pow(absa, f1o2_4);
+		const simd128_t tmp1       = simd_mul(tmp0, f1_055);
+		const simd128_t hi         = simd_sub(tmp1, f0_055);
+		const simd128_t mask       = simd_cmple(_a, f0_0031308);
+		const simd128_t result     = simd_selb(mask, hi, lo);
+
+		return result;
 	}
 
 	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
@@ -414,8 +451,6 @@ namespace bimg
 		const simd128_t pmask  = simd_ild(0xff, 0x7f80, 0xff0000, 0x7f800000);
 		const simd128_t wflip  = simd_ild(0, 0, 0, 0x80000000);
 		const simd128_t wadd   = simd_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
-		const simd128_t gamma  = simd_ld(1.0f/2.2f, 1.0f/2.2f, 1.0f/2.2f, 1.0f);
-		const simd128_t linear = simd_ld(2.2f, 2.2f, 2.2f, 1.0f);
 		const simd128_t quater = simd_splat(0.25f);
 
 		for (uint32_t zz = 0; zz < _depth; ++zz)
@@ -452,16 +487,16 @@ namespace bimg
 					const simd128_t abgr2n = simd_mul(abgr2c, unpack);
 					const simd128_t abgr3n = simd_mul(abgr3c, unpack);
 
-					const simd128_t abgr0l = simd_pow(abgr0n, linear);
-					const simd128_t abgr1l = simd_pow(abgr1n, linear);
-					const simd128_t abgr2l = simd_pow(abgr2n, linear);
-					const simd128_t abgr3l = simd_pow(abgr3n, linear);
+					const simd128_t abgr0l = simd_to_linear(abgr0n);
+					const simd128_t abgr1l = simd_to_linear(abgr1n);
+					const simd128_t abgr2l = simd_to_linear(abgr2n);
+					const simd128_t abgr3l = simd_to_linear(abgr3n);
 
 					const simd128_t sum0   = simd_add(abgr0l, abgr1l);
 					const simd128_t sum1   = simd_add(abgr2l, abgr3l);
 					const simd128_t sum2   = simd_add(sum0, sum1);
 					const simd128_t avg0   = simd_mul(sum2, quater);
-					const simd128_t avg1   = simd_pow(avg0, gamma);
+					const simd128_t avg1   = simd_to_gamma(avg0);
 
 					const simd128_t avg2   = simd_mul(avg1, pack);
 					const simd128_t ftoi0  = simd_ftoi(avg2);
@@ -493,10 +528,10 @@ namespace bimg
 						  float* fd = (      float*)(dst + offset);
 					const float* fs = (const float*)(src + offset);
 
-					fd[0] = bx::pow(fs[0], 1.0f/2.2f);
-					fd[1] = bx::pow(fs[1], 1.0f/2.2f);
-					fd[2] = bx::pow(fs[2], 1.0f/2.2f);
-					fd[3] =         fs[3];
+					fd[0] = bx::toLinear(fs[0]);
+					fd[1] = bx::toLinear(fs[1]);
+					fd[2] = bx::toLinear(fs[2]);
+					fd[3] =              fs[3];
 				}
 			}
 		}
@@ -517,10 +552,10 @@ namespace bimg
 						  float* fd = (      float*)(dst + offset);
 					const float* fs = (const float*)(src + offset);
 
-					fd[0] = bx::pow(fs[0], 2.2f);
-					fd[1] = bx::pow(fs[1], 2.2f);
-					fd[2] = bx::pow(fs[2], 2.2f);
-					fd[3] =         fs[3];
+					fd[0] = bx::toGamma(fs[0]);
+					fd[1] = bx::toGamma(fs[1]);
+					fd[2] = bx::toGamma(fs[2]);
+					fd[3] =             fs[3];
 				}
 			}
 		}
@@ -530,6 +565,7 @@ namespace bimg
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
+		const uint32_t dstDepth = _depth/2;
 
 		if (0 == dstWidth
 		||  0 == dstHeight)
@@ -540,7 +576,7 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
-		for (uint32_t zz = 0; zz < _depth; ++zz)
+		if (0 == dstDepth)
 		{
 			for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 			{
@@ -570,12 +606,81 @@ namespace bimg
 					xyz[2] += rgba1[6];
 					xyz[3] += rgba1[7];
 
-					xyz[0] *= 0.25f;
-					xyz[1] *= 0.25f;
-					xyz[2] *= 0.25f;
-					xyz[3] *= 0.25f;
+					xyz[0] *= 1.0f/4.0f;
+					xyz[1] *= 1.0f/4.0f;
+					xyz[2] *= 1.0f/4.0f;
+					xyz[3] *= 1.0f/4.0f;
 
 					bx::packRgba32F(dst, xyz);
+				}
+			}
+		}
+		else
+		{
+			const uint32_t slicePitch = _srcPitch*_height;
+
+			for (uint32_t zz = 0; zz < dstDepth; ++zz, src += slicePitch)
+			{
+				for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
+				{
+					const float* rgba0 = (const float*)&src[0];
+					const float* rgba1 = (const float*)&src[_srcPitch];
+					const float* rgba2 = (const float*)&src[slicePitch];
+					const float* rgba3 = (const float*)&src[slicePitch+_srcPitch];
+					for (uint32_t xx = 0
+						; xx < dstWidth
+						; ++xx, rgba0 += 8, rgba1 += 8, rgba2 += 8, rgba3 += 8, dst += 16
+						)
+					{
+						float xyz[4];
+
+						xyz[0]  = rgba0[0];
+						xyz[1]  = rgba0[1];
+						xyz[2]  = rgba0[2];
+						xyz[3]  = rgba0[3];
+
+						xyz[0] += rgba0[4];
+						xyz[1] += rgba0[5];
+						xyz[2] += rgba0[6];
+						xyz[3] += rgba0[7];
+
+						xyz[0] += rgba1[0];
+						xyz[1] += rgba1[1];
+						xyz[2] += rgba1[2];
+						xyz[3] += rgba1[3];
+
+						xyz[0] += rgba1[4];
+						xyz[1] += rgba1[5];
+						xyz[2] += rgba1[6];
+						xyz[3] += rgba1[7];
+
+						xyz[0] += rgba2[0];
+						xyz[1] += rgba2[1];
+						xyz[2] += rgba2[2];
+						xyz[3] += rgba2[3];
+
+						xyz[0] += rgba2[4];
+						xyz[1] += rgba2[5];
+						xyz[2] += rgba2[6];
+						xyz[3] += rgba2[7];
+
+						xyz[0] += rgba3[0];
+						xyz[1] += rgba3[1];
+						xyz[2] += rgba3[2];
+						xyz[3] += rgba3[3];
+
+						xyz[0] += rgba3[4];
+						xyz[1] += rgba3[5];
+						xyz[2] += rgba3[6];
+						xyz[3] += rgba3[7];
+
+						xyz[0] *= 1.0f/8.0f;
+						xyz[1] *= 1.0f/8.0f;
+						xyz[2] *= 1.0f/8.0f;
+						xyz[3] *= 1.0f/8.0f;
+
+						bx::packRgba32F(dst, xyz);
+					}
 				}
 			}
 		}
@@ -3086,10 +3191,10 @@ namespace bimg
 			const uint8_t* rgba = src;
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 4, dst += 4)
 			{
-				dst[0] = bx::pow(rgba[0], 2.2f);
-				dst[1] = bx::pow(rgba[1], 2.2f);
-				dst[2] = bx::pow(rgba[2], 2.2f);
-				dst[3] =         rgba[3];
+				dst[0] = bx::toLinear(rgba[0]);
+				dst[1] = bx::toLinear(rgba[1]);
+				dst[2] = bx::toLinear(rgba[2]);
+				dst[3] =              rgba[3];
 			}
 		}
 	}

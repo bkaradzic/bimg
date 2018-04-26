@@ -26,7 +26,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 13
+#define BIMG_TEXTUREC_VERSION_MINOR 14
 
 struct Options
 {
