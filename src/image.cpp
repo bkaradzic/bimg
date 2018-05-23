@@ -1433,7 +1433,7 @@ namespace bimg
 		},
 	};
 
-	static const uint8_t s_bptcFactors[3][18] =
+	static const uint8_t s_bptcFactors[3][16] =
 	{
 		{  0, 21, 43, 64,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  9, 18, 27, 37, 46, 55, 64,  0,  0,  0,  0,  0,  0,  0,  0 },
