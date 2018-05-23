@@ -1261,7 +1261,7 @@ namespace bimg
 	// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/hh308952(v=vs.85).aspx
 
-	static const uint16_t s_bctcP2[] =
+	static const uint16_t s_bptcP2[] =
 	{ //  3210     0000000000   1111111111   2222222222   3333333333
 		0xcccc, // 0, 0, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1
 		0x8888, // 0, 0, 0, 1,  0, 0, 0, 1,  0, 0, 0, 1,  0, 0, 0, 1
@@ -1329,7 +1329,7 @@ namespace bimg
 		0xee22, // 0, 1, 0, 0,  0, 1, 0, 0,  0, 1, 1, 1,  0, 1, 1, 1
 	};
 
-	static const uint32_t s_bctcP3[] =
+	static const uint32_t s_bptcP3[] =
 	{ //  76543210     0000   1111   2222   3333   4444   5555   6666   7777
 		0xaa685050, // 0, 0,  1, 1,  0, 0,  1, 1,  0, 2,  2, 1,  2, 2,  2, 2
 		0x6a5a5040,	// 0, 0,  0, 1,  0, 0,  1, 1,  2, 2,  1, 1,  2, 2,  2, 1
@@ -1397,7 +1397,7 @@ namespace bimg
 		0x2a4a5254,	// 0, 1,  1, 1,  2, 0,  1, 1,  2, 2,  0, 1,  2, 2,  2, 0
 	};
 
-	static const uint8_t s_bctcA2[] =
+	static const uint8_t s_bptcA2[] =
 	{
 		15, 15, 15, 15, 15, 15, 15, 15,
 		15, 15, 15, 15, 15, 15, 15, 15,
@@ -1409,7 +1409,7 @@ namespace bimg
 		15, 15, 15, 15, 15,  2,  2, 15,
 	};
 
-	static const uint8_t s_bctcA3[2][64] =
+	static const uint8_t s_bptcA3[2][64] =
 	{
 		{
 			 3,  3, 15, 15,  8,  3, 15, 15,
@@ -1433,14 +1433,14 @@ namespace bimg
 		},
 	};
 
-	static const uint8_t s_bctcFactors[3][18] =
+	static const uint8_t s_bptcFactors[3][18] =
 	{
 		{  0, 21, 43, 64,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  9, 18, 27, 37, 46, 55, 64,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  4,  9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64 },
 	};
 
-	struct BctcModeInfo
+	struct BptcModeInfo
 	{
 		uint8_t numSubsets;
 		uint8_t partitionBits;
@@ -1453,7 +1453,7 @@ namespace bimg
 		uint8_t indexBits[2];
 	};
 
-	static const BctcModeInfo s_bctcModeInfo[] =
+	static const BptcModeInfo s_bptcModeInfo[] =
 	{ //  +---------------------------- num subsets
 	  //  |  +------------------------- partition bits
 	  //  |  |  +---------------------- rotation bits
@@ -1523,7 +1523,7 @@ namespace bimg
 			return;
 		}
 
-		const BctcModeInfo& mi  = s_bctcModeInfo[mode];
+		const BptcModeInfo& mi  = s_bptcModeInfo[mode];
 		const uint8_t modePBits = 0 != mi.endpointPBits
 			? mi.endpointPBits
 			: mi.sharedPBits
@@ -1614,8 +1614,8 @@ namespace bimg
 
 		const uint8_t* factors[] =
 		{
-			s_bctcFactors[mi.indexBits[0]-2],
-			hasIndexBits1 ? s_bctcFactors[mi.indexBits[1]-2] : s_bctcFactors[0],
+			s_bptcFactors[mi.indexBits[0]-2],
+			hasIndexBits1 ? s_bptcFactors[mi.indexBits[1]-2] : s_bptcFactors[0],
 		};
 
 		uint16_t offset[2] =
@@ -1635,13 +1635,13 @@ namespace bimg
 				switch (mi.numSubsets)
 				{
 				case 2:
-					subsetIndex = (s_bctcP2[partitionSetIdx] >> idx) & 1;
-					indexAnchor = 0 != subsetIndex ? s_bctcA2[partitionSetIdx] : 0;
+					subsetIndex = (s_bptcP2[partitionSetIdx] >> idx) & 1;
+					indexAnchor = 0 != subsetIndex ? s_bptcA2[partitionSetIdx] : 0;
 					break;
 
 				case 3:
-					subsetIndex = (s_bctcP3[partitionSetIdx] >> (2*idx) ) & 3;
-					indexAnchor = 0 != subsetIndex ? s_bctcA3[subsetIndex-1][partitionSetIdx] : 0;
+					subsetIndex = (s_bptcP3[partitionSetIdx] >> (2*idx) ) & 3;
+					indexAnchor = 0 != subsetIndex ? s_bptcA3[subsetIndex-1][partitionSetIdx] : 0;
 					break;
 
 				default:
