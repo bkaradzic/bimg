@@ -986,6 +986,13 @@ namespace bimg
 				imageDecodeToBgra8(_dst, _src, _width, _height, _width*4, _srcFormat);
 				return true;
 
+			case TextureFormat::RGBA32F:
+				{
+					bx::DefaultAllocator allocator;
+					imageDecodeToRgba32f(&allocator, _dst, _src, _width, _height, 1, _width*16, _srcFormat);
+				}
+				return true;
+
 			default:
 				break;
 			}
@@ -1485,7 +1492,10 @@ namespace bimg
 		{
 			const uint16_t pos   = m_bitPos / 8;
 			const uint16_t shift = m_bitPos & 7;
-			const uint16_t data  = *( (uint16_t*)&m_data[pos]);
+			const uint16_t data  = 15 > pos
+				? *( (uint16_t*)&m_data[pos])
+				:       uint16_t(m_data[pos])
+				;
 			m_bitPos += _numBits;
 			return uint8_t( (data >> shift) & ( (1 << _numBits)-1) );
 		}
@@ -1495,7 +1505,10 @@ namespace bimg
 			const uint16_t bitPos = m_bitPos + _offset;
 			const uint16_t pos    = bitPos / 8;
 			const uint16_t shift  = bitPos & 7;
-			const uint16_t data   = *( (uint16_t*)&m_data[pos]);
+			const uint16_t data   = 15 > pos
+				? *( (uint16_t*)&m_data[pos])
+				:       uint16_t(m_data[pos])
+				;
 			return uint8_t( (data >> shift) & ( (1 << _numBits)-1) );
 		}
 
@@ -1574,7 +1587,7 @@ namespace bimg
 			for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
 			{
 				const uint8_t pda = bit.read(modePBits);
-				const uint8_t pdb = 0 != mi.sharedPBits ? bit.read(modePBits) : pda;
+				const uint8_t pdb = 0 == mi.sharedPBits ? bit.read(modePBits) : pda;
 
 				epR[ii*2+0] |= pda;
 				epR[ii*2+1] |= pdb;
@@ -1614,8 +1627,8 @@ namespace bimg
 
 		const uint8_t* factors[] =
 		{
-			s_bptcFactors[mi.indexBits[0]-2],
-			hasIndexBits1 ? s_bptcFactors[mi.indexBits[1]-2] : s_bptcFactors[0],
+			                s_bptcFactors[mi.indexBits[0]-2],
+			hasIndexBits1 ? s_bptcFactors[mi.indexBits[1]-2] : factors[0],
 		};
 
 		uint16_t offset[2] =
@@ -1651,13 +1664,13 @@ namespace bimg
 				const uint8_t anchor = idx == indexAnchor;
 				const uint8_t num[2] =
 				{
-					uint8_t(mi.indexBits[0] - anchor),
+					uint8_t(                mi.indexBits[0] - anchor    ),
 					uint8_t(hasIndexBits1 ? mi.indexBits[1] - anchor : 0),
 				};
 
 				const uint8_t index[2] =
 				{
-					bit.peek(offset[0], num[0]),
+					                bit.peek(offset[0], num[0]),
 					hasIndexBits1 ? bit.peek(offset[1], num[1]) : index[0],
 				};
 
@@ -1686,7 +1699,7 @@ namespace bimg
 				default:                  break;
 				};
 
-				uint8_t* bgra = &_dst[(yy*4+xx)*4];
+				uint8_t* bgra = &_dst[idx*4];
 				bgra[0] = bb;
 				bgra[1] = gg;
 				bgra[2] = rr;
@@ -3751,6 +3764,31 @@ namespace bimg
 								block[2] = nz;
 								block[3] = 0.0f;
 							}
+						}
+					}
+				}
+				break;
+
+			case TextureFormat::BC6H:
+				{
+					uint32_t width  = _width/4;
+					uint32_t height = _height/4;
+
+					const uint8_t* srcData = src;
+
+					for (uint32_t yy = 0; yy < height; ++yy)
+					{
+						for (uint32_t xx = 0; xx < width; ++xx)
+						{
+							float tmp[16*4];
+							decodeBlockBc6(tmp, srcData);
+							srcData += 16;
+
+							uint8_t* block = (uint8_t*)&dst[yy*_dstPitch*4 + xx*64];
+							bx::memCopy(&block[0*_dstPitch], &tmp[ 0], 64);
+							bx::memCopy(&block[1*_dstPitch], &tmp[16], 64);
+							bx::memCopy(&block[2*_dstPitch], &tmp[32], 64);
+							bx::memCopy(&block[3*_dstPitch], &tmp[48], 64);
 						}
 					}
 				}
