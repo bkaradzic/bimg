@@ -1489,7 +1489,7 @@ namespace bimg
 				return _value;
 			}
 
-			const bool sign = _value & 0x8000;
+			const bool sign = !!(_value & 0x8000);
 			_value &= 0x7fff;
 
 			uint16_t unq;
