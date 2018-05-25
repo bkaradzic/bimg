@@ -1017,7 +1017,7 @@ namespace bimg
 		return imageConvert(_allocator, _dst, _dstFormat, _src, _srcFormat, _width, _height, _depth, _width*srcBpp/8);
 	}
 
-	ImageContainer* imageConvert(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, const ImageContainer& _input)
+	ImageContainer* imageConvert(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, const ImageContainer& _input, bool _convertMips)
 	{
 		ImageContainer* output = imageAlloc(_allocator
 			, _dstFormat
@@ -1026,14 +1026,14 @@ namespace bimg
 			, uint16_t(_input.m_depth)
 			, _input.m_numLayers
 			, _input.m_cubeMap
-			, 1 < _input.m_numMips
+			, _convertMips && 1 < _input.m_numMips
 			);
 
 		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
 
 		for (uint16_t side = 0; side < numSides; ++side)
 		{
-			for (uint8_t lod = 0, num = _input.m_numMips; lod < num; ++lod)
+			for (uint8_t lod = 0, num = _convertMips ? _input.m_numMips : 1; lod < num; ++lod)
 			{
 				ImageMip mip;
 				if (imageGetRawData(_input, side, lod, _input.m_data, _input.m_size, mip) )
@@ -4032,6 +4032,23 @@ namespace bimg
 			}
 			break;
 
+		case TextureFormat::BC6H:
+			{
+				ImageContainer* rgba32f = imageAlloc(_allocator
+					, TextureFormat::RGBA32F
+					, uint16_t(_width)
+					, uint16_t(_height)
+					, uint16_t(1)
+					, 1
+					, false
+					, false
+					);
+				imageDecodeToRgba32f(_allocator, rgba32f->m_data, _src, _width, _height, 1, _width*16, _srcFormat);
+				imageConvert(_allocator, _dst, TextureFormat::BGRA8, rgba32f->m_data, TextureFormat::RGBA32F, _width, _height, 1, _width*16);
+				imageFree(rgba32f);
+			}
+			break;
+
 		case TextureFormat::BC7:
 			for (uint32_t yy = 0; yy < height; ++yy)
 			{
@@ -4229,7 +4246,7 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 
 		using namespace bx;
-		const simd128_t unpack = simd_ld(1.0f, 1.0f/256.0f, 1.0f/65536.0f, 1.0f/16777216.0f);
+		const simd128_t unpack = simd_ld(1.0f/256.0f, 1.0f/256.0f/256.0f, 1.0f/65536.0f/256.0f, 1.0f/16777216.0f/256.0f);
 		const simd128_t umask  = simd_ild(0xff, 0xff00, 0xff0000, 0xff000000);
 		const simd128_t wflip  = simd_ild(0, 0, 0, 0x80000000);
 		const simd128_t wadd   = simd_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);

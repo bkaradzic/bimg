@@ -26,7 +26,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 14
+#define BIMG_TEXTUREC_VERSION_MINOR 15
 
 struct Options
 {
@@ -145,8 +145,8 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 	if (NULL != input)
 	{
-		const bimg::TextureFormat::Enum inputFormat  = input->m_format;
-		      bimg::TextureFormat::Enum outputFormat = input->m_format;
+		bimg::TextureFormat::Enum inputFormat  = input->m_format;
+		bimg::TextureFormat::Enum outputFormat = input->m_format;
 
 		if (bimg::TextureFormat::Count != _options.format)
 		{
@@ -211,7 +211,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 		if (needResize)
 		{
-			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input);
+			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input, false);
 
 			bimg::ImageContainer* dst = bimg::imageAlloc(
 				  _allocator
@@ -228,6 +228,18 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			bimg::imageFree(src);
 			bimg::imageFree(input);
+
+			if (bimg::isCompressed(inputFormat) )
+			{
+				if (inputFormat == bimg::TextureFormat::BC6H)
+				{
+					inputFormat = bimg::TextureFormat::RGBA32F;
+				}
+				else
+				{
+					inputFormat = bimg::TextureFormat::RGBA8;
+				}
+			}
 
 			input = bimg::imageConvert(_allocator, inputFormat, *dst);
 			bimg::imageFree(dst);
@@ -396,7 +408,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					BX_FREE(_allocator, rgbaDst);
 				}
 				// HDR
-				else if ( (!bimg::isCompressed(input->m_format) && 8 != inputBlockInfo.rBits)
+				else if ( (!bimg::isCompressed(inputFormat) && 8 != inputBlockInfo.rBits)
 					 || outputFormat == bimg::TextureFormat::BC6H
 					 || outputFormat == bimg::TextureFormat::BC7
 						)

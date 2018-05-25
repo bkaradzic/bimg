@@ -427,6 +427,7 @@ namespace bimg
 		  bx::AllocatorI* _allocator
 		, TextureFormat::Enum _dstFormat
 		, const ImageContainer& _input
+		, bool _convertMips = true
 		);
 
 	///
