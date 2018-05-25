@@ -404,7 +404,8 @@ namespace bimg
 
 	///
 	bool imageConvert(
-		  void* _dst
+		  bx::AllocatorI* _allocator
+		, void* _dst
 		, TextureFormat::Enum _dstFormat
 		, const void* _src
 		, TextureFormat::Enum _srcFormat
@@ -575,7 +576,8 @@ namespace bimg
 
 	///
 	void imageDecodeToBgra8(
-		  void* _dst
+		  bx::AllocatorI* _allocator
+		, void* _dst
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height
@@ -585,7 +587,8 @@ namespace bimg
 
 	///
 	void imageDecodeToRgba8(
-		  void* _dst
+		  bx::AllocatorI* _allocator
+		, void* _dst
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height

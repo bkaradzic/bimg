@@ -559,7 +559,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					temp = BX_ALLOC(_allocator, size);
 					uint8_t* rgba = (uint8_t*)temp;
 
-					bimg::imageDecodeToRgba8(rgba
+					bimg::imageDecodeToRgba8(
+						  _allocator
+						, rgba
 						, mip.m_data
 						, mip.m_width
 						, mip.m_height
@@ -600,7 +602,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					bimg::imageGetRawData(*output, side, 0, output->m_data, output->m_size, dstMip);
 					dstData = const_cast<uint8_t*>(dstMip.m_data);
 
-					bimg::imageEncodeFromRgba8(dstData
+					bimg::imageEncodeFromRgba8(
+						  _allocator
+						, dstData
 						, rgba
 						, dstMip.m_width
 						, dstMip.m_height
@@ -647,7 +651,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						bimg::imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
 						dstData = const_cast<uint8_t*>(dstMip.m_data);
 
-						bimg::imageEncodeFromRgba8(dstData
+						bimg::imageEncodeFromRgba8(
+							  _allocator
+							, dstData
 							, rgba
 							, dstMip.m_width
 							, dstMip.m_height
@@ -660,7 +666,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					if (NULL != ref)
 					{
-						bimg::imageDecodeToRgba8(rgba
+						bimg::imageDecodeToRgba8(
+							  _allocator
+							, rgba
 							, output->m_data
 							, mip.m_width
 							, mip.m_height
