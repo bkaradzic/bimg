@@ -796,6 +796,30 @@ void help(const char* _str, const bx::Error& _err)
 	help(str.c_str(), false);
 }
 
+class AlignedAllocator : public bx::AllocatorI
+{
+public:
+	AlignedAllocator(bx::AllocatorI* _allocator, size_t _minAlignment)
+		: m_allocator(_allocator)
+		, m_minAlignment(_minAlignment)
+	{
+	}
+
+	virtual void* realloc(
+			void* _ptr
+		, size_t _size
+		, size_t _align
+		, const char* _file
+		, uint32_t _line
+		)
+	{
+		return m_allocator->realloc(_ptr, _size, bx::max(_align, m_minAlignment), _file, _line);
+	}
+
+	bx::AllocatorI* m_allocator;
+	size_t m_minAlignment;
+};
+
 int main(int _argc, const char* _argv[])
 {
 	bx::CommandLine cmdLine(_argc, _argv);
@@ -947,7 +971,9 @@ int main(int _argc, const char* _argv[])
 		return bx::kExitFailure;
 	}
 
-	bx::DefaultAllocator allocator;
+	bx::DefaultAllocator defaultAllocator;
+	AlignedAllocator allocator(&defaultAllocator, 16);
+
 	uint8_t* inputData = (uint8_t*)BX_ALLOC(&allocator, inputSize);
 
 	bx::read(&reader, inputData, inputSize, &err);
