@@ -2891,7 +2891,7 @@ namespace bimg
 		const uint8_t numMips = _hasMips ? imageGetNumMips(_format, _width, _height, _depth) : 1;
 		uint32_t size = imageGetSize(NULL, _width, _height, _depth, _cubeMap, _hasMips, _numLayers, _format);
 
-		ImageContainer* imageContainer = (ImageContainer*)BX_ALLOC(_allocator, size + BX_ALIGN_16(sizeof(ImageContainer) ) );
+		ImageContainer* imageContainer = (ImageContainer*)BX_ALIGNED_ALLOC(_allocator, size + BX_ALIGN_16(sizeof(ImageContainer) ), 16);
 
 		imageContainer->m_allocator   = _allocator;
 		imageContainer->m_data        = bx::alignPtr(imageContainer + 1, 0, 16);
@@ -2920,7 +2920,7 @@ namespace bimg
 
 	void imageFree(ImageContainer* _imageContainer)
 	{
-		BX_FREE(_imageContainer->m_allocator, _imageContainer);
+		BX_ALIGNED_FREE(_imageContainer->m_allocator, _imageContainer, 16);
 	}
 
 // DDS
