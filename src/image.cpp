@@ -969,13 +969,31 @@ namespace bimg
 		}
 	}
 
-	bool imageConvert(void* _dst, TextureFormat::Enum _dstFormat, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch)
+	bool imageConvert(bx::AllocatorI* _allocator, void* _dst, TextureFormat::Enum _dstFormat, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch)
 	{
 		UnpackFn unpack = s_packUnpack[_srcFormat].unpack;
 		PackFn   pack   = s_packUnpack[_dstFormat].pack;
 		if (NULL == pack
 		||  NULL == unpack)
 		{
+			switch (_dstFormat)
+			{
+			case TextureFormat::RGBA8:
+				imageDecodeToRgba8(_allocator, _dst, _src, _width, _height, _width*4, _srcFormat);
+				return true;
+
+			case TextureFormat::BGRA8:
+				imageDecodeToBgra8(_allocator, _dst, _src, _width, _height, _width*4, _srcFormat);
+				return true;
+
+			case TextureFormat::RGBA32F:
+				imageDecodeToRgba32f(_allocator, _dst, _src, _width, _height, 1, _width*16, _srcFormat);
+				return true;
+
+			default:
+				break;
+			}
+
 			return false;
 		}
 
@@ -986,7 +1004,7 @@ namespace bimg
 		return true;
 	}
 
-	bool imageConvert(void* _dst, TextureFormat::Enum _dstFormat, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth)
+	bool imageConvert(bx::AllocatorI* _allocator, void* _dst, TextureFormat::Enum _dstFormat, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth)
 	{
 		const uint32_t srcBpp = s_imageBlockInfo[_srcFormat].bitsPerPixel;
 
@@ -996,10 +1014,10 @@ namespace bimg
 			return true;
 		}
 
-		return imageConvert(_dst, _dstFormat, _src, _srcFormat, _width, _height, _depth, _width*srcBpp/8);
+		return imageConvert(_allocator, _dst, _dstFormat, _src, _srcFormat, _width, _height, _depth, _width*srcBpp/8);
 	}
 
-	ImageContainer* imageConvert(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, const ImageContainer& _input)
+	ImageContainer* imageConvert(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, const ImageContainer& _input, bool _convertMips)
 	{
 		ImageContainer* output = imageAlloc(_allocator
 			, _dstFormat
@@ -1008,14 +1026,14 @@ namespace bimg
 			, uint16_t(_input.m_depth)
 			, _input.m_numLayers
 			, _input.m_cubeMap
-			, 1 < _input.m_numMips
+			, _convertMips && 1 < _input.m_numMips
 			);
 
 		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
 
 		for (uint16_t side = 0; side < numSides; ++side)
 		{
-			for (uint8_t lod = 0, num = _input.m_numMips; lod < num; ++lod)
+			for (uint8_t lod = 0, num = _convertMips ? _input.m_numMips : 1; lod < num; ++lod)
 			{
 				ImageMip mip;
 				if (imageGetRawData(_input, side, lod, _input.m_data, _input.m_size, mip) )
@@ -1024,14 +1042,16 @@ namespace bimg
 					imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
 					uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
 
-					bool ok = imageConvert(dstData
-							, _dstFormat
-							, mip.m_data
-							, mip.m_format
-							, mip.m_width
-							, mip.m_height
-							, mip.m_depth
-							);
+					bool ok = imageConvert(
+						  _allocator
+						, dstData
+						, _dstFormat
+						, mip.m_data
+						, mip.m_format
+						, mip.m_width
+						, mip.m_height
+						, mip.m_depth
+						);
 					BX_CHECK(ok, "Conversion from %s to %s failed!"
 							, getName(_input.m_format)
 							, getName(output->m_format)
@@ -1240,19 +1260,997 @@ namespace bimg
 		}
 	}
 
-	static const int32_t s_etc1Mod[8][4] =
-	{
-		{  2,   8,  -2,   -8},
-		{  5,  17,  -5,  -17},
-		{  9,  29,  -9,  -29},
-		{ 13,  42, -13,  -42},
-		{ 18,  60, -18,  -60},
-		{ 24,  80, -24,  -80},
-		{ 33, 106, -33, -106},
-		{ 47, 183, -47, -183},
+	// BC6H, BC7
+	//
+	// Reference:
+	//
+	// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/hh308952(v=vs.85).aspx
+
+	static const uint16_t s_bptcP2[] =
+	{ //  3210     0000000000   1111111111   2222222222   3333333333
+		0xcccc, // 0, 0, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1
+		0x8888, // 0, 0, 0, 1,  0, 0, 0, 1,  0, 0, 0, 1,  0, 0, 0, 1
+		0xeeee, // 0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1
+		0xecc8, // 0, 0, 0, 1,  0, 0, 1, 1,  0, 0, 1, 1,  0, 1, 1, 1
+		0xc880, // 0, 0, 0, 0,  0, 0, 0, 1,  0, 0, 0, 1,  0, 0, 1, 1
+		0xfeec, // 0, 0, 1, 1,  0, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1
+		0xfec8, // 0, 0, 0, 1,  0, 0, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1
+		0xec80, // 0, 0, 0, 0,  0, 0, 0, 1,  0, 0, 1, 1,  0, 1, 1, 1
+		0xc800, // 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1,  0, 0, 1, 1
+		0xffec, // 0, 0, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1
+		0xfe80, // 0, 0, 0, 0,  0, 0, 0, 1,  0, 1, 1, 1,  1, 1, 1, 1
+		0xe800, // 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1,  0, 1, 1, 1
+		0xffe8, // 0, 0, 0, 1,  0, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1
+		0xff00, // 0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 1,  1, 1, 1, 1
+		0xfff0, // 0, 0, 0, 0,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1
+		0xf000, // 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 1
+		0xf710, // 0, 0, 0, 0,  1, 0, 0, 0,  1, 1, 1, 0,  1, 1, 1, 1
+		0x008e, // 0, 1, 1, 1,  0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0
+		0x7100, // 0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  1, 1, 1, 0
+		0x08ce, // 0, 1, 1, 1,  0, 0, 1, 1,  0, 0, 0, 1,  0, 0, 0, 0
+		0x008c, // 0, 0, 1, 1,  0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0
+		0x7310, // 0, 0, 0, 0,  1, 0, 0, 0,  1, 1, 0, 0,  1, 1, 1, 0
+		0x3100, // 0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  1, 1, 0, 0
+		0x8cce, // 0, 1, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1,  0, 0, 0, 1
+		0x088c, // 0, 0, 1, 1,  0, 0, 0, 1,  0, 0, 0, 1,  0, 0, 0, 0
+		0x3110, // 0, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1, 1, 0, 0
+		0x6666, // 0, 1, 1, 0,  0, 1, 1, 0,  0, 1, 1, 0,  0, 1, 1, 0
+		0x366c, // 0, 0, 1, 1,  0, 1, 1, 0,  0, 1, 1, 0,  1, 1, 0, 0
+		0x17e8, // 0, 0, 0, 1,  0, 1, 1, 1,  1, 1, 1, 0,  1, 0, 0, 0
+		0x0ff0, // 0, 0, 0, 0,  1, 1, 1, 1,  1, 1, 1, 1,  0, 0, 0, 0
+		0x718e, // 0, 1, 1, 1,  0, 0, 0, 1,  1, 0, 0, 0,  1, 1, 1, 0
+		0x399c, // 0, 0, 1, 1,  1, 0, 0, 1,  1, 0, 0, 1,  1, 1, 0, 0
+		0xaaaa, // 0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1,  0, 1, 0, 1
+		0xf0f0, // 0, 0, 0, 0,  1, 1, 1, 1,  0, 0, 0, 0,  1, 1, 1, 1
+		0x5a5a, // 0, 1, 0, 1,  1, 0, 1, 0,  0, 1, 0, 1,  1, 0, 1, 0
+		0x33cc, // 0, 0, 1, 1,  0, 0, 1, 1,  1, 1, 0, 0,  1, 1, 0, 0
+		0x3c3c, // 0, 0, 1, 1,  1, 1, 0, 0,  0, 0, 1, 1,  1, 1, 0, 0
+		0x55aa, // 0, 1, 0, 1,  0, 1, 0, 1,  1, 0, 1, 0,  1, 0, 1, 0
+		0x9696, // 0, 1, 1, 0,  1, 0, 0, 1,  0, 1, 1, 0,  1, 0, 0, 1
+		0xa55a, // 0, 1, 0, 1,  1, 0, 1, 0,  1, 0, 1, 0,  0, 1, 0, 1
+		0x73ce, // 0, 1, 1, 1,  0, 0, 1, 1,  1, 1, 0, 0,  1, 1, 1, 0
+		0x13c8, // 0, 0, 0, 1,  0, 0, 1, 1,  1, 1, 0, 0,  1, 0, 0, 0
+		0x324c, // 0, 0, 1, 1,  0, 0, 1, 0,  0, 1, 0, 0,  1, 1, 0, 0
+		0x3bdc, // 0, 0, 1, 1,  1, 0, 1, 1,  1, 1, 0, 1,  1, 1, 0, 0
+		0x6996, // 0, 1, 1, 0,  1, 0, 0, 1,  1, 0, 0, 1,  0, 1, 1, 0
+		0xc33c, // 0, 0, 1, 1,  1, 1, 0, 0,  1, 1, 0, 0,  0, 0, 1, 1
+		0x9966, // 0, 1, 1, 0,  0, 1, 1, 0,  1, 0, 0, 1,  1, 0, 0, 1
+		0x0660, // 0, 0, 0, 0,  0, 1, 1, 0,  0, 1, 1, 0,  0, 0, 0, 0
+		0x0272, // 0, 1, 0, 0,  1, 1, 1, 0,  0, 1, 0, 0,  0, 0, 0, 0
+		0x04e4, // 0, 0, 1, 0,  0, 1, 1, 1,  0, 0, 1, 0,  0, 0, 0, 0
+		0x4e40, // 0, 0, 0, 0,  0, 0, 1, 0,  0, 1, 1, 1,  0, 0, 1, 0
+		0x2720, // 0, 0, 0, 0,  0, 1, 0, 0,  1, 1, 1, 0,  0, 1, 0, 0
+		0xc936, // 0, 1, 1, 0,  1, 1, 0, 0,  1, 0, 0, 1,  0, 0, 1, 1
+		0x936c, // 0, 0, 1, 1,  0, 1, 1, 0,  1, 1, 0, 0,  1, 0, 0, 1
+		0x39c6, // 0, 1, 1, 0,  0, 0, 1, 1,  1, 0, 0, 1,  1, 1, 0, 0
+		0x639c, // 0, 0, 1, 1,  1, 0, 0, 1,  1, 1, 0, 0,  0, 1, 1, 0
+		0x9336, // 0, 1, 1, 0,  1, 1, 0, 0,  1, 1, 0, 0,  1, 0, 0, 1
+		0x9cc6, // 0, 1, 1, 0,  0, 0, 1, 1,  0, 0, 1, 1,  1, 0, 0, 1
+		0x817e, // 0, 1, 1, 1,  1, 1, 1, 0,  1, 0, 0, 0,  0, 0, 0, 1
+		0xe718, // 0, 0, 0, 1,  1, 0, 0, 0,  1, 1, 1, 0,  0, 1, 1, 1
+		0xccf0, // 0, 0, 0, 0,  1, 1, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1
+		0x0fcc, // 0, 0, 1, 1,  0, 0, 1, 1,  1, 1, 1, 1,  0, 0, 0, 0
+		0x7744, // 0, 0, 1, 0,  0, 0, 1, 0,  1, 1, 1, 0,  1, 1, 1, 0
+		0xee22, // 0, 1, 0, 0,  0, 1, 0, 0,  0, 1, 1, 1,  0, 1, 1, 1
 	};
 
-	static const uint8_t s_etc2Mod[8] = { 3, 6, 11, 16, 23, 32, 41, 64 };
+	static const uint32_t s_bptcP3[] =
+	{ //  76543210     0000   1111   2222   3333   4444   5555   6666   7777
+		0xaa685050, // 0, 0,  1, 1,  0, 0,  1, 1,  0, 2,  2, 1,  2, 2,  2, 2
+		0x6a5a5040,	// 0, 0,  0, 1,  0, 0,  1, 1,  2, 2,  1, 1,  2, 2,  2, 1
+		0x5a5a4200,	// 0, 0,  0, 0,  2, 0,  0, 1,  2, 2,  1, 1,  2, 2,  1, 1
+		0x5450a0a8,	// 0, 2,  2, 2,  0, 0,  2, 2,  0, 0,  1, 1,  0, 1,  1, 1
+		0xa5a50000,	// 0, 0,  0, 0,  0, 0,  0, 0,  1, 1,  2, 2,  1, 1,  2, 2
+		0xa0a05050,	// 0, 0,  1, 1,  0, 0,  1, 1,  0, 0,  2, 2,  0, 0,  2, 2
+		0x5555a0a0,	// 0, 0,  2, 2,  0, 0,  2, 2,  1, 1,  1, 1,  1, 1,  1, 1
+		0x5a5a5050,	// 0, 0,  1, 1,  0, 0,  1, 1,  2, 2,  1, 1,  2, 2,  1, 1
+		0xaa550000,	// 0, 0,  0, 0,  0, 0,  0, 0,  1, 1,  1, 1,  2, 2,  2, 2
+		0xaa555500,	// 0, 0,  0, 0,  1, 1,  1, 1,  1, 1,  1, 1,  2, 2,  2, 2
+		0xaaaa5500,	// 0, 0,  0, 0,  1, 1,  1, 1,  2, 2,  2, 2,  2, 2,  2, 2
+		0x90909090,	// 0, 0,  1, 2,  0, 0,  1, 2,  0, 0,  1, 2,  0, 0,  1, 2
+		0x94949494,	// 0, 1,  1, 2,  0, 1,  1, 2,  0, 1,  1, 2,  0, 1,  1, 2
+		0xa4a4a4a4,	// 0, 1,  2, 2,  0, 1,  2, 2,  0, 1,  2, 2,  0, 1,  2, 2
+		0xa9a59450,	// 0, 0,  1, 1,  0, 1,  1, 2,  1, 1,  2, 2,  1, 2,  2, 2
+		0x2a0a4250,	// 0, 0,  1, 1,  2, 0,  0, 1,  2, 2,  0, 0,  2, 2,  2, 0
+		0xa5945040,	// 0, 0,  0, 1,  0, 0,  1, 1,  0, 1,  1, 2,  1, 1,  2, 2
+		0x0a425054,	// 0, 1,  1, 1,  0, 0,  1, 1,  2, 0,  0, 1,  2, 2,  0, 0
+		0xa5a5a500,	// 0, 0,  0, 0,  1, 1,  2, 2,  1, 1,  2, 2,  1, 1,  2, 2
+		0x55a0a0a0,	// 0, 0,  2, 2,  0, 0,  2, 2,  0, 0,  2, 2,  1, 1,  1, 1
+		0xa8a85454,	// 0, 1,  1, 1,  0, 1,  1, 1,  0, 2,  2, 2,  0, 2,  2, 2
+		0x6a6a4040,	// 0, 0,  0, 1,  0, 0,  0, 1,  2, 2,  2, 1,  2, 2,  2, 1
+		0xa4a45000,	// 0, 0,  0, 0,  0, 0,  1, 1,  0, 1,  2, 2,  0, 1,  2, 2
+		0x1a1a0500,	// 0, 0,  0, 0,  1, 1,  0, 0,  2, 2,  1, 0,  2, 2,  1, 0
+		0x0050a4a4,	// 0, 1,  2, 2,  0, 1,  2, 2,  0, 0,  1, 1,  0, 0,  0, 0
+		0xaaa59090,	// 0, 0,  1, 2,  0, 0,  1, 2,  1, 1,  2, 2,  2, 2,  2, 2
+		0x14696914,	// 0, 1,  1, 0,  1, 2,  2, 1,  1, 2,  2, 1,  0, 1,  1, 0
+		0x69691400,	// 0, 0,  0, 0,  0, 1,  1, 0,  1, 2,  2, 1,  1, 2,  2, 1
+		0xa08585a0,	// 0, 0,  2, 2,  1, 1,  0, 2,  1, 1,  0, 2,  0, 0,  2, 2
+		0xaa821414,	// 0, 1,  1, 0,  0, 1,  1, 0,  2, 0,  0, 2,  2, 2,  2, 2
+		0x50a4a450,	// 0, 0,  1, 1,  0, 1,  2, 2,  0, 1,  2, 2,  0, 0,  1, 1
+		0x6a5a0200,	// 0, 0,  0, 0,  2, 0,  0, 0,  2, 2,  1, 1,  2, 2,  2, 1
+		0xa9a58000,	// 0, 0,  0, 0,  0, 0,  0, 2,  1, 1,  2, 2,  1, 2,  2, 2
+		0x5090a0a8,	// 0, 2,  2, 2,  0, 0,  2, 2,  0, 0,  1, 2,  0, 0,  1, 1
+		0xa8a09050,	// 0, 0,  1, 1,  0, 0,  1, 2,  0, 0,  2, 2,  0, 2,  2, 2
+		0x24242424,	// 0, 1,  2, 0,  0, 1,  2, 0,  0, 1,  2, 0,  0, 1,  2, 0
+		0x00aa5500,	// 0, 0,  0, 0,  1, 1,  1, 1,  2, 2,  2, 2,  0, 0,  0, 0
+		0x24924924,	// 0, 1,  2, 0,  1, 2,  0, 1,  2, 0,  1, 2,  0, 1,  2, 0
+		0x24499224,	// 0, 1,  2, 0,  2, 0,  1, 2,  1, 2,  0, 1,  0, 1,  2, 0
+		0x50a50a50,	// 0, 0,  1, 1,  2, 2,  0, 0,  1, 1,  2, 2,  0, 0,  1, 1
+		0x500aa550,	// 0, 0,  1, 1,  1, 1,  2, 2,  2, 2,  0, 0,  0, 0,  1, 1
+		0xaaaa4444,	// 0, 1,  0, 1,  0, 1,  0, 1,  2, 2,  2, 2,  2, 2,  2, 2
+		0x66660000,	// 0, 0,  0, 0,  0, 0,  0, 0,  2, 1,  2, 1,  2, 1,  2, 1
+		0xa5a0a5a0,	// 0, 0,  2, 2,  1, 1,  2, 2,  0, 0,  2, 2,  1, 1,  2, 2
+		0x50a050a0,	// 0, 0,  2, 2,  0, 0,  1, 1,  0, 0,  2, 2,  0, 0,  1, 1
+		0x69286928,	// 0, 2,  2, 0,  1, 2,  2, 1,  0, 2,  2, 0,  1, 2,  2, 1
+		0x44aaaa44,	// 0, 1,  0, 1,  2, 2,  2, 2,  2, 2,  2, 2,  0, 1,  0, 1
+		0x66666600,	// 0, 0,  0, 0,  2, 1,  2, 1,  2, 1,  2, 1,  2, 1,  2, 1
+		0xaa444444,	// 0, 1,  0, 1,  0, 1,  0, 1,  0, 1,  0, 1,  2, 2,  2, 2
+		0x54a854a8,	// 0, 2,  2, 2,  0, 1,  1, 1,  0, 2,  2, 2,  0, 1,  1, 1
+		0x95809580,	// 0, 0,  0, 2,  1, 1,  1, 2,  0, 0,  0, 2,  1, 1,  1, 2
+		0x96969600,	// 0, 0,  0, 0,  2, 1,  1, 2,  2, 1,  1, 2,  2, 1,  1, 2
+		0xa85454a8,	// 0, 2,  2, 2,  0, 1,  1, 1,  0, 1,  1, 1,  0, 2,  2, 2
+		0x80959580,	// 0, 0,  0, 2,  1, 1,  1, 2,  1, 1,  1, 2,  0, 0,  0, 2
+		0xaa141414,	// 0, 1,  1, 0,  0, 1,  1, 0,  0, 1,  1, 0,  2, 2,  2, 2
+		0x96960000,	// 0, 0,  0, 0,  0, 0,  0, 0,  2, 1,  1, 2,  2, 1,  1, 2
+		0xaaaa1414,	// 0, 1,  1, 0,  0, 1,  1, 0,  2, 2,  2, 2,  2, 2,  2, 2
+		0xa05050a0,	// 0, 0,  2, 2,  0, 0,  1, 1,  0, 0,  1, 1,  0, 0,  2, 2
+		0xa0a5a5a0,	// 0, 0,  2, 2,  1, 1,  2, 2,  1, 1,  2, 2,  0, 0,  2, 2
+		0x96000000,	// 0, 0,  0, 0,  0, 0,  0, 0,  0, 0,  0, 0,  2, 1,  1, 2
+		0x40804080,	// 0, 0,  0, 2,  0, 0,  0, 1,  0, 0,  0, 2,  0, 0,  0, 1
+		0xa9a8a9a8,	// 0, 2,  2, 2,  1, 2,  2, 2,  0, 2,  2, 2,  1, 2,  2, 2
+		0xaaaaaa44,	// 0, 1,  0, 1,  2, 2,  2, 2,  2, 2,  2, 2,  2, 2,  2, 2
+		0x2a4a5254,	// 0, 1,  1, 1,  2, 0,  1, 1,  2, 2,  0, 1,  2, 2,  2, 0
+	};
+
+	static const uint8_t s_bptcA2[] =
+	{
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15, 15, 15, 15, 15, 15, 15, 15,
+		15,  2,  8,  2,  2,  8,  8, 15,
+		 2,  8,  2,  2,  8,  8,  2,  2,
+		15, 15,  6,  8,  2,  8, 15, 15,
+		 2,  8,  2,  2,  2, 15, 15,  6,
+		 6,  2,  6,  8, 15, 15,  2,  2,
+		15, 15, 15, 15, 15,  2,  2, 15,
+	};
+
+	static const uint8_t s_bptcA3[2][64] =
+	{
+		{
+			 3,  3, 15, 15,  8,  3, 15, 15,
+			 8,  8,  6,  6,  6,  5,  3,  3,
+			 3,  3,  8, 15,  3,  3,  6, 10,
+			 5,  8,  8,  6,  8,  5, 15, 15,
+			 8, 15,  3,  5,  6, 10,  8, 15,
+			15,  3, 15,  5, 15, 15, 15, 15,
+			 3, 15,  5,  5,  5,  8,  5, 10,
+			 5, 10,  8, 13, 15, 12,  3,  3,
+		},
+		{
+			15,  8,  8,  3, 15, 15,  3,  8,
+			15, 15, 15, 15, 15, 15, 15,  8,
+			15,  8, 15,  3, 15,  8, 15,  8,
+			 3, 15,  6, 10, 15, 15, 10,  8,
+			15,  3, 15, 10, 10,  8,  9, 10,
+			 6, 15,  8, 15,  3,  6,  6,  8,
+			15,  3, 15, 15, 15, 15, 15, 15,
+			15, 15, 15, 15,  3, 15, 15,  8,
+		},
+	};
+
+	static const uint8_t s_bptcFactors[3][16] =
+	{
+		{  0, 21, 43, 64,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+		{  0,  9, 18, 27, 37, 46, 55, 64,  0,  0,  0,  0,  0,  0,  0,  0 },
+		{  0,  4,  9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64 },
+	};
+
+	struct BitReader
+	{
+		BitReader(const uint8_t* _data, uint16_t _bitPos = 0)
+			: m_data(_data)
+			, m_bitPos(_bitPos)
+		{
+		}
+
+		uint16_t read(uint8_t _numBits)
+		{
+			const uint16_t pos   = m_bitPos / 8;
+			const uint16_t shift = m_bitPos & 7;
+			uint32_t data = 0;
+			bx::memCopy(&data, &m_data[pos], bx::min(4, 16-pos) );
+			m_bitPos += _numBits;
+			return uint16_t( (data >> shift) & ( (1 << _numBits)-1) );
+		}
+
+		uint16_t peek(uint16_t _offset, uint8_t _numBits)
+		{
+			const uint16_t bitPos = m_bitPos + _offset;
+			const uint16_t shift  = bitPos & 7;
+			uint16_t pos  = bitPos / 8;
+			uint32_t data = 0;
+			bx::memCopy(&data, &m_data[pos], bx::min(4, 16-pos) );
+			return uint8_t( (data >> shift) & ( (1 << _numBits)-1) );
+		}
+
+		const uint8_t* m_data;
+		uint16_t m_bitPos;
+	};
+
+	uint16_t bc6hUnquantize(uint16_t _value, bool _signed, uint8_t _endpointBits)
+	{
+		const uint16_t maxValue = 1<<(_endpointBits-1);
+
+		if (_signed)
+		{
+			if (_endpointBits >= 16)
+			{
+				return _value;
+			}
+
+			const bool sign = !!(_value & 0x8000);
+			_value &= 0x7fff;
+
+			uint16_t unq;
+
+			if (0 == _value)
+			{
+				unq = 0;
+			}
+			else if (_value >= maxValue-1)
+			{
+				unq = 0x7fff;
+			}
+			else
+			{
+				unq = ( (_value<<15) + 0x4000) >> (_endpointBits-1);
+			}
+
+			return sign ? -unq : unq;
+		}
+
+		if (_endpointBits >= 15)
+		{
+			return _value;
+		}
+
+		if (0 == _value)
+		{
+			return 0;
+		}
+
+		if (_value == maxValue)
+		{
+			return UINT16_MAX;
+		}
+
+		return ( (_value<<15) + 0x4000) >> (_endpointBits-1);
+	}
+
+	uint16_t bc6hUnquantizeFinal(uint16_t _value, bool _signed)
+	{
+		if (_signed)
+		{
+			const uint16_t sign = _value & 0x8000;
+			_value &= 0x7fff;
+
+			return ( (_value * 31) >> 5) | sign;
+		}
+
+		return (_value * 31) >> 6;
+	}
+
+	uint16_t signExtend(uint16_t _value, uint8_t _numBits)
+	{
+		const uint16_t mask   = 1 << (_numBits - 1);
+		const uint16_t result = (_value ^ mask) - mask;
+
+		return result;
+	}
+
+	struct Bc6hModeInfo
+	{
+		uint8_t transformed;
+		uint8_t partitionBits;
+		uint8_t endpointBits;
+		uint8_t deltaBits[3];
+	};
+
+	static const Bc6hModeInfo s_bc6hModeInfo[] =
+	{ //  +--------------------------- transformed
+	  //  |  +------------------------ partition bits
+	  //  |  |  +--------------------- endpoint bits
+	  //  |  |  |      +-------------- delta bits
+		{ 1, 5, 10, {  5,  5,  5 } }, // 00    2-bits
+		{ 1, 5,  7, {  6,  6,  6 } }, // 01
+		{ 1, 5, 11, {  5,  4,  4 } }, // 00010 5-bits
+		{ 0, 0, 10, { 10, 10, 10 } }, // 00011
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 1, 5, 11, {  4,  5,  4 } }, // 00110
+		{ 1, 0, 11, {  9,  9,  9 } }, // 00010
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 1, 5, 11, {  4,  4,  5 } }, // 00010
+		{ 1, 0, 12, {  8,  8,  8 } }, // 00010
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 1, 5,  9, {  5,  5,  5 } }, // 00010
+		{ 1, 0, 16, {  4,  4,  4 } }, // 00010
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 1, 5,  8, {  6,  5,  5 } }, // 00010
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 1, 5,  8, {  5,  6,  5 } }, // 00010
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 1, 5,  8, {  5,  5,  6 } }, // 00010
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+		{ 0, 5,  6, {  6,  6,  6 } }, // 00010
+		{ 0, 0,  0, {  0,  0,  0 } }, // -
+	};
+
+	void decodeBlockBc6h(uint16_t _dst[16*3], const uint8_t _src[16], bool _signed)
+	{
+		BitReader bit(_src);
+
+		uint8_t mode = uint8_t(bit.read(2) );
+		if (mode & 2)
+		{
+			// 5-bit mode
+			mode |= bit.read(3) << 2;
+		}
+
+		const Bc6hModeInfo& mi = s_bc6hModeInfo[mode];
+		if (0 == mi.endpointBits)
+		{
+			bx::memSet(_dst, 0, 16*3*2);
+			return;
+		}
+
+		uint16_t epR[4] = { /* rw, rx, ry, rz */ };
+		uint16_t epG[4] = { /* gw, gx, gy, gz */ };
+		uint16_t epB[4] = { /* bw, bx, by, bz */ };
+
+		switch (mode)
+		{
+		case 0:
+			epG[2] |= bit.read( 1) <<  4;
+			epB[2] |= bit.read( 1) <<  4;
+			epB[3] |= bit.read( 1) <<  4;
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read( 5) <<  0;
+			epG[3] |= bit.read( 1) <<  4;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  2;
+			epR[3] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  3;
+			break;
+
+		case 1:
+			epG[2] |= bit.read( 1) <<  5;
+			epG[3] |= bit.read( 1) <<  4;
+			epG[3] |= bit.read( 1) <<  5;
+			epR[0] |= bit.read( 7) <<  0;
+			epB[3] |= bit.read( 1) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 1) <<  4;
+			epG[0] |= bit.read( 7) <<  0;
+			epB[2] |= bit.read( 1) <<  5;
+			epB[3] |= bit.read( 1) <<  2;
+			epG[2] |= bit.read( 1) <<  4;
+			epB[0] |= bit.read( 7) <<  0;
+			epB[3] |= bit.read( 1) <<  3;
+			epB[3] |= bit.read( 1) <<  5;
+			epB[3] |= bit.read( 1) <<  4;
+			epR[1] |= bit.read( 6) <<  0;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 6) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 6) <<  0;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 6) <<  0;
+			epR[3] |= bit.read( 6) <<  0;
+			break;
+
+		case 2:
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read( 5) <<  0;
+			epR[0] |= bit.read( 1) << 10;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 4) <<  0;
+			epG[0] |= bit.read( 1) << 10;
+			epB[3] |= bit.read( 1) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 4) <<  0;
+			epB[0] |= bit.read( 1) << 10;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  2;
+			epR[3] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  3;
+			break;
+
+		case 3:
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read(10) <<  0;
+			epG[1] |= bit.read(10) <<  0;
+			epB[1] |= bit.read(10) <<  0;
+			break;
+
+		case 6:
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read( 4) <<  0;
+			epR[0] |= bit.read( 1) << 10;
+			epG[3] |= bit.read( 1) <<  4;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 5) <<  0;
+			epG[0] |= bit.read( 1) << 10;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 4) <<  0;
+			epB[0] |= bit.read( 1) << 10;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 4) <<  0;
+			epB[3] |= bit.read( 1) <<  0;
+			epB[3] |= bit.read( 1) <<  2;
+			epR[3] |= bit.read( 4) <<  0;
+			epG[2] |= bit.read( 1) <<  4;
+			epB[3] |= bit.read( 1) <<  3;
+			break;
+
+		case 7:
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read( 9) <<  0;
+			epR[0] |= bit.read( 1) << 10;
+			epG[1] |= bit.read( 9) <<  0;
+			epG[0] |= bit.read( 1) << 10;
+			epB[1] |= bit.read( 9) <<  0;
+			epB[0] |= bit.read( 1) << 10;
+			break;
+
+		case 10:
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read( 4) <<  0;
+			epR[0] |= bit.read( 1) << 10;
+			epB[2] |= bit.read( 1) <<  4;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 4) <<  0;
+			epG[0] |= bit.read( 1) << 10;
+			epB[3] |= bit.read( 1) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 5) <<  0;
+			epB[0] |= bit.read( 1) << 10;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 4) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[3] |= bit.read( 1) <<  2;
+			epR[3] |= bit.read( 4) <<  0;
+			epB[3] |= bit.read( 1) <<  4;
+			epB[3] |= bit.read( 1) <<  3;
+			break;
+
+		case 11:
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read( 8) <<  0;
+			epR[0] |= bit.read( 1) << 11;
+			epR[0] |= bit.read( 1) << 10;
+			epG[1] |= bit.read( 8) <<  0;
+			epG[0] |= bit.read( 1) << 11;
+			epG[0] |= bit.read( 1) << 10;
+			epB[1] |= bit.read( 8) <<  0;
+			epB[0] |= bit.read( 1) << 11;
+			epB[0] |= bit.read( 1) << 10;
+			break;
+
+		case 14:
+			epR[0] |= bit.read( 9) <<  0;
+			epB[2] |= bit.read( 1) <<  4;
+			epG[0] |= bit.read( 9) <<  0;
+			epG[2] |= bit.read( 1) <<  4;
+			epB[0] |= bit.read( 9) <<  0;
+			epB[3] |= bit.read( 1) <<  4;
+			epR[1] |= bit.read( 5) <<  0;
+			epG[3] |= bit.read( 1) <<  4;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  2;
+			epR[3] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  3;
+			break;
+
+		case 15:
+			epR[0] |= bit.read(10) <<  0;
+			epG[0] |= bit.read(10) <<  0;
+			epB[0] |= bit.read(10) <<  0;
+			epR[1] |= bit.read( 4) <<  0;
+			epR[0] |= bit.read( 1) << 15;
+			epR[0] |= bit.read( 1) << 14;
+			epR[0] |= bit.read( 1) << 13;
+			epR[0] |= bit.read( 1) << 12;
+			epR[0] |= bit.read( 1) << 11;
+			epR[0] |= bit.read( 1) << 10;
+			epG[1] |= bit.read( 4) <<  0;
+			epG[0] |= bit.read( 1) << 15;
+			epG[0] |= bit.read( 1) << 14;
+			epG[0] |= bit.read( 1) << 13;
+			epG[0] |= bit.read( 1) << 12;
+			epG[0] |= bit.read( 1) << 11;
+			epG[0] |= bit.read( 1) << 10;
+			epB[1] |= bit.read( 4) <<  0;
+			epB[0] |= bit.read( 1) << 15;
+			epB[0] |= bit.read( 1) << 14;
+			epB[0] |= bit.read( 1) << 13;
+			epB[0] |= bit.read( 1) << 12;
+			epB[0] |= bit.read( 1) << 11;
+			epB[0] |= bit.read( 1) << 10;
+			break;
+
+		case 18:
+			epR[0] |= bit.read( 8) <<  0;
+			epG[3] |= bit.read( 1) <<  4;
+			epB[2] |= bit.read( 1) <<  4;
+			epG[0] |= bit.read( 8) <<  0;
+			epB[3] |= bit.read( 1) <<  2;
+			epG[2] |= bit.read( 1) <<  4;
+			epB[0] |= bit.read( 8) <<  0;
+			epB[3] |= bit.read( 1) <<  3;
+			epB[3] |= bit.read( 1) <<  4;
+			epR[1] |= bit.read( 6) <<  0;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 6) <<  0;
+			epR[3] |= bit.read( 6) <<  0;
+			break;
+
+		case 22:
+			epR[0] |= bit.read( 8) <<  0;
+			epB[3] |= bit.read( 1) <<  0;
+			epB[2] |= bit.read( 1) <<  4;
+			epG[0] |= bit.read( 8) <<  0;
+			epG[2] |= bit.read( 1) <<  5;
+			epG[2] |= bit.read( 1) <<  4;
+			epB[0] |= bit.read( 8) <<  0;
+			epG[3] |= bit.read( 1) <<  5;
+			epB[3] |= bit.read( 1) <<  4;
+			epR[1] |= bit.read( 5) <<  0;
+			epG[3] |= bit.read( 1) <<  4;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 6) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  2;
+			epR[3] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  3;
+			break;
+
+		case 26:
+			epR[0] |= bit.read( 8) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 1) <<  4;
+			epG[0] |= bit.read( 8) <<  0;
+			epB[2] |= bit.read( 1) <<  5;
+			epG[2] |= bit.read( 1) <<  4;
+			epB[0] |= bit.read( 8) <<  0;
+			epB[3] |= bit.read( 1) <<  5;
+			epB[3] |= bit.read( 1) <<  4;
+			epR[1] |= bit.read( 5) <<  0;
+			epG[3] |= bit.read( 1) <<  4;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 6) <<  0;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  2;
+			epR[3] |= bit.read( 5) <<  0;
+			epB[3] |= bit.read( 1) <<  3;
+			break;
+
+		case 30:
+			epR[0] |= bit.read( 6) <<  0;
+			epG[3] |= bit.read( 1) <<  4;
+			epB[3] |= bit.read( 1) <<  0;
+			epB[3] |= bit.read( 1) <<  1;
+			epB[2] |= bit.read( 1) <<  4;
+			epG[0] |= bit.read( 6) <<  0;
+			epG[2] |= bit.read( 1) <<  5;
+			epB[2] |= bit.read( 1) <<  5;
+			epB[3] |= bit.read( 1) <<  2;
+			epG[2] |= bit.read( 1) <<  4;
+			epB[0] |= bit.read( 6) <<  0;
+			epG[3] |= bit.read( 1) <<  5;
+			epB[3] |= bit.read( 1) <<  3;
+			epB[3] |= bit.read( 1) <<  5;
+			epB[3] |= bit.read( 1) <<  4;
+			epR[1] |= bit.read( 6) <<  0;
+			epG[2] |= bit.read( 4) <<  0;
+			epG[1] |= bit.read( 6) <<  0;
+			epG[3] |= bit.read( 4) <<  0;
+			epB[1] |= bit.read( 6) <<  0;
+			epB[2] |= bit.read( 4) <<  0;
+			epR[2] |= bit.read( 6) <<  0;
+			epR[3] |= bit.read( 6) <<  0;
+			break;
+
+		default:
+			break;
+		}
+
+		if (_signed)
+		{
+			epR[0] = signExtend(epR[0], mi.endpointBits);
+			epG[0] = signExtend(epG[0], mi.endpointBits);
+			epB[0] = signExtend(epB[0], mi.endpointBits);
+		}
+
+		const uint8_t numSubsets = !!mi.partitionBits + 1;
+
+		for (uint8_t ii = 1, num = numSubsets*2; ii < num; ++ii)
+		{
+			if (_signed
+			||  mi.transformed)
+			{
+				epR[ii] = signExtend(epR[ii], mi.deltaBits[0]);
+				epG[ii] = signExtend(epG[ii], mi.deltaBits[1]);
+				epB[ii] = signExtend(epB[ii], mi.deltaBits[2]);
+			}
+
+			if (mi.transformed)
+			{
+				const uint16_t mask = (1<<mi.endpointBits) - 1;
+
+				epR[ii] = (epR[ii] + epR[0]) & mask;
+				epG[ii] = (epG[ii] + epG[0]) & mask;
+				epB[ii] = (epB[ii] + epB[0]) & mask;
+
+				if (_signed)
+				{
+					epR[ii] = signExtend(epR[ii], mi.endpointBits);
+					epG[ii] = signExtend(epG[ii], mi.endpointBits);
+					epB[ii] = signExtend(epB[ii], mi.endpointBits);
+				}
+			}
+		}
+
+		for (uint8_t ii = 0, num = numSubsets*2; ii < num; ++ii)
+		{
+			epR[ii] = bc6hUnquantize(epR[ii], _signed, mi.endpointBits);
+			epG[ii] = bc6hUnquantize(epG[ii], _signed, mi.endpointBits);
+			epB[ii] = bc6hUnquantize(epB[ii], _signed, mi.endpointBits);
+		}
+
+		const uint8_t partitionSetIdx = uint8_t(mi.partitionBits ? bit.read(5) : 0);
+		const uint8_t indexBits = mi.partitionBits ? 3 : 4;
+		const uint8_t* factors  = s_bptcFactors[indexBits-2];
+
+		for (uint8_t yy = 0; yy < 4; ++yy)
+		{
+			for (uint8_t xx = 0; xx < 4; ++xx)
+			{
+				const uint8_t idx = yy*4+xx;
+
+				uint8_t subsetIndex = 0;
+				uint8_t indexAnchor = 0;
+
+				if (0 != mi.partitionBits)
+				{
+					subsetIndex = (s_bptcP2[partitionSetIdx] >> idx) & 1;
+					indexAnchor = subsetIndex ? s_bptcA2[partitionSetIdx] : 0;
+				}
+
+				const uint8_t anchor = idx == indexAnchor;
+				const uint8_t num    = indexBits - anchor;
+				const uint8_t index  = (uint8_t)bit.read(num);
+
+				const uint8_t fc  = factors[index];
+				const uint8_t fca = 64 - fc;
+				const uint8_t fcb = fc;
+
+				subsetIndex *= 2;
+				uint16_t rr = bc6hUnquantizeFinal( (epR[subsetIndex]*fca + epR[subsetIndex + 1]*fcb + 32) >> 6, _signed);
+				uint16_t gg = bc6hUnquantizeFinal( (epG[subsetIndex]*fca + epG[subsetIndex + 1]*fcb + 32) >> 6, _signed);
+				uint16_t bb = bc6hUnquantizeFinal( (epB[subsetIndex]*fca + epB[subsetIndex + 1]*fcb + 32) >> 6, _signed);
+
+				uint16_t* rgba = &_dst[idx*3];
+				rgba[0] = rr;
+				rgba[1] = gg;
+				rgba[2] = bb;
+			}
+		}
+	}
+
+	void decodeBlockBc6h(float _dst[16*4], const uint8_t _src[16])
+	{
+		uint16_t tmp[16*3];
+
+		decodeBlockBc6h(tmp, _src, true);
+
+		for (uint32_t ii = 0; ii < 16; ++ii)
+		{
+			_dst[ii*4+0] = bx::halfToFloat(tmp[ii*3+0]);
+			_dst[ii*4+1] = bx::halfToFloat(tmp[ii*3+1]);
+			_dst[ii*4+2] = bx::halfToFloat(tmp[ii*3+2]);
+			_dst[ii*4+3] = 1.0f;
+		}
+	}
+
+	struct Bc7ModeInfo
+	{
+		uint8_t numSubsets;
+		uint8_t partitionBits;
+		uint8_t rotationBits;
+		uint8_t indexSelectionBits;
+		uint8_t colorBits;
+		uint8_t alphaBits;
+		uint8_t endpointPBits;
+		uint8_t sharedPBits;
+		uint8_t indexBits[2];
+	};
+
+	static const Bc7ModeInfo s_bp7ModeInfo[] =
+	{ //  +---------------------------- num subsets
+	  //  |  +------------------------- partition bits
+	  //  |  |  +---------------------- rotation bits
+	  //  |  |  |  +------------------- index selection bits
+	  //  |  |  |  |  +---------------- color bits
+	  //  |  |  |  |  |  +------------- alpha bits
+	  //  |  |  |  |  |  |  +---------- endpoint P-bits
+	  //  |  |  |  |  |  |  |  +------- shared P-bits
+	  //  |  |  |  |  |  |  |  |    +-- 2x index bits
+		{ 3, 4, 0, 0, 4, 0, 1, 0, { 3, 0 } }, // 0
+		{ 2, 6, 0, 0, 6, 0, 0, 1, { 3, 0 } }, // 1
+		{ 3, 6, 0, 0, 5, 0, 0, 0, { 2, 0 } }, // 2
+		{ 2, 6, 0, 0, 7, 0, 1, 0, { 2, 0 } }, // 3
+		{ 1, 0, 2, 1, 5, 6, 0, 0, { 2, 3 } }, // 4
+		{ 1, 0, 2, 0, 7, 8, 0, 0, { 2, 2 } }, // 5
+		{ 1, 0, 0, 0, 7, 7, 1, 0, { 4, 0 } }, // 6
+		{ 2, 6, 0, 0, 5, 5, 1, 0, { 2, 0 } }, // 7
+	};
+
+	void decodeBlockBc7(uint8_t _dst[16*4], const uint8_t _src[16])
+	{
+		BitReader bit(_src);
+
+		uint8_t mode = 0;
+		for (; mode < 8 && 0 == bit.read(1); ++mode)
+		{
+		}
+
+		if (mode == 8)
+		{
+			bx::memSet(_dst, 0, 16*4);
+			return;
+		}
+
+		const Bc7ModeInfo& mi  = s_bp7ModeInfo[mode];
+		const uint8_t modePBits = 0 != mi.endpointPBits
+			? mi.endpointPBits
+			: mi.sharedPBits
+			;
+
+		const uint8_t partitionSetIdx    = uint8_t(bit.read(mi.partitionBits) );
+		const uint8_t rotationMode       = uint8_t(bit.read(mi.rotationBits) );
+		const uint8_t indexSelectionMode = uint8_t(bit.read(mi.indexSelectionBits) );
+
+		uint8_t epR[6];
+		uint8_t epG[6];
+		uint8_t epB[6];
+		uint8_t epA[6];
+
+		for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
+		{
+			epR[ii*2+0] = uint8_t(bit.read(mi.colorBits) << modePBits);
+			epR[ii*2+1] = uint8_t(bit.read(mi.colorBits) << modePBits);
+		}
+
+		for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
+		{
+			epG[ii*2+0] = uint8_t(bit.read(mi.colorBits) << modePBits);
+			epG[ii*2+1] = uint8_t(bit.read(mi.colorBits) << modePBits);
+		}
+
+		for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
+		{
+			epB[ii*2+0] = uint8_t(bit.read(mi.colorBits) << modePBits);
+			epB[ii*2+1] = uint8_t(bit.read(mi.colorBits) << modePBits);
+		}
+
+		if (mi.alphaBits)
+		{
+			for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
+			{
+				epA[ii*2+0] = uint8_t(bit.read(mi.alphaBits) << modePBits);
+				epA[ii*2+1] = uint8_t(bit.read(mi.alphaBits) << modePBits);
+			}
+		}
+		else
+		{
+			bx::memSet(epA, 0xff, 6);
+		}
+
+		if (0 != modePBits)
+		{
+			for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
+			{
+				const uint8_t pda = uint8_t(                      bit.read(modePBits)      );
+				const uint8_t pdb = uint8_t(0 == mi.sharedPBits ? bit.read(modePBits) : pda);
+
+				epR[ii*2+0] |= pda;
+				epR[ii*2+1] |= pdb;
+				epG[ii*2+0] |= pda;
+				epG[ii*2+1] |= pdb;
+				epB[ii*2+0] |= pda;
+				epB[ii*2+1] |= pdb;
+				epA[ii*2+0] |= pda;
+				epA[ii*2+1] |= pdb;
+			}
+		}
+
+		const uint8_t colorBits = mi.colorBits + modePBits;
+
+		for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
+		{
+			epR[ii*2+0] = bitRangeConvert(epR[ii*2+0], colorBits, 8);
+			epR[ii*2+1] = bitRangeConvert(epR[ii*2+1], colorBits, 8);
+			epG[ii*2+0] = bitRangeConvert(epG[ii*2+0], colorBits, 8);
+			epG[ii*2+1] = bitRangeConvert(epG[ii*2+1], colorBits, 8);
+			epB[ii*2+0] = bitRangeConvert(epB[ii*2+0], colorBits, 8);
+			epB[ii*2+1] = bitRangeConvert(epB[ii*2+1], colorBits, 8);
+		}
+
+		if (mi.alphaBits)
+		{
+			const uint8_t alphaBits = mi.alphaBits + modePBits;
+
+			for (uint8_t ii = 0; ii < mi.numSubsets; ++ii)
+			{
+				epA[ii*2+0] = bitRangeConvert(epA[ii*2+0], alphaBits, 8);
+				epA[ii*2+1] = bitRangeConvert(epA[ii*2+1], alphaBits, 8);
+			}
+		}
+
+		const bool hasIndexBits1 = 0 != mi.indexBits[1];
+
+		const uint8_t* factors[] =
+		{
+			                s_bptcFactors[mi.indexBits[0]-2],
+			hasIndexBits1 ? s_bptcFactors[mi.indexBits[1]-2] : factors[0],
+		};
+
+		uint16_t offset[2] =
+		{
+			0,
+			uint16_t(mi.numSubsets*(16*mi.indexBits[0]-1) ),
+		};
+
+		for (uint8_t yy = 0; yy < 4; ++yy)
+		{
+			for (uint8_t xx = 0; xx < 4; ++xx)
+			{
+				const uint8_t idx = yy*4+xx;
+
+				uint8_t subsetIndex = 0;
+				uint8_t indexAnchor = 0;
+				switch (mi.numSubsets)
+				{
+				case 2:
+					subsetIndex = (s_bptcP2[partitionSetIdx] >> idx) & 1;
+					indexAnchor = 0 != subsetIndex ? s_bptcA2[partitionSetIdx] : 0;
+					break;
+
+				case 3:
+					subsetIndex = (s_bptcP3[partitionSetIdx] >> (2*idx) ) & 3;
+					indexAnchor = 0 != subsetIndex ? s_bptcA3[subsetIndex-1][partitionSetIdx] : 0;
+					break;
+
+				default:
+					break;
+				}
+
+				const uint8_t anchor = idx == indexAnchor;
+				const uint8_t num[2] =
+				{
+					uint8_t(                mi.indexBits[0] - anchor    ),
+					uint8_t(hasIndexBits1 ? mi.indexBits[1] - anchor : 0),
+				};
+
+				const uint8_t index[2] =
+				{
+					                (uint8_t)bit.peek(offset[0], num[0]),
+					hasIndexBits1 ? (uint8_t)bit.peek(offset[1], num[1]) : index[0],
+				};
+
+				offset[0] += num[0];
+				offset[1] += num[1];
+
+				const uint8_t fc = factors[ indexSelectionMode][index[ indexSelectionMode] ];
+				const uint8_t fa = factors[!indexSelectionMode][index[!indexSelectionMode] ];
+
+				const uint8_t fca = 64 - fc;
+				const uint8_t fcb = fc;
+				const uint8_t faa = 64 - fa;
+				const uint8_t fab = fa;
+
+				subsetIndex *= 2;
+				uint8_t rr = uint8_t(uint16_t(epR[subsetIndex]*fca + epR[subsetIndex + 1]*fcb + 32) >> 6);
+				uint8_t gg = uint8_t(uint16_t(epG[subsetIndex]*fca + epG[subsetIndex + 1]*fcb + 32) >> 6);
+				uint8_t bb = uint8_t(uint16_t(epB[subsetIndex]*fca + epB[subsetIndex + 1]*fcb + 32) >> 6);
+				uint8_t aa = uint8_t(uint16_t(epA[subsetIndex]*faa + epA[subsetIndex + 1]*fab + 32) >> 6);
+
+				switch (rotationMode)
+				{
+				case 1: bx::xchg(aa, rr); break;
+				case 2: bx::xchg(aa, gg); break;
+				case 3: bx::xchg(aa, bb); break;
+				default:                  break;
+				};
+
+				uint8_t* bgra = &_dst[idx*4];
+				bgra[0] = bb;
+				bgra[1] = gg;
+				bgra[2] = rr;
+				bgra[3] = aa;
+			}
+		}
+	}
+
+	static const int32_t s_etc1Mod[8][4] =
+	{
+		{  2,   8,  -2,   -8 },
+		{  5,  17,  -5,  -17 },
+		{  9,  29,  -9,  -29 },
+		{ 13,  42, -13,  -42 },
+		{ 18,  60, -18,  -60 },
+		{ 24,  80, -24,  -80 },
+		{ 33, 106, -33, -106 },
+		{ 47, 183, -47, -183 },
+	};
+
+	static const uint8_t s_etc2Mod[] = { 3, 6, 11, 16, 23, 32, 41, 64 };
 
 	uint8_t uint8_sat(int32_t _a)
 	{
@@ -1893,10 +2891,10 @@ namespace bimg
 		const uint8_t numMips = _hasMips ? imageGetNumMips(_format, _width, _height, _depth) : 1;
 		uint32_t size = imageGetSize(NULL, _width, _height, _depth, _cubeMap, _hasMips, _numLayers, _format);
 
-		ImageContainer* imageContainer = (ImageContainer*)BX_ALLOC(_allocator, size + sizeof(ImageContainer) );
+		ImageContainer* imageContainer = (ImageContainer*)BX_ALIGNED_ALLOC(_allocator, size + BX_ALIGN_16(sizeof(ImageContainer) ), 16);
 
 		imageContainer->m_allocator   = _allocator;
-		imageContainer->m_data        = imageContainer + 1;
+		imageContainer->m_data        = bx::alignPtr(imageContainer + 1, 0, 16);
 		imageContainer->m_format      = _format;
 		imageContainer->m_orientation = Orientation::R0;
 		imageContainer->m_size        = size;
@@ -1922,7 +2920,7 @@ namespace bimg
 
 	void imageFree(ImageContainer* _imageContainer)
 	{
-		BX_FREE(_imageContainer->m_allocator, _imageContainer);
+		BX_ALIGNED_FREE(_imageContainer->m_allocator, _imageContainer, 16);
 	}
 
 // DDS
@@ -2911,18 +3909,18 @@ namespace bimg
 			{
 				uint32_t size = imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, TextureFormat::RGBA8);
 				void* temp = BX_ALLOC(_allocator, size);
-				imageDecodeToRgba8(temp, _src, _width, _height, _width*4, _srcFormat);
-				imageConvert(dst, TextureFormat::R8, temp, TextureFormat::RGBA8, _width, _height, 1, _width*4);
+				imageDecodeToRgba8(_allocator, temp, _src, _width, _height, _width*4, _srcFormat);
+				imageConvert(_allocator, dst, TextureFormat::R8, temp, TextureFormat::RGBA8, _width, _height, 1, _width*4);
 				BX_FREE(_allocator, temp);
 			}
 			else
 			{
-				imageConvert(dst, TextureFormat::R8, src, _srcFormat, _width, _height, 1, srcPitch);
+				imageConvert(_allocator, dst, TextureFormat::R8, src, _srcFormat, _width, _height, 1, srcPitch);
 			}
 		}
 	}
 
-	void imageDecodeToBgra8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _dstPitch, TextureFormat::Enum _srcFormat)
+	void imageDecodeToBgra8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _dstPitch, TextureFormat::Enum _srcFormat)
 	{
 		const uint8_t* src = (const uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
@@ -3034,6 +4032,40 @@ namespace bimg
 			}
 			break;
 
+		case TextureFormat::BC6H:
+			{
+				ImageContainer* rgba32f = imageAlloc(_allocator
+					, TextureFormat::RGBA32F
+					, uint16_t(_width)
+					, uint16_t(_height)
+					, uint16_t(1)
+					, 1
+					, false
+					, false
+					);
+				imageDecodeToRgba32f(_allocator, rgba32f->m_data, _src, _width, _height, 1, _width*16, _srcFormat);
+				imageConvert(_allocator, _dst, TextureFormat::BGRA8, rgba32f->m_data, TextureFormat::RGBA32F, _width, _height, 1, _width*16);
+				imageFree(rgba32f);
+			}
+			break;
+
+		case TextureFormat::BC7:
+			for (uint32_t yy = 0; yy < height; ++yy)
+			{
+				for (uint32_t xx = 0; xx < width; ++xx)
+				{
+					decodeBlockBc7(temp, src);
+					src += 16;
+
+					uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
+					bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
+					bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
+					bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
+					bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+				}
+			}
+			break;
+
 		case TextureFormat::ETC1:
 		case TextureFormat::ETC2:
 			for (uint32_t yy = 0; yy < height; ++yy)
@@ -3133,7 +4165,7 @@ namespace bimg
 			{
 				const uint32_t srcBpp   = s_imageBlockInfo[_srcFormat].bitsPerPixel;
 				const uint32_t srcPitch = _width * srcBpp / 8;
-				if (!imageConvert(_dst, TextureFormat::BGRA8, _src, _srcFormat, _width, _height, 1, srcPitch) )
+				if (!imageConvert(_allocator, _dst, TextureFormat::BGRA8, _src, _srcFormat, _width, _height, 1, srcPitch) )
 				{
 					// Failed to convert, just make ugly red-yellow checkerboard texture.
 					imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xffff0000), UINT32_C(0xffffff00) );
@@ -3143,7 +4175,7 @@ namespace bimg
 		}
 	}
 
-	void imageDecodeToRgba8(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _dstPitch, TextureFormat::Enum _srcFormat)
+	void imageDecodeToRgba8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _dstPitch, TextureFormat::Enum _srcFormat)
 	{
 		switch (_srcFormat)
 		{
@@ -3165,7 +4197,7 @@ namespace bimg
 		default:
 			{
 				const uint32_t srcPitch = _width * 4;
-				imageDecodeToBgra8(_dst, _src, _width, _height, _dstPitch, _srcFormat);
+				imageDecodeToBgra8(_allocator, _dst, _src, _width, _height, _dstPitch, _srcFormat);
 				imageSwizzleBgra8(_dst, _dstPitch, _width, _height, _dst, srcPitch);
 			}
 			break;
@@ -3214,7 +4246,7 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 
 		using namespace bx;
-		const simd128_t unpack = simd_ld(1.0f, 1.0f/256.0f, 1.0f/65536.0f, 1.0f/16777216.0f);
+		const simd128_t unpack = simd_ld(1.0f/256.0f, 1.0f/256.0f/256.0f, 1.0f/65536.0f/256.0f, 1.0f/16777216.0f/256.0f);
 		const simd128_t umask  = simd_ild(0xff, 0xff00, 0xff0000, 0xff000000);
 		const simd128_t wflip  = simd_ild(0, 0, 0, 0x80000000);
 		const simd128_t wadd   = simd_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
@@ -3284,6 +4316,31 @@ namespace bimg
 				}
 				break;
 
+			case TextureFormat::BC6H:
+				{
+					uint32_t width  = _width/4;
+					uint32_t height = _height/4;
+
+					const uint8_t* srcData = src;
+
+					for (uint32_t yy = 0; yy < height; ++yy)
+					{
+						for (uint32_t xx = 0; xx < width; ++xx)
+						{
+							float tmp[16*4];
+							decodeBlockBc6h(tmp, srcData);
+							srcData += 16;
+
+							uint8_t* block = (uint8_t*)&dst[yy*_dstPitch*4 + xx*64];
+							bx::memCopy(&block[0*_dstPitch], &tmp[ 0], 64);
+							bx::memCopy(&block[1*_dstPitch], &tmp[16], 64);
+							bx::memCopy(&block[2*_dstPitch], &tmp[32], 64);
+							bx::memCopy(&block[3*_dstPitch], &tmp[48], 64);
+						}
+					}
+				}
+				break;
+
 			case TextureFormat::RGBA32F:
 				bx::memCopy(dst, src, _dstPitch*_height);
 				break;
@@ -3293,13 +4350,13 @@ namespace bimg
 				{
 					uint32_t size = imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, TextureFormat::RGBA8);
 					void* temp = BX_ALLOC(_allocator, size);
-					imageDecodeToRgba8(temp, src, _width, _height, _width*4, _srcFormat);
+					imageDecodeToRgba8(_allocator, temp, src, _width, _height, _width*4, _srcFormat);
 					imageRgba8ToRgba32f(dst, _width, _height, _width*4, temp);
 					BX_FREE(_allocator, temp);
 				}
 				else
 				{
-					imageConvert(dst, TextureFormat::RGBA32F, src, _srcFormat, _width, _height, 1, srcPitch);
+					imageConvert(_allocator, dst, TextureFormat::RGBA32F, src, _srcFormat, _width, _height, 1, srcPitch);
 				}
 				break;
 			}

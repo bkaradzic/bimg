@@ -24,7 +24,8 @@ namespace bimg
 
 	///
 	void imageEncodeFromRgba8(
-		  void* _dst
+		  bx::AllocatorI* _allocator
+		, void* _dst
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height

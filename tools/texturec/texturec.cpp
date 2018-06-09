@@ -26,7 +26,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 14
+#define BIMG_TEXTUREC_VERSION_MINOR 15
 
 struct Options
 {
@@ -145,8 +145,8 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 	if (NULL != input)
 	{
-		const bimg::TextureFormat::Enum inputFormat  = input->m_format;
-		      bimg::TextureFormat::Enum outputFormat = input->m_format;
+		bimg::TextureFormat::Enum inputFormat  = input->m_format;
+		bimg::TextureFormat::Enum outputFormat = input->m_format;
 
 		if (bimg::TextureFormat::Count != _options.format)
 		{
@@ -211,7 +211,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 		if (needResize)
 		{
-			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input);
+			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input, false);
 
 			bimg::ImageContainer* dst = bimg::imageAlloc(
 				  _allocator
@@ -228,6 +228,18 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			bimg::imageFree(src);
 			bimg::imageFree(input);
+
+			if (bimg::isCompressed(inputFormat) )
+			{
+				if (inputFormat == bimg::TextureFormat::BC6H)
+				{
+					inputFormat = bimg::TextureFormat::RGBA32F;
+				}
+				else
+				{
+					inputFormat = bimg::TextureFormat::RGBA8;
+				}
+			}
 
 			input = bimg::imageConvert(_allocator, inputFormat, *dst);
 			bimg::imageFree(dst);
@@ -396,7 +408,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					BX_FREE(_allocator, rgbaDst);
 				}
 				// HDR
-				else if ( (!bimg::isCompressed(input->m_format) && 8 != inputBlockInfo.rBits)
+				else if ( (!bimg::isCompressed(inputFormat) && 8 != inputBlockInfo.rBits)
 					 || outputFormat == bimg::TextureFormat::BC6H
 					 || outputFormat == bimg::TextureFormat::BC7
 						)
@@ -559,7 +571,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					temp = BX_ALLOC(_allocator, size);
 					uint8_t* rgba = (uint8_t*)temp;
 
-					bimg::imageDecodeToRgba8(rgba
+					bimg::imageDecodeToRgba8(
+						  _allocator
+						, rgba
 						, mip.m_data
 						, mip.m_width
 						, mip.m_height
@@ -600,7 +614,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					bimg::imageGetRawData(*output, side, 0, output->m_data, output->m_size, dstMip);
 					dstData = const_cast<uint8_t*>(dstMip.m_data);
 
-					bimg::imageEncodeFromRgba8(dstData
+					bimg::imageEncodeFromRgba8(
+						  _allocator
+						, dstData
 						, rgba
 						, dstMip.m_width
 						, dstMip.m_height
@@ -647,7 +663,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						bimg::imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
 						dstData = const_cast<uint8_t*>(dstMip.m_data);
 
-						bimg::imageEncodeFromRgba8(dstData
+						bimg::imageEncodeFromRgba8(
+							  _allocator
+							, dstData
 							, rgba
 							, dstMip.m_width
 							, dstMip.m_height
@@ -660,7 +678,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					if (NULL != ref)
 					{
-						bimg::imageDecodeToRgba8(rgba
+						bimg::imageDecodeToRgba8(
+							  _allocator
+							, rgba
 							, output->m_data
 							, mip.m_width
 							, mip.m_height
@@ -775,6 +795,30 @@ void help(const char* _str, const bx::Error& _err)
 
 	help(str.c_str(), false);
 }
+
+class AlignedAllocator : public bx::AllocatorI
+{
+public:
+	AlignedAllocator(bx::AllocatorI* _allocator, size_t _minAlignment)
+		: m_allocator(_allocator)
+		, m_minAlignment(_minAlignment)
+	{
+	}
+
+	virtual void* realloc(
+			void* _ptr
+		, size_t _size
+		, size_t _align
+		, const char* _file
+		, uint32_t _line
+		)
+	{
+		return m_allocator->realloc(_ptr, _size, bx::max(_align, m_minAlignment), _file, _line);
+	}
+
+	bx::AllocatorI* m_allocator;
+	size_t m_minAlignment;
+};
 
 int main(int _argc, const char* _argv[])
 {
@@ -927,7 +971,9 @@ int main(int _argc, const char* _argv[])
 		return bx::kExitFailure;
 	}
 
-	bx::DefaultAllocator allocator;
+	bx::DefaultAllocator defaultAllocator;
+	AlignedAllocator allocator(&defaultAllocator, 16);
+
 	uint8_t* inputData = (uint8_t*)BX_ALLOC(&allocator, inputSize);
 
 	bx::read(&reader, inputData, inputSize, &err);

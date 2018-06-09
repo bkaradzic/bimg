@@ -9,7 +9,7 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
-#define BIMG_API_VERSION UINT32_C(5)
+#define BIMG_API_VERSION UINT32_C(6)
 
 namespace bx
 {
@@ -404,7 +404,8 @@ namespace bimg
 
 	///
 	bool imageConvert(
-		  void* _dst
+		  bx::AllocatorI* _allocator
+		, void* _dst
 		, TextureFormat::Enum _dstFormat
 		, const void* _src
 		, TextureFormat::Enum _srcFormat
@@ -426,6 +427,7 @@ namespace bimg
 		  bx::AllocatorI* _allocator
 		, TextureFormat::Enum _dstFormat
 		, const ImageContainer& _input
+		, bool _convertMips = true
 		);
 
 	///
@@ -575,7 +577,8 @@ namespace bimg
 
 	///
 	void imageDecodeToBgra8(
-		  void* _dst
+		  bx::AllocatorI* _allocator
+		, void* _dst
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height
@@ -585,7 +588,8 @@ namespace bimg
 
 	///
 	void imageDecodeToRgba8(
-		  void* _dst
+		  bx::AllocatorI* _allocator
+		, void* _dst
 		, const void* _src
 		, uint32_t _width
 		, uint32_t _height
