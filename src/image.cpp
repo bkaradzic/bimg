@@ -307,10 +307,10 @@ namespace bimg
         {
             for (uint32_t lod = 0; lod < numMips; ++lod)
             {
-                depth  = bx::uint32_max(1, depth);
+                depth = bx::max<uint32_t>(1, depth);
 
-                uint16_t blocksX = bx::uint32_max(minBlockX, ((width  + blockWidth  - 1) / blockWidth ));
-                uint16_t blocksY = bx::uint32_max(minBlockY, ((height + blockHeight - 1) / blockHeight));
+                const uint32_t blocksX = bx::max<uint32_t>(minBlockX, ( (width  + blockWidth  - 1) / blockWidth ) );
+                const uint32_t blocksY = bx::max<uint32_t>(minBlockY, ( (height + blockHeight - 1) / blockHeight) );
 
                 size += blocksX * blocksY * blockSize * depth * sides;
 
@@ -2267,61 +2267,61 @@ namespace bimg
 		}
 	}
 
-	// BC6H, BC7
+	// ATC
 	//
-    void decodeBlockATC(uint8_t _dst[16*4], const uint8_t _src[8])
-    {
-        uint8_t colors[4*4];    // You can see from comparison with decodeBlockDXT just how little sense the ATI patent-avoiding(?) modification makes
+	void decodeBlockATC(uint8_t _dst[16*4], const uint8_t _src[8])
+	{
+		uint8_t colors[4*4];
 
-        uint32_t c0 = _src[0] | (_src[1] << 8);
-        uint32_t c1 = _src[2] | (_src[3] << 8);
+		uint32_t c0 = _src[0] | (_src[1] << 8);
+		uint32_t c1 = _src[2] | (_src[3] << 8);
 
-        if ((c0 & 0x8000) == 0)
-        {
-            colors[0] = bitRangeConvert( (c0>> 0)&0x1f, 5, 8);
-            colors[1] = bitRangeConvert( (c0>> 5)&0x1f, 5, 8);
-            colors[2] = bitRangeConvert( (c0>>10)&0x1f, 5, 8);
+		if (0 == (c0 & 0x8000) )
+		{
+			colors[ 0] = bitRangeConvert( (c0>> 0)&0x1f, 5, 8);
+			colors[ 1] = bitRangeConvert( (c0>> 5)&0x1f, 5, 8);
+			colors[ 2] = bitRangeConvert( (c0>>10)&0x1f, 5, 8);
 
-            colors[12] = bitRangeConvert( (c1>> 0)&0x1f, 5, 8);
-            colors[13] = bitRangeConvert( (c1>> 5)&0x3f, 6, 8);
-            colors[14] = bitRangeConvert( (c1>>11)&0x1f, 5, 8);
+			colors[12] = bitRangeConvert( (c1>> 0)&0x1f, 5, 8);
+			colors[13] = bitRangeConvert( (c1>> 5)&0x3f, 6, 8);
+			colors[14] = bitRangeConvert( (c1>>11)&0x1f, 5, 8);
 
-            colors[ 4] = (2 * colors[0] + colors[12]) / 3;
-            colors[ 5] = (2 * colors[1] + colors[13]) / 3;
-            colors[ 6] = (2 * colors[2] + colors[14]) / 3;
+			colors[ 4] = (2 * colors[0] + colors[12]) / 3;
+			colors[ 5] = (2 * colors[1] + colors[13]) / 3;
+			colors[ 6] = (2 * colors[2] + colors[14]) / 3;
 
-            colors[ 8] = (colors[0] + 2 * colors[12]) / 3;
-            colors[ 9] = (colors[1] + 2 * colors[13]) / 3;
-            colors[10] = (colors[2] + 2 * colors[14]) / 3;
-        }
-        else
-        {
-            colors[ 0] = 0;
-            colors[ 1] = 0;
-            colors[ 2] = 0;
+			colors[ 8] = (colors[0] + 2 * colors[12]) / 3;
+			colors[ 9] = (colors[1] + 2 * colors[13]) / 3;
+			colors[10] = (colors[2] + 2 * colors[14]) / 3;
+		}
+		else
+		{
+			colors[ 0] = 0;
+			colors[ 1] = 0;
+			colors[ 2] = 0;
 
-            colors[ 8] = bitRangeConvert( (c0>> 0)&0x1f, 5, 8);
-            colors[ 9] = bitRangeConvert( (c0>> 5)&0x1f, 5, 8);
-            colors[10] = bitRangeConvert( (c0>>10)&0x1f, 5, 8);
+			colors[ 8] = bitRangeConvert( (c0>> 0)&0x1f, 5, 8);
+			colors[ 9] = bitRangeConvert( (c0>> 5)&0x1f, 5, 8);
+			colors[10] = bitRangeConvert( (c0>>10)&0x1f, 5, 8);
 
-            colors[12] = bitRangeConvert( (c1>> 0)&0x1f, 5, 8);
-            colors[13] = bitRangeConvert( (c1>> 5)&0x3f, 6, 8);
-            colors[14] = bitRangeConvert( (c1>>11)&0x1f, 5, 8);
+			colors[12] = bitRangeConvert( (c1>> 0)&0x1f, 5, 8);
+			colors[13] = bitRangeConvert( (c1>> 5)&0x3f, 6, 8);
+			colors[14] = bitRangeConvert( (c1>>11)&0x1f, 5, 8);
 
-            colors[ 4] = colors[ 8] - colors[12] / 4;
-            colors[ 5] = colors[ 9] - colors[13] / 4;
-            colors[ 6] = colors[10] - colors[14] / 4;
-        }
+			colors[ 4] = colors[ 8] - colors[12] / 4;
+			colors[ 5] = colors[ 9] - colors[13] / 4;
+			colors[ 6] = colors[10] - colors[14] / 4;
+		}
 
-        for (uint32_t ii = 0, next = 8*4; ii < 16*4; ii += 4, next += 2)
-        {
-            int idx = ( (_src[next>>3] >> (next & 7) ) & 3) * 4;
-            _dst[ii+0] = colors[idx+0];
-            _dst[ii+1] = colors[idx+1];
-            _dst[ii+2] = colors[idx+2];
-            _dst[ii+3] = colors[idx+3];
-        }
-    }
+		for (uint32_t ii = 0, next = 8*4; ii < 16*4; ii += 4, next += 2)
+		{
+			int32_t idx = ( (_src[next>>3] >> (next & 7) ) & 3) * 4;
+			_dst[ii+0] = colors[idx+0];
+			_dst[ii+1] = colors[idx+1];
+			_dst[ii+2] = colors[idx+2];
+			_dst[ii+3] = colors[idx+3];
+		}
+	}
 
 	static const int32_t s_etc1Mod[8][4] =
 	{
