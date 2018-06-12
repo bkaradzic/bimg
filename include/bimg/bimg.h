@@ -73,7 +73,7 @@ namespace bimg
 			ASTC6x6,      //!< ASTC 6x6 3.56 BPP
 			ASTC8x5,      //!< ASTC 8x5 3.20 BPP
 			ASTC8x6,      //!< ASTC 8x6 2.67 BPP
-			ASTC10x5,	  //!< ASTC 10x5 2.56 BPP
+			ASTC10x5,     //!< ASTC 10x5 2.56 BPP
 
 			Unknown,      // Compressed formats above.
 
