@@ -4605,28 +4605,29 @@ namespace bimg
 
 			for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num; ++lod)
 			{
-				uint32_t sourceSize = bx::toHostEndian(*(const uint32_t*)&data[offset], _imageContainer.m_ktxLE);
-				offset += sizeof(uint32_t);
-
+				width  = bx::uint32_max(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
+				height = bx::uint32_max(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 				depth  = bx::uint32_max(1, depth);
 
-				uint32_t blocksX = bx::uint32_max(minBlockX, ((width  + blockWidth  - 1) / blockWidth ));
-				uint32_t blocksY = bx::uint32_max(minBlockY, ((height + blockHeight - 1) / blockHeight));
+				const uint32_t mipSize = width*height*depth*bpp/8;
 
-                uint32_t destSize = blocksX * blocksY * blockSize * depth;
+				const uint32_t size = mipSize*numSides;
+				uint32_t imageSize = bx::toHostEndian(*(const uint32_t*)&data[offset], _imageContainer.m_ktxLE);
+				BX_CHECK(size == imageSize, "KTX: Image size mismatch %d (expected %d).", size, imageSize);
+				BX_UNUSED(size, imageSize);
 
-				BX_CHECK(sourceSize == destSize, "KTX: Image size mismatch %d (expected %d).", sourceSize, destSize);
+				offset += sizeof(uint32_t);
 
 				for (uint16_t side = 0; side < numSides; ++side)
 				{
 					if (side == _side
 					&&  lod  == _lod)
 					{
-						_mip.m_width     = blocksX * blockWidth;
-						_mip.m_height    = blocksY * blockHeight;
+						_mip.m_width     = width;
+						_mip.m_height    = height;
 						_mip.m_depth     = depth;
 						_mip.m_blockSize = blockSize;
-						_mip.m_size      = destSize;
+						_mip.m_size      = mipSize;
 						_mip.m_data      = &data[offset];
 						_mip.m_bpp       = bpp;
 						_mip.m_format    = format;
@@ -4634,7 +4635,7 @@ namespace bimg
 						return true;
 					}
 
-					offset += sourceSize;
+					offset += mipSize;
 
 					BX_CHECK(offset <= _size, "Reading past size of data buffer! (offset %d, size %d)", offset, _size);
 					BX_UNUSED(_size);
