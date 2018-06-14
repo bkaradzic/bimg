@@ -26,7 +26,9 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 15
+#define BIMG_TEXTUREC_VERSION_MINOR 16
+
+BX_ERROR_RESULT(TEXTRUREC_ERROR, BX_MAKEFOURCC('t', 'c', 0, 0) );
 
 struct Options
 {
@@ -168,9 +170,28 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		uint32_t outputHeight = bx::uint32_max(blockHeight * minBlockY, ( (input->m_height + blockHeight - 1) / blockHeight)*blockHeight);
 		uint32_t outputDepth  = input->m_depth;
 
-		if (outputWidth  > _options.maxSize
-		||  outputHeight > _options.maxSize
-		||  outputDepth  > _options.maxSize)
+		if (_options.equirect)
+		{
+			if (outputDepth   == 1
+			&&  outputWidth/2 == outputHeight)
+			{
+				if (outputWidth/2 > _options.maxSize)
+				{
+					outputWidth  = _options.maxSize*4;
+					outputHeight = _options.maxSize*2;
+				}
+			}
+			else
+			{
+				bimg::imageFree(input);
+
+				BX_ERROR_SET(_err, TEXTRUREC_ERROR, "Input image format is not equirectangular projection.");
+				return NULL;
+			}
+		}
+		else if (outputWidth  > _options.maxSize
+			 ||  outputHeight > _options.maxSize
+			 ||  outputDepth  > _options.maxSize)
 		{
 			if (outputDepth > outputWidth
 			&&  outputDepth > outputHeight)
@@ -890,8 +911,8 @@ int main(int _argc, const char* _argv[])
 		}
 	}
 
-	options.mips      = cmdLine.hasArg('m',  "mips");
-	options.normalMap = cmdLine.hasArg('n',  "normalmap");
+	options.mips      = cmdLine.hasArg('m', "mips");
+	options.normalMap = cmdLine.hasArg('n', "normalmap");
 	options.equirect  = cmdLine.hasArg("equirect");
 	options.iqa       = cmdLine.hasArg("iqa");
 	options.pma       = cmdLine.hasArg("pma");
@@ -899,7 +920,11 @@ int main(int _argc, const char* _argv[])
 	const char* maxSize = cmdLine.findOption("max");
 	if (NULL != maxSize)
 	{
-		options.maxSize = atoi(maxSize);
+		if (!bx::fromString(&options.maxSize, maxSize) )
+		{
+			help("Parsing max size failed.");
+			return bx::kExitFailure;
+		}
 	}
 
 	options.format = bimg::TextureFormat::Count;
