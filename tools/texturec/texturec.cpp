@@ -770,7 +770,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "    *.exr (input, output)  OpenEXR.\n"
 		  "    *.gif (input)          Graphics Interchange Format.\n"
 		  "    *.jpg (input)          JPEG Interchange Format.\n"
-		  "    *.hdr (input)          Radiance RGBE.\n"
+		  "    *.hdr (input, output)  Radiance RGBE.\n"
 		  "    *.ktx (input, output)  Khronos Texture.\n"
 		  "    *.png (input, output)  Portable Network Graphics.\n"
 		  "    *.psd (input)          Photoshop Document.\n"
@@ -881,6 +881,7 @@ int main(int _argc, const char* _argv[])
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".dds") : saveAs;
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".png") : saveAs;
 	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".exr") : saveAs;
+	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".hdr") : saveAs;
 	if (NULL == saveAs)
 	{
 		help("Output file format must be specified.");
@@ -1044,7 +1045,8 @@ int main(int _argc, const char* _argv[])
 					, mip.m_data
 					, output->m_format
 					, false
-					, &err);
+					, &err
+					);
 			}
 			else if (NULL != bx::strFindI(saveAs, "exr") )
 			{
@@ -1057,7 +1059,22 @@ int main(int _argc, const char* _argv[])
 					, mip.m_data
 					, output->m_format
 					, false
-					, &err);
+					, &err
+					);
+			}
+			else if (NULL != bx::strFindI(saveAs, "hdr") )
+			{
+				bimg::ImageMip mip;
+				bimg::imageGetRawData(*output, 0, 0, output->m_data, output->m_size, mip);
+				bimg::imageWriteHdr(&writer
+					, mip.m_width
+					, mip.m_height
+					, mip.m_width*8
+					, mip.m_data
+					, output->m_format
+					, false
+					, &err
+					);
 			}
 
 			bx::close(&writer);

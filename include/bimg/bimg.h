@@ -9,7 +9,7 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
-#define BIMG_API_VERSION UINT32_C(6)
+#define BIMG_API_VERSION UINT32_C(7)
 
 namespace bx
 {
@@ -483,6 +483,18 @@ namespace bimg
 
 	///
 	int32_t imageWriteExr(
+		  bx::WriterI* _writer
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, TextureFormat::Enum _format
+		, bool _yflip
+		, bx::Error* _err
+		);
+
+	///
+	int32_t imageWriteHdr(
 		  bx::WriterI* _writer
 		, uint32_t _width
 		, uint32_t _height

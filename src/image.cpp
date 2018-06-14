@@ -5000,6 +5000,47 @@ namespace bimg
 		return total;
 	}
 
+	int32_t imageWriteHdr(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, TextureFormat::Enum _format, bool _yflip, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		int32_t total = 0;
+		total += bx::write(_writer, "#?RADIANCE\n" , _err);
+		total += bx::write(_writer, "FORMAT=32-bit_rle_rgbe\n" , _err);
+		total += bx::write(_writer, '\n' , _err);
+
+		total += bx::writePrintf(_writer, "%cY %d +X %d\n", _yflip ? '+' : '-', _height, _width);
+
+		UnpackFn unpack = getUnpack(_format);
+		const uint32_t bpp  = getBitsPerPixel(_format);
+
+		const uint8_t* data = (const uint8_t*)_src;
+		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
+		{
+			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
+			{
+				float rgba[4];
+				unpack(rgba, &data[xx*bpp/8]);
+
+				const float maxVal = bx::max(rgba[0], rgba[1], rgba[2]);
+				const float exp    = bx::ceil(bx::log2(maxVal) );
+				const float toRgb8 = 255.0f * 1.0f/bx::ldexp(1.0f, int(exp) );
+
+				uint8_t rgbe[4];
+				rgbe[0] = uint8_t(rgba[0] * toRgb8);
+				rgbe[1] = uint8_t(rgba[1] * toRgb8);
+				rgbe[2] = uint8_t(rgba[2] * toRgb8);
+				rgbe[3] = uint8_t(exp+128.0f);
+
+				total += bx::write(_writer, rgbe, 4, _err);
+			}
+
+			data += _srcPitch;
+		}
+
+		return total;
+	}
+
 	static int32_t imageWriteDdsHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
