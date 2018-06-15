@@ -10,7 +10,7 @@ namespace bimg
 {
 	static const ImageBlockInfo s_imageBlockInfo[] =
 	{
-		//  +-------------------------------------------- bits per pixel
+		//  +--------------------------------------------- bits per pixel
 		//  |   +----------------------------------------- block width
 		//  |   |  +-------------------------------------- block height
 		//  |   |  |   +---------------------------------- block size
