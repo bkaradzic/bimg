@@ -127,6 +127,21 @@ namespace bimg
 		, float _alphaRef
 		);
 
+	///
+	ImageContainer* imageCubemapFromLatLongRgba32F(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _input
+		, bool _useBilinearInterpolation
+		, bx::Error* _err
+		);
+
+	///
+	ImageContainer* imageCubemapRadianceFilter(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _image
+		, float _filterSize
+		);
+
 } // namespace bimg
 
 #endif // BIMG_ENCODE_H_HEADER_GUARD
