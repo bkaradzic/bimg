@@ -709,6 +709,136 @@ namespace bimg
 		imageRgba32fLinearDownsample2x2Ref(_dst, _width, _height, _depth, _srcPitch, _src);
 	}
 
+	void imageRgba32fDownsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, const void* _src)
+	{
+		const uint32_t dstWidth  = _width/2;
+		const uint32_t dstHeight = _height/2;
+		const uint32_t dstDepth  = _depth/2;
+
+		if (0 == dstWidth
+		||  0 == dstHeight)
+		{
+			return;
+		}
+
+		const uint8_t* src = (const uint8_t*)_src;
+		uint8_t* dst = (uint8_t*)_dst;
+
+		if (0 == dstDepth)
+		{
+			for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
+			{
+				const float* rgba0 = (const float*)&src[0];
+				const float* rgba1 = (const float*)&src[_srcPitch];
+				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba0 += 8, rgba1 += 8, dst += 16)
+				{
+					float xyz[4];
+
+					xyz[0]  = bx::toLinear(rgba0[0]);
+					xyz[1]  = bx::toLinear(rgba0[1]);
+					xyz[2]  = bx::toLinear(rgba0[2]);
+					xyz[3]  =              rgba0[3];
+
+					xyz[0] += bx::toLinear(rgba0[4]);
+					xyz[1] += bx::toLinear(rgba0[5]);
+					xyz[2] += bx::toLinear(rgba0[6]);
+					xyz[3] +=              rgba0[7];
+
+					xyz[0] += bx::toLinear(rgba1[0]);
+					xyz[1] += bx::toLinear(rgba1[1]);
+					xyz[2] += bx::toLinear(rgba1[2]);
+					xyz[3] +=              rgba1[3];
+
+					xyz[0] += bx::toLinear(rgba1[4]);
+					xyz[1] += bx::toLinear(rgba1[5]);
+					xyz[2] += bx::toLinear(rgba1[6]);
+					xyz[3] +=              rgba1[7];
+
+					xyz[0] = bx::toGamma(xyz[0]/4.0f);
+					xyz[1] = bx::toGamma(xyz[1]/4.0f);
+					xyz[2] = bx::toGamma(xyz[2]/4.0f);
+					xyz[3] =             xyz[3]/4.0f;
+
+					bx::packRgba32F(dst, xyz);
+				}
+			}
+		}
+		else
+		{
+			const uint32_t slicePitch = _srcPitch*_height;
+
+			for (uint32_t zz = 0; zz < dstDepth; ++zz, src += slicePitch)
+			{
+				for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
+				{
+					const float* rgba0 = (const float*)&src[0];
+					const float* rgba1 = (const float*)&src[_srcPitch];
+					const float* rgba2 = (const float*)&src[slicePitch];
+					const float* rgba3 = (const float*)&src[slicePitch+_srcPitch];
+					for (uint32_t xx = 0
+						; xx < dstWidth
+						; ++xx, rgba0 += 8, rgba1 += 8, rgba2 += 8, rgba3 += 8, dst += 16
+						)
+					{
+						float xyz[4];
+
+						xyz[0]  = bx::toLinear(rgba0[0]);
+						xyz[1]  = bx::toLinear(rgba0[1]);
+						xyz[2]  = bx::toLinear(rgba0[2]);
+						xyz[3]  =              rgba0[3];
+
+						xyz[0] += bx::toLinear(rgba0[4]);
+						xyz[1] += bx::toLinear(rgba0[5]);
+						xyz[2] += bx::toLinear(rgba0[6]);
+						xyz[3] +=              rgba0[7];
+
+						xyz[0] += bx::toLinear(rgba1[0]);
+						xyz[1] += bx::toLinear(rgba1[1]);
+						xyz[2] += bx::toLinear(rgba1[2]);
+						xyz[3] +=              rgba1[3];
+
+						xyz[0] += bx::toLinear(rgba1[4]);
+						xyz[1] += bx::toLinear(rgba1[5]);
+						xyz[2] += bx::toLinear(rgba1[6]);
+						xyz[3] +=              rgba1[7];
+
+						xyz[0] += bx::toLinear(rgba2[0]);
+						xyz[1] += bx::toLinear(rgba2[1]);
+						xyz[2] += bx::toLinear(rgba2[2]);
+						xyz[3] +=              rgba2[3];
+
+						xyz[0] += bx::toLinear(rgba2[4]);
+						xyz[1] += bx::toLinear(rgba2[5]);
+						xyz[2] += bx::toLinear(rgba2[6]);
+						xyz[3] +=              rgba2[7];
+
+						xyz[0] += bx::toLinear(rgba3[0]);
+						xyz[1] += bx::toLinear(rgba3[1]);
+						xyz[2] += bx::toLinear(rgba3[2]);
+						xyz[3] +=              rgba3[3];
+
+						xyz[0] += bx::toLinear(rgba3[4]);
+						xyz[1] += bx::toLinear(rgba3[5]);
+						xyz[2] += bx::toLinear(rgba3[6]);
+						xyz[3] +=              rgba3[7];
+
+						xyz[0] = bx::toGamma(xyz[0]/8.0f);
+						xyz[1] = bx::toGamma(xyz[1]/8.0f);
+						xyz[2] = bx::toGamma(xyz[2]/8.0f);
+						xyz[3] =             xyz[3]/8.0f;
+
+						bx::packRgba32F(dst, xyz);
+					}
+				}
+			}
+		}
+	}
+
+	void imageRgba32fDownsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, const void* _src)
+	{
+		imageRgba32fDownsample2x2Ref(_dst, _width, _height, _depth, _srcPitch, _src);
+	}
+
 	void imageRgba32fDownsample2x2NormalMapRef(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
@@ -1037,7 +1167,7 @@ namespace bimg
 
 		if (_dstFormat == _srcFormat)
 		{
-			bx::memCopy(_dst, _src, _width*_height*_depth*srcBpp/8);
+			bx::memCopy(_dst, _src, _width*_height*_depth*(srcBpp/8) );
 			return true;
 		}
 

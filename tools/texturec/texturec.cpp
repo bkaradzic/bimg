@@ -1069,7 +1069,7 @@ int main(int _argc, const char* _argv[])
 				bimg::imageWriteHdr(&writer
 					, mip.m_width
 					, mip.m_height
-					, mip.m_width*8
+					, mip.m_width*getBitsPerPixel(mip.m_format)/8
 					, mip.m_data
 					, output->m_format
 					, false

@@ -623,6 +623,7 @@ namespace bimg
 	void processFilterArea(
 		  float* _result
 		, const ImageContainer& _image
+		, uint8_t _lod
 		, const Aabb* _aabb
 		, const float* _dir
 		, float _specularPower
@@ -633,9 +634,6 @@ namespace bimg
 		float totalWeight = 0.0f;
 
 		const uint32_t bpp   = getBitsPerPixel(_image.m_format);
-		const uint32_t pitch = _image.m_width*bpp/8;
-		const float widthMinusOne = float(_image.m_width-1);
-		const float invWidth      = 1.0f/float(_image.m_width);
 
 		UnpackFn unpack = getUnpack(_image.m_format);
 
@@ -646,14 +644,18 @@ namespace bimg
 				continue;
 			}
 
-			const uint32_t minX = uint32_t(_aabb[side].m_min[0] * widthMinusOne);
-			const uint32_t maxX = uint32_t(_aabb[side].m_max[0] * widthMinusOne);
-			const uint32_t minY = uint32_t(_aabb[side].m_min[1] * widthMinusOne);
-			const uint32_t maxY = uint32_t(_aabb[side].m_max[1] * widthMinusOne);
-
 			ImageMip mip;
-			if (imageGetRawData(_image, side, 0, _image.m_data, _image.m_size, mip) )
+			if (imageGetRawData(_image, side, _lod, _image.m_data, _image.m_size, mip) )
 			{
+				const uint32_t pitch      = mip.m_width*bpp/8;
+				const float widthMinusOne = float(mip.m_width-1);
+				const float invWidth      = 1.0f/float(mip.m_width);
+
+				const uint32_t minX = uint32_t(_aabb[side].m_min[0] * widthMinusOne);
+				const uint32_t maxX = uint32_t(_aabb[side].m_max[0] * widthMinusOne);
+				const uint32_t minY = uint32_t(_aabb[side].m_min[1] * widthMinusOne);
+				const uint32_t maxY = uint32_t(_aabb[side].m_max[1] * widthMinusOne);
+
 				for (uint32_t yy = minY; yy <= maxY; ++yy)
 				{
 					const uint8_t* row = mip.m_data + yy*pitch;
@@ -713,35 +715,113 @@ namespace bimg
 		}
 	}
 
+	ImageContainer* imageGenerateMips(bx::AllocatorI* _allocator, const ImageContainer& _image)
+	{
+		if (_image.m_format != TextureFormat::RGBA8
+		&&  _image.m_format != TextureFormat::RGBA32F)
+		{
+			return NULL;
+		}
+
+		ImageContainer* output = imageAlloc(_allocator, _image.m_format, uint16_t(_image.m_width), uint16_t(_image.m_height), uint16_t(_image.m_depth), _image.m_numLayers, _image.m_cubeMap, true);
+
+		const uint32_t numMips   = output->m_numMips;
+		const uint32_t numLayers = output->m_numLayers;
+		const uint32_t numSides  = output->m_cubeMap ? 6 : 1;
+
+		for (uint32_t layer = 0; layer < numLayers; ++layer)
+		{
+			for (uint8_t side = 0; side < numSides; ++side)
+			{
+				ImageMip mip;
+				if (imageGetRawData(_image, uint16_t(layer*numSides + side), 0, _image.m_data, _image.m_size, mip) )
+				{
+					for (uint8_t lod = 0; lod < numMips; ++lod)
+					{
+						ImageMip srcMip;
+						imageGetRawData(*output, uint16_t(layer*numSides + side), lod == 0 ? 0 : lod-1, output->m_data, output->m_size, srcMip);
+
+						ImageMip dstMip;
+						imageGetRawData(*output, uint16_t(layer*numSides + side), lod, output->m_data, output->m_size, dstMip);
+
+						uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
+
+						if (0 == lod)
+						{
+							bx::memCopy(dstData, mip.m_data, mip.m_size);
+						}
+						else if (output->m_format == TextureFormat::RGBA8)
+						{
+							imageRgba8Downsample2x2(
+								  dstData
+								, srcMip.m_width
+								, srcMip.m_height
+								, srcMip.m_depth
+								, srcMip.m_width*4
+								, dstMip.m_width*4
+								, srcMip.m_data
+								);
+						}
+						else if (output->m_format == TextureFormat::RGBA32F)
+						{
+							imageRgba32fDownsample2x2(
+								  dstData
+								, srcMip.m_width
+								, srcMip.m_height
+								, srcMip.m_depth
+								, srcMip.m_width*16
+								, srcMip.m_data
+								);
+						}
+					}
+				}
+			}
+		}
+
+		return output;
+	}
+
 	ImageContainer* imageCubemapRadianceFilter(bx::AllocatorI* _allocator, const ImageContainer& _image, float _filterSize)
 	{
-		const uint32_t dstWidth = _image.m_width;
-		const uint32_t dstPitch = dstWidth*16;
-		const float invDstWidth = 1.0f / float(dstWidth);
+		ImageContainer* output = imageConvert(_allocator, TextureFormat::RGBA32F, _image, true);
 
-		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, uint16_t(dstWidth), uint16_t(dstWidth), 1, 1, true, true);
+		if (1 >= output->m_numMips)
+		{
+			ImageContainer* temp = imageGenerateMips(_allocator, *output);
+			imageFree(output);
+			output = temp;
+		}
+
+		const uint32_t numMips = output->m_numMips;
 
 		for (uint8_t side = 0; side < 6; ++side)
 		{
-			ImageMip mip;
-			imageGetRawData(*output, side, 0, output->m_data, output->m_size, mip);
-
-			for (uint32_t yy = 0; yy < dstWidth; ++yy)
+			for (uint8_t lod = 0; lod < numMips; ++lod)
 			{
-				for (uint32_t xx = 0; xx < dstWidth; ++xx)
+				ImageMip mip;
+				imageGetRawData(*output, side, lod, output->m_data, output->m_size, mip);
+
+				const uint32_t dstWidth = mip.m_width;
+				const uint32_t dstPitch = dstWidth*16;
+				const float invDstWidth = 1.0f / float(dstWidth);
+
+				for (uint32_t yy = 0; yy < dstWidth; ++yy)
 				{
-					float* dstData = (float*)&mip. m_data[yy*dstPitch+xx*16];
+					for (uint32_t xx = 0; xx < dstWidth; ++xx)
+					{
+						float* dstData = (float*)&mip.m_data[yy*dstPitch+xx*16];
 
-					const float uu = float(xx)*invDstWidth*2.0f - 1.0f;
-					const float vv = float(yy)*invDstWidth*2.0f - 1.0f;
+						const float uu = float(xx)*invDstWidth*2.0f - 1.0f;
+						const float vv = float(yy)*invDstWidth*2.0f - 1.0f;
 
-					float dir[3];
-					texelUvToDir(dir, side, uu, vv);
+						float dir[3];
+						texelUvToDir(dir, side, uu, vv);
 
-					Aabb aabb[6];
-					calcFilterArea(aabb, dir, _filterSize);
+						Aabb aabb[6];
+						calcFilterArea(aabb, dir, _filterSize);
 
-					processFilterArea(dstData, _image, aabb, dir, 10.0f, 0.2f);
+						processFilterArea(dstData, *output, lod, aabb, dir, 10.0f, 0.2f);
+					}
 				}
 			}
 		}

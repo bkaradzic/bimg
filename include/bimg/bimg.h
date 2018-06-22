@@ -335,6 +335,16 @@ namespace bimg
 		);
 
 	///
+	void imageRgba32fDownsample2x2(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _depth
+		, uint32_t _srcPitch
+		, const void* _src
+		);
+
+	///
 	void imageRgba32fDownsample2x2NormalMap(
 		  void* _dst
 		, uint32_t _width
