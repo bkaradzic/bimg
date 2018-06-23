@@ -58,6 +58,7 @@ struct Options
 			"\t      iqa: %s\n"
 			"\t      pma: %s\n"
 			"\t      sdf: %s\n"
+			"\t radiance: %s\n"
 			, maxSize
 			, edge
 			, bimg::getName(format)
@@ -66,6 +67,7 @@ struct Options
 			, iqa       ? "true" : "false"
 			, pma       ? "true" : "false"
 			, sdf       ? "true" : "false"
+			, radiance  ? "true" : "false"
 			);
 	}
 
@@ -80,6 +82,7 @@ struct Options
 	bool pma;
 	bool sdf;
 	bool alphaTest;
+	bool radiance;
 };
 
 void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
@@ -228,6 +231,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			&& !_options.equirect
 			&& !_options.iqa
 			&& !_options.pma
+			&& !_options.radiance
 			;
 
 		if (needResize)
@@ -297,6 +301,14 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			input = bimg::imageConvert(_allocator, inputFormat, *dst);
 			bimg::imageFree(dst);
+		}
+
+		if (_options.radiance)
+		{
+			output = bimg::imageCubemapRadianceFilter(_allocator, *input);
+
+			bimg::imageFree(input);
+			return output;
 		}
 
 		output = bimg::imageAlloc(
@@ -917,6 +929,7 @@ int main(int _argc, const char* _argv[])
 	options.equirect  = cmdLine.hasArg("equirect");
 	options.iqa       = cmdLine.hasArg("iqa");
 	options.pma       = cmdLine.hasArg("pma");
+	options.radiance  = cmdLine.hasArg("radiance");
 
 	const char* maxSize = cmdLine.findOption("max");
 	if (NULL != maxSize)

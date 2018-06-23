@@ -4,6 +4,7 @@
  */
 
 #include "bimg_p.h"
+#include <bimg/encode.h>
 
 namespace bimg
 {
@@ -311,10 +312,9 @@ namespace bimg
 
 	float texelSolidAngle(float _u, float _v, float _invFaceSize)
 	{
-		/// Reference:
-		///  - https://web.archive.org/web/20180614195754/http://www.mpia.de/~mathar/public/mathar20051002.pdf
-		///  - https://web.archive.org/web/20180614195725/http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
-
+		// Reference:
+		//  - https://web.archive.org/web/20180614195754/http://www.mpia.de/~mathar/public/mathar20051002.pdf
+		//  - https://web.archive.org/web/20180614195725/http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
 		const float x0 = _u - _invFaceSize;
 		const float x1 = _u + _invFaceSize;
 		const float y0 = _v - _invFaceSize;
@@ -332,7 +332,7 @@ namespace bimg
 	{
 		const uint32_t dstWidth = _size;
 		const uint32_t dstPitch = dstWidth*16;
-		const float invDstWidth = 1.0f / float(dstWidth);
+		const float texelSize   = 1.0f / float(dstWidth);
 
 		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, uint16_t(dstWidth), uint16_t(dstWidth), 1, 1, true, false);
 
@@ -347,11 +347,11 @@ namespace bimg
 				{
 					float* dstData = (float*)&mip.m_data[yy*dstPitch+xx*16];
 
-					const float uu = float(xx)*invDstWidth*2.0f - 1.0f;
-					const float vv = float(yy)*invDstWidth*2.0f - 1.0f;
+					const float uu = float(xx)*texelSize*2.0f - 1.0f;
+					const float vv = float(yy)*texelSize*2.0f - 1.0f;
 
 					texelUvToDir(dstData, side, uu, vv);
-					dstData[3] = texelSolidAngle(uu, vv, invDstWidth);
+					dstData[3] = texelSolidAngle(uu, vv, texelSize);
 				}
 			}
 		}
@@ -623,6 +623,7 @@ namespace bimg
 	void processFilterArea(
 		  float* _result
 		, const ImageContainer& _image
+		, const ImageContainer& _nsa
 		, uint8_t _lod
 		, const Aabb* _aabb
 		, const float* _dir
@@ -630,10 +631,10 @@ namespace bimg
 		, float _specularAngle
 		)
 	{
-		float color[3] = { 0.0f, 0.0f, 0.0f };
+		float color[3]    = { 0.0f, 0.0f, 0.0f };
 		float totalWeight = 0.0f;
 
-		const uint32_t bpp   = getBitsPerPixel(_image.m_format);
+		const uint32_t bpp = getBitsPerPixel(_image.m_format);
 
 		UnpackFn unpack = getUnpack(_image.m_format);
 
@@ -644,12 +645,15 @@ namespace bimg
 				continue;
 			}
 
+			ImageMip nsaMip;
+			imageGetRawData(_nsa, side, 0, _nsa.m_data, _nsa.m_size, nsaMip);
+
 			ImageMip mip;
 			if (imageGetRawData(_image, side, _lod, _image.m_data, _image.m_size, mip) )
 			{
 				const uint32_t pitch      = mip.m_width*bpp/8;
 				const float widthMinusOne = float(mip.m_width-1);
-				const float invWidth      = 1.0f/float(mip.m_width);
+				const float texelSize     = 1.0f/float(mip.m_width);
 
 				const uint32_t minX = uint32_t(_aabb[side].m_min[0] * widthMinusOne);
 				const uint32_t maxX = uint32_t(_aabb[side].m_max[0] * widthMinusOne);
@@ -662,14 +666,20 @@ namespace bimg
 
 					for (uint32_t xx = minX; xx <= maxX; ++xx)
 					{
-						const float uu = float(xx)*invWidth*2.0f - 1.0f;
-						const float vv = float(yy)*invWidth*2.0f - 1.0f;
+#if 0
+						const float uu = float(xx)*texelSize*2.0f - 1.0f;
+						const float vv = float(yy)*texelSize*2.0f - 1.0f;
 
 						float normal[4];
 						texelUvToDir(normal, side, uu, vv);
-						const float solidAngle = texelSolidAngle(uu, vv, invWidth);
 
+						const float solidAngle = texelSolidAngle(uu, vv, texelSize);
 						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
+#else
+						const float* normal = (const float*)&nsaMip.m_data[(yy*nsaMip.m_width+xx)*(nsaMip.m_bpp/8)];
+						const float solidAngle = normal[3];
+						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
+#endif // 0
 
 						if (ndotl >= _specularAngle)
 						{
@@ -781,29 +791,79 @@ namespace bimg
 		return output;
 	}
 
-	ImageContainer* imageCubemapRadianceFilter(bx::AllocatorI* _allocator, const ImageContainer& _image, float _filterSize)
+	/// Returns the angle of cosine power function where the results are above a small empirical treshold.
+	static float cosinePowerFilterAngle(float _cosinePower)
 	{
-		ImageContainer* output = imageConvert(_allocator, TextureFormat::RGBA32F, _image, true);
+		// Bigger value leads to performance improvement but might hurt the results.
+		// 0.00001f was tested empirically and it gives almost the same values as reference.
+		const float treshold = 0.00001f;
 
-		if (1 >= output->m_numMips)
+		// Cosine power filter is: pow(cos(angle), power).
+		// We want the value of the angle above each result is <= treshold.
+		// So: angle = acos(pow(treshold, 1.0 / power))
+		return bx::acos(bx::pow(treshold, 1.0f / _cosinePower));
+	}
+
+	float specularPowerFor(float _mip, float _mipCount, float _glossScale, float _glossBias)
+	{
+		const float glossiness    = bx::max(0.0f, 1.0f - _mip/(_mipCount-1.0000001f) );
+		const float specularPower = bx::pow(2.0f, _glossScale * glossiness + _glossBias);
+		return specularPower;
+	}
+
+	float applyLightningModel(float _specularPower, LightingModel::Enum _lightingModel)
+	{
+		// Reference:
+		//  - https://web.archive.org/web/20180622232018/https://seblagarde.wordpress.com/2012/06/10/amd-cubemapgen-for-physically-based-rendering/
+		//  - https://web.archive.org/web/20180622232041/https://seblagarde.wordpress.com/2012/03/29/relationship-between-phong-and-blinn-lighting-model/
+		switch (_lightingModel)
 		{
-			ImageContainer* temp = imageGenerateMips(_allocator, *output);
-			imageFree(output);
-			output = temp;
+		case LightingModel::Phong:     return _specularPower;
+		case LightingModel::PhongBrdf: return _specularPower + 1.0f;
+		case LightingModel::Blinn:     return _specularPower/4.0f;
+		case LightingModel::BlinnBrdf: return _specularPower/4.0f + 1.0f;
+		default: break;
+		};
+
+		return _specularPower;
+	}
+
+	ImageContainer* imageCubemapRadianceFilter(bx::AllocatorI* _allocator, const ImageContainer& _image, LightingModel::Enum _lightingModel, float _glossScale, float _glossBias)
+	{
+		ImageContainer* input = imageConvert(_allocator, TextureFormat::RGBA32F, _image, true);
+
+		if (1 >= input->m_numMips)
+		{
+			ImageContainer* temp = imageGenerateMips(_allocator, *input);
+			imageFree(input);
+			input = temp;
 		}
 
-		const uint32_t numMips = output->m_numMips;
+		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, uint16_t(input->m_width), uint16_t(input->m_width), 1, 1, true, true);
 
-		for (uint8_t side = 0; side < 6; ++side)
+		const uint32_t numMips = input->m_numMips;
+
+		for (uint8_t lod = 0; lod < numMips; ++lod)
 		{
-			for (uint8_t lod = 0; lod < numMips; ++lod)
+			ImageContainer* nsa = imageCubemapNormalSolidAngle(_allocator, bx::max<uint32_t>(_image.m_width>>lod, 1) );
+
+			for (uint8_t side = 0; side < 6; ++side)
 			{
 				ImageMip mip;
 				imageGetRawData(*output, side, lod, output->m_data, output->m_size, mip);
 
 				const uint32_t dstWidth = mip.m_width;
 				const uint32_t dstPitch = dstWidth*16;
-				const float invDstWidth = 1.0f / float(dstWidth);
+
+				const float minAngle = bx::atan2(1.0f, float(dstWidth) );
+				const float maxAngle = bx::kPiHalf;
+				const float toFilterSize     = 1.0f/(minAngle*dstWidth*2.0f);
+				const float specularPowerRef = specularPowerFor(lod, float(numMips), _glossScale, _glossBias);
+				const float specularPower    = applyLightningModel(specularPowerRef, _lightingModel);
+				const float filterAngle      = bx::clamp(cosinePowerFilterAngle(specularPower), minAngle, maxAngle);
+				const float cosAngle   = bx::max(0.0f, bx::cos(filterAngle) );
+				const float texelSize  = 1.0f/float(dstWidth);
+				const float filterSize = bx::max(texelSize, filterAngle * toFilterSize);
 
 				for (uint32_t yy = 0; yy < dstWidth; ++yy)
 				{
@@ -811,19 +871,21 @@ namespace bimg
 					{
 						float* dstData = (float*)&mip.m_data[yy*dstPitch+xx*16];
 
-						const float uu = float(xx)*invDstWidth*2.0f - 1.0f;
-						const float vv = float(yy)*invDstWidth*2.0f - 1.0f;
+						const float uu = float(xx)*texelSize*2.0f - 1.0f;
+						const float vv = float(yy)*texelSize*2.0f - 1.0f;
 
 						float dir[3];
 						texelUvToDir(dir, side, uu, vv);
 
 						Aabb aabb[6];
-						calcFilterArea(aabb, dir, _filterSize);
+						calcFilterArea(aabb, dir, filterSize);
 
-						processFilterArea(dstData, *output, lod, aabb, dir, 10.0f, 0.2f);
+						processFilterArea(dstData, *input, *nsa, lod, aabb, dir, specularPower, cosAngle);
 					}
 				}
 			}
+
+			imageFree(nsa);
 		}
 
 		return output;

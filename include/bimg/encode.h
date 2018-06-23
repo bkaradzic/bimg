@@ -136,10 +136,31 @@ namespace bimg
 		);
 
 	///
+	ImageContainer* imageGenerateMips(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _image
+		);
+
+	struct LightingModel
+	{
+		enum Enum
+		{
+			Phong,
+			PhongBrdf,
+			Blinn,
+			BlinnBrdf,
+
+			Count
+		};
+	};
+
+	///
 	ImageContainer* imageCubemapRadianceFilter(
 		  bx::AllocatorI* _allocator
 		, const ImageContainer& _image
-		, float _filterSize
+		, LightingModel::Enum _lightingModel = LightingModel::BlinnBrdf
+		, float _glossScale = 10.0f
+		, float _glossBias  = 1.0f
 		);
 
 } // namespace bimg
