@@ -307,6 +307,14 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		{
 			output = bimg::imageCubemapRadianceFilter(_allocator, *input);
 
+			if (bimg::TextureFormat::RGBA32F != outputFormat)
+			{
+				bimg::ImageContainer* temp = bimg::imageEncode(_allocator, outputFormat, _options.quality, *output);
+				bimg::imageFree(output);
+
+				output = temp;
+			}
+
 			bimg::imageFree(input);
 			return output;
 		}

@@ -228,7 +228,10 @@ namespace bimg
 				break;
 
 			default:
-				BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				if (!imageConvert(_allocator, _dst, _dstFormat, _src, _srcFormat, _width, _height, 1) )
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				}
 				break;
 		}
 	}
@@ -260,17 +263,18 @@ namespace bimg
 					imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
 					uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
 
-					imageEncode(_allocator
-							, dstData
-							, mip.m_data
-							, mip.m_format
-							, mip.m_width
-							, mip.m_height
-							, mip.m_depth
-							, _dstFormat
-							, _quality
-							, &err
-							);
+					imageEncode(
+						  _allocator
+						, dstData
+						, mip.m_data
+						, mip.m_format
+						, mip.m_width
+						, mip.m_height
+						, mip.m_depth
+						, _dstFormat
+						, _quality
+						, &err
+						);
 				}
 			}
 		}

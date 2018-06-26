@@ -620,6 +620,35 @@ namespace bimg
 		}
 	}
 
+	void importanceSampleGGX(float* _result, const float* _xi, float _roughness, const float* _dir)
+	{
+		const float aa  = bx::square(_roughness);
+		const float phi = bx::kPi2 * _xi[0];
+		const float cosTheta = bx::sqrt( (1.0f - _xi[1]) / (1.0f + (bx::square(aa) - 1.0f) * _xi[1]) );
+		const float sinTheta = bx::sqrt(1.0f - bx::square(cosTheta) );
+
+		float hh[3];
+		hh[0] = sinTheta * bx::cos(phi);
+		hh[1] = sinTheta * bx::sin(phi);
+		hh[2] = cosTheta;
+
+		float up[3] = { 0.0f, 0.0f, 0.0f };
+		up[bx::abs(_dir[2]) < 0.999f ? 2 : 0] = 1.0f;
+
+		float right[3];
+		bx::vec3Cross(right, up, _dir);
+
+		float tangentX[3];
+		bx::vec3Norm(tangentX, right);
+
+		float tangentY[3];
+		bx::vec3Cross(tangentY, _dir, tangentX);
+
+		_result[0] = tangentX[0] * hh[0] + tangentY[0] * hh[1] + _dir[0] * hh[2];
+		_result[1] = tangentX[1] * hh[0] + tangentY[1] * hh[1] + _dir[1] * hh[2];
+		_result[2] = tangentX[2] * hh[0] + tangentY[2] * hh[1] + _dir[2] * hh[2];
+	}
+
 	void processFilterArea(
 		  float* _result
 		, const ImageContainer& _image
@@ -654,6 +683,7 @@ namespace bimg
 				const uint32_t pitch      = mip.m_width*bpp/8;
 				const float widthMinusOne = float(mip.m_width-1);
 				const float texelSize     = 1.0f/float(mip.m_width);
+				BX_UNUSED(texelSize);
 
 				const uint32_t minX = uint32_t(_aabb[side].m_min[0] * widthMinusOne);
 				const uint32_t maxX = uint32_t(_aabb[side].m_max[0] * widthMinusOne);
@@ -675,16 +705,31 @@ namespace bimg
 
 						const float solidAngle = texelSolidAngle(uu, vv, texelSize);
 						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
-#else
+#elif 1
 						const float* normal = (const float*)&nsaMip.m_data[(yy*nsaMip.m_width+xx)*(nsaMip.m_bpp/8)];
 						const float solidAngle = normal[3];
 						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
+#else
+						const float uu = float(xx)*texelSize*2.0f - 1.0f;
+						const float vv = float(yy)*texelSize*2.0f - 1.0f;
+						float xi[2] = { uu, vv };
+
+						float hh[3];
+						importanceSampleGGX(hh, xi, _specularPower, _dir);
+
+						const float ddoth2 = 2.0f * bx::vec3Dot(_dir, hh);
+
+						float ll[3];
+						ll[0] = ddoth2 * hh[0] - _dir[0];
+						ll[1] = ddoth2 * hh[1] - _dir[1];
+						ll[2] = ddoth2 * hh[2] - _dir[2];
+
+						const float ndotl = bx::clamp(bx::vec3Dot(_dir, ll), 0.0f, 1.0f);
 #endif // 0
 
 						if (ndotl >= _specularAngle)
 						{
 							const float weight = solidAngle * bx::pow(ndotl, _specularPower);
-
 							float rgba[4];
 							unpack(rgba, row + xx*bpp/8);
 
@@ -841,9 +886,20 @@ namespace bimg
 
 		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, uint16_t(input->m_width), uint16_t(input->m_width), 1, 1, true, true);
 
-		const uint32_t numMips = input->m_numMips;
+		for (uint8_t side = 0; side < 6; ++side)
+		{
+			ImageMip srcMip;
+			imageGetRawData(*input, side, 0, input->m_data, input->m_size, srcMip);
 
-		for (uint8_t lod = 0; lod < numMips; ++lod)
+			ImageMip dstMip;
+			imageGetRawData(*output, side, 0, output->m_data, output->m_size, dstMip);
+
+			uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
+
+			bx::memCopy(dstData, srcMip.m_data, srcMip.m_size);
+		}
+
+		for (uint8_t lod = 1, numMips = input->m_numMips; lod < numMips; ++lod)
 		{
 			ImageContainer* nsa = imageCubemapNormalSolidAngle(_allocator, bx::max<uint32_t>(_image.m_width>>lod, 1) );
 
