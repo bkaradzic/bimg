@@ -620,34 +620,38 @@ namespace bimg
 		}
 	}
 
-	void importanceSampleGGX(float* _result, const float* _xi, float _roughness, const float* _dir)
+	void importanceSampleGgx(float* _result, float _u, float _v, float _roughness, const float* _normal)
 	{
 		const float aa  = bx::square(_roughness);
-		const float phi = bx::kPi2 * _xi[0];
-		const float cosTheta = bx::sqrt( (1.0f - _xi[1]) / (1.0f + (bx::square(aa) - 1.0f) * _xi[1]) );
-		const float sinTheta = bx::sqrt(1.0f - bx::square(cosTheta) );
+		const float phi = bx::kPi2 * _u;
+		const float cosTheta = bx::sqrt( (1.0f - _v) / (1.0f + (bx::square(aa) - 1.0f) * _v) );
+		const float sinTheta = bx::sqrt(bx::abs(1.0f - bx::square(cosTheta) ) );
 
-		float hh[3];
-		hh[0] = sinTheta * bx::cos(phi);
-		hh[1] = sinTheta * bx::sin(phi);
-		hh[2] = cosTheta;
+		const float hh[3] =
+		{
+			sinTheta * bx::cos(phi),
+			sinTheta * bx::sin(phi),
+			cosTheta,
+		};
 
 		float up[3] = { 0.0f, 0.0f, 0.0f };
-		up[bx::abs(_dir[2]) < 0.999f ? 2 : 0] = 1.0f;
+		up[bx::abs(_normal[2]) < 0.999f ? 2 : 0] = 1.0f;
 
 		float right[3];
-		bx::vec3Cross(right, up, _dir);
+		bx::vec3Cross(right, up, _normal);
 
 		float tangentX[3];
 		bx::vec3Norm(tangentX, right);
 
 		float tangentY[3];
-		bx::vec3Cross(tangentY, _dir, tangentX);
+		bx::vec3Cross(tangentY, _normal, tangentX);
 
-		_result[0] = tangentX[0] * hh[0] + tangentY[0] * hh[1] + _dir[0] * hh[2];
-		_result[1] = tangentX[1] * hh[0] + tangentY[1] * hh[1] + _dir[1] * hh[2];
-		_result[2] = tangentX[2] * hh[0] + tangentY[2] * hh[1] + _dir[2] * hh[2];
+		_result[0] = tangentX[0] * hh[0] + tangentY[0] * hh[1] + _normal[0] * hh[2];
+		_result[1] = tangentX[1] * hh[0] + tangentY[1] * hh[1] + _normal[1] * hh[2];
+		_result[2] = tangentX[2] * hh[0] + tangentY[2] * hh[1] + _normal[2] * hh[2];
 	}
+
+#define GGX 0
 
 	void processFilterArea(
 		  float* _result
@@ -696,7 +700,8 @@ namespace bimg
 
 					for (uint32_t xx = minX; xx <= maxX; ++xx)
 					{
-#if 0
+#if !GGX
+#	if 0
 						const float uu = float(xx)*texelSize*2.0f - 1.0f;
 						const float vv = float(yy)*texelSize*2.0f - 1.0f;
 
@@ -705,28 +710,11 @@ namespace bimg
 
 						const float solidAngle = texelSolidAngle(uu, vv, texelSize);
 						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
-#elif 1
+#	else
 						const float* normal = (const float*)&nsaMip.m_data[(yy*nsaMip.m_width+xx)*(nsaMip.m_bpp/8)];
 						const float solidAngle = normal[3];
 						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
-#else
-						const float uu = float(xx)*texelSize*2.0f - 1.0f;
-						const float vv = float(yy)*texelSize*2.0f - 1.0f;
-						float xi[2] = { uu, vv };
-
-						float hh[3];
-						importanceSampleGGX(hh, xi, _specularPower, _dir);
-
-						const float ddoth2 = 2.0f * bx::vec3Dot(_dir, hh);
-
-						float ll[3];
-						ll[0] = ddoth2 * hh[0] - _dir[0];
-						ll[1] = ddoth2 * hh[1] - _dir[1];
-						ll[2] = ddoth2 * hh[2] - _dir[2];
-
-						const float ndotl = bx::clamp(bx::vec3Dot(_dir, ll), 0.0f, 1.0f);
-#endif // 0
-
+#	endif
 						if (ndotl >= _specularAngle)
 						{
 							const float weight = solidAngle * bx::pow(ndotl, _specularPower);
@@ -738,6 +726,47 @@ namespace bimg
 							color[2] += rgba[2] * weight;
 							totalWeight += weight;
 						}
+#else
+						BX_UNUSED(_specularAngle);
+						const float uu = float(xx)*texelSize; //*2.0f - 1.0f;
+						const float vv = float(yy)*texelSize; //*2.0f - 1.0f;
+
+						const float* normal = (const float*)&nsaMip.m_data[(yy*nsaMip.m_width+xx)*(nsaMip.m_bpp/8)];
+
+						float hh[3];
+						importanceSampleGgx(hh, uu, vv, _specularPower, normal);
+
+						const float ddoth2 = 2.0f * bx::vec3Dot(normal, hh);
+
+						float ll[3];
+						ll[0] = ddoth2 * hh[0] - normal[0];
+						ll[1] = ddoth2 * hh[1] - normal[1];
+						ll[2] = ddoth2 * hh[2] - normal[2];
+
+						const float ndotl = bx::clamp(bx::vec3Dot(normal, ll), 0.0f, 1.0f);
+
+//						if (ndotl > 0.0f)
+						{
+							const float solidAngle = normal[3];
+
+							const float weight = solidAngle * ndotl;
+
+							float rgba[4];
+							unpack(rgba, row + xx*bpp/8);
+#	if 1
+							color[0] += rgba[0] * weight;
+							color[1] += rgba[1] * weight;
+							color[2] += rgba[2] * weight;
+							totalWeight += weight;
+#	else
+							color[0] += ll[0];
+							color[1] += ll[1];
+							color[2] += ll[2];
+							totalWeight += 1.0f;
+#	endif // 0
+						}
+#endif // 0
+
 					}
 				}
 
@@ -849,11 +878,9 @@ namespace bimg
 		return bx::acos(bx::pow(treshold, 1.0f / _cosinePower));
 	}
 
-	float specularPowerFor(float _mip, float _mipCount, float _glossScale, float _glossBias)
+	float glossinessFor(float _mip, float _mipCount)
 	{
-		const float glossiness    = bx::max(0.0f, 1.0f - _mip/(_mipCount-1.0000001f) );
-		const float specularPower = bx::pow(2.0f, _glossScale * glossiness + _glossBias);
-		return specularPower;
+		return bx::max(0.0f, 1.0f - _mip/(_mipCount-1.0000001f) );
 	}
 
 	float applyLightningModel(float _specularPower, LightingModel::Enum _lightingModel)
@@ -914,7 +941,8 @@ namespace bimg
 				const float minAngle = bx::atan2(1.0f, float(dstWidth) );
 				const float maxAngle = bx::kPiHalf;
 				const float toFilterSize     = 1.0f/(minAngle*dstWidth*2.0f);
-				const float specularPowerRef = specularPowerFor(lod, float(numMips), _glossScale, _glossBias);
+				const float glossiness       = glossinessFor(lod, float(numMips) );
+				const float specularPowerRef = bx::pow(2.0f, _glossScale * glossiness + _glossBias);
 				const float specularPower    = applyLightningModel(specularPowerRef, _lightingModel);
 				const float filterAngle      = bx::clamp(cosinePowerFilterAngle(specularPower), minAngle, maxAngle);
 				const float cosAngle   = bx::max(0.0f, bx::cos(filterAngle) );
@@ -936,7 +964,11 @@ namespace bimg
 						Aabb aabb[6];
 						calcFilterArea(aabb, dir, filterSize);
 
+#if GGX
+						processFilterArea(dstData, *input, *nsa, lod, aabb, dir, 1.0f-glossiness, cosAngle);
+#else
 						processFilterArea(dstData, *input, *nsa, lod, aabb, dir, specularPower, cosAngle);
+#endif // GGX
 					}
 				}
 			}
