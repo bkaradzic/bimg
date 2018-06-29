@@ -32,21 +32,6 @@ BX_ERROR_RESULT(TEXTRUREC_ERROR, BX_MAKEFOURCC('t', 'c', 0, 0) );
 
 struct Options
 {
-	Options()
-		: maxSize(UINT32_MAX)
-		, edge(0.0f)
-		, format(bimg::TextureFormat::Count)
-		, quality(bimg::Quality::Default)
-		, mips(false)
-		, normalMap(false)
-		, equirect(false)
-		, iqa(false)
-		, pma(false)
-		, sdf(false)
-		, alphaTest(false)
-	{
-	}
-
 	void dump()
 	{
 		DBG("Options:\n"
@@ -71,18 +56,18 @@ struct Options
 			);
 	}
 
-	uint32_t maxSize;
-	float edge;
-	bimg::TextureFormat::Enum format;
-	bimg::Quality::Enum quality;
-	bool mips;
-	bool normalMap;
-	bool equirect;
-	bool iqa;
-	bool pma;
-	bool sdf;
-	bool alphaTest;
-	bool radiance;
+	uint32_t maxSize = UINT32_MAX;
+	float edge       = 0.0f;
+	bimg::TextureFormat::Enum format   = bimg::TextureFormat::Count;
+	bimg::Quality::Enum quality        = bimg::Quality::Default;
+	bimg::LightingModel::Enum radiance = bimg::LightingModel::Count;
+	bool mips      = false;
+	bool normalMap = false;
+	bool equirect  = false;
+	bool iqa       = false;
+	bool pma       = false;
+	bool sdf       = false;
+	bool alphaTest = false;
 };
 
 void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
@@ -231,7 +216,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			&& !_options.equirect
 			&& !_options.iqa
 			&& !_options.pma
-			&& !_options.radiance
+			&& (bimg::LightingModel::Count == _options.radiance)
 			;
 
 		if (needResize)
@@ -303,9 +288,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			bimg::imageFree(dst);
 		}
 
-		if (_options.radiance)
+		if (bimg::LightingModel::Count != _options.radiance)
 		{
-			output = bimg::imageCubemapRadianceFilter(_allocator, *input);
+			output = bimg::imageCubemapRadianceFilter(_allocator, *input, _options.radiance);
 
 			if (bimg::TextureFormat::RGBA32F != outputFormat)
 			{
@@ -814,6 +799,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "      --pma                Premultiply alpha into RGB channel.\n"
 		  "      --max <max size>     Maximum width/height (image will be scaled down and\n"
 		  "                           aspect ratio will be preserved.\n"
+		  "      --radiance <model>   Radiance cubemap filter. (Lighting model: Phong, PhongBrdf, Blinn, BlinnBrdf, GGX)\n"
 		  "      --as <extension>     Save as.\n"
 		  "      --validate           *DEBUG* Validate that output image produced matches after loading.\n"
 
@@ -937,7 +923,6 @@ int main(int _argc, const char* _argv[])
 	options.equirect  = cmdLine.hasArg("equirect");
 	options.iqa       = cmdLine.hasArg("iqa");
 	options.pma       = cmdLine.hasArg("pma");
-	options.radiance  = cmdLine.hasArg("radiance");
 
 	const char* maxSize = cmdLine.findOption("max");
 	if (NULL != maxSize)
@@ -997,6 +982,21 @@ int main(int _argc, const char* _argv[])
 		case 'd': options.quality = bimg::Quality::Default; break;
 		default:
 			help("Invalid quality specified.");
+			return bx::kExitFailure;
+		}
+	}
+
+	const char* radiance = cmdLine.findOption("radiance");
+	if (NULL != radiance)
+	{
+		if      (0 == bx::strCmpI(radiance, "phong"    ) ) { options.radiance = bimg::LightingModel::Phong; }
+		else if (0 == bx::strCmpI(radiance, "phongbrdf") ) { options.radiance = bimg::LightingModel::PhongBrdf; }
+		else if (0 == bx::strCmpI(radiance, "blinn"    ) ) { options.radiance = bimg::LightingModel::Blinn; }
+		else if (0 == bx::strCmpI(radiance, "blinnbrdf") ) { options.radiance = bimg::LightingModel::BlinnBrdf; }
+		else if (0 == bx::strCmpI(radiance, "ggx"      ) ) { options.radiance = bimg::LightingModel::Ggx; }
+		else
+		{
+			help("Invalid radiance lighting model specified.");
 			return bx::kExitFailure;
 		}
 	}

@@ -149,6 +149,7 @@ namespace bimg
 			PhongBrdf,
 			Blinn,
 			BlinnBrdf,
+			Ggx,
 
 			Count
 		};
@@ -158,9 +159,7 @@ namespace bimg
 	ImageContainer* imageCubemapRadianceFilter(
 		  bx::AllocatorI* _allocator
 		, const ImageContainer& _image
-		, LightingModel::Enum _lightingModel = LightingModel::BlinnBrdf
-		, float _glossScale = 10.0f
-		, float _glossBias  = 1.0f
+		, LightingModel::Enum _lightingModel
 		);
 
 } // namespace bimg

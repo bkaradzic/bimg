@@ -5,6 +5,7 @@
 
 #include "bimg_p.h"
 #include <bimg/encode.h>
+#include <bx/rng.h>
 
 namespace bimg
 {
@@ -620,6 +621,63 @@ namespace bimg
 		}
 	}
 
+	struct Sampler
+	{
+		Sampler(const ImageContainer& _image, uint16_t _side, float _lod)
+		{
+			const uint8_t lod = uint8_t(bx::clamp(_lod, 0.0f, 1.0f) * _image.m_numMips);
+			imageGetRawData(_image, _side, lod, _image.m_data, _image.m_size, mip);
+		}
+
+		ImageMip mip;
+	};
+
+	void texelFetch(float* _rgba, const Sampler& _sampler, uint32_t _u, uint32_t _v)
+	{
+		const uint32_t bpp   = _sampler.mip.m_bpp;
+		const uint32_t pitch = _sampler.mip.m_width*bpp/8;
+		const uint8_t* texel = _sampler.mip.m_data + _v*pitch + _u*bpp/8;
+
+		UnpackFn unpack = getUnpack(_sampler.mip.m_format);
+		unpack(_rgba, texel);
+	}
+
+	void sampleCubeMap(float* _rgba, const ImageContainer& _image, const float* _dir, float _lod)
+	{
+		float uu, vv;
+		uint8_t side;
+		dirToTexelUv(uu, vv, side, _dir);
+
+		Sampler sampler(_image, side, _lod);
+
+		const uint32_t widthMinusOne = sampler.mip.m_width-1;
+
+		const uint32_t u0 = uint32_t(uu*widthMinusOne+0.5f);
+		const uint32_t v0 = uint32_t(vv*widthMinusOne+0.5f);
+		const uint32_t u1 = bx::min(u0 + 1, widthMinusOne);
+		const uint32_t v1 = bx::min(v0 + 1, widthMinusOne);
+
+		const float fu = bx::fract(uu);
+		const float fv = bx::fract(vv);
+
+		float rgba00[4];
+		texelFetch(rgba00, sampler, u0, v0);
+
+		float rgba01[4];
+		texelFetch(rgba01, sampler, u0, v1);
+
+		float rgba10[4];
+		texelFetch(rgba10, sampler, u1, v0);
+
+		float rgba11[4];
+		texelFetch(rgba11, sampler, u1, v1);
+
+		_rgba[0] = bx::lerp(bx::lerp(rgba00[0], rgba01[0], fv), bx::lerp(rgba10[0], rgba11[0], fv), fu);
+		_rgba[1] = bx::lerp(bx::lerp(rgba00[1], rgba01[1], fv), bx::lerp(rgba10[1], rgba11[1], fv), fu);
+		_rgba[2] = bx::lerp(bx::lerp(rgba00[2], rgba01[2], fv), bx::lerp(rgba10[2], rgba11[2], fv), fu);
+		_rgba[3] = bx::lerp(bx::lerp(rgba00[3], rgba01[3], fv), bx::lerp(rgba10[3], rgba11[3], fv), fu);
+	}
+
 	void importanceSampleGgx(float* _result, float _u, float _v, float _roughness, const float* _normal)
 	{
 		const float aa  = bx::square(_roughness);
@@ -651,7 +709,85 @@ namespace bimg
 		_result[2] = tangentX[2] * hh[0] + tangentY[2] * hh[1] + _normal[2] * hh[2];
 	}
 
-#define GGX 0
+	void processFilterAreaGgx(
+		  float* _result
+		, const ImageContainer& _image
+		, uint8_t _lod
+		, const float* _dir
+		, float _roughness
+		)
+	{
+		ImageMip mip;
+		imageGetRawData(_image, 0, _lod, _image.m_data, _image.m_size, mip);
+
+		const uint32_t bpp = getBitsPerPixel(_image.m_format);
+		const float    lod = float(_lod)/_image.m_numMips;
+
+		const uint32_t pitch      = mip.m_width*bpp/8;
+		const float widthMinusOne = float(mip.m_width-1);
+
+		UnpackFn unpack = getUnpack(_image.m_format);
+
+		float color[3]    = { 0.0f, 0.0f, 0.0f };
+		float totalWeight = 0.0f;
+
+		bx::RngMwc mwc;
+
+		for (uint32_t ii = 0; ii < 1024; ++ii)
+		{
+			const float uu = ii/1024.0f;
+			const float vv = bx::frnd(&mwc);
+
+			float hh[3];
+			importanceSampleGgx(hh, uu, vv, _roughness, _dir);
+
+			const float ddoth2 = 2.0f * bx::vec3Dot(_dir, hh);
+
+			float ll[3];
+			ll[0] = ddoth2 * hh[0] - _dir[0];
+			ll[1] = ddoth2 * hh[1] - _dir[1];
+			ll[2] = ddoth2 * hh[2] - _dir[2];
+
+			const float ndotl = bx::clamp(bx::vec3Dot(_dir, ll), 0.0f, 1.0f);
+
+			if (ndotl > 0.0f)
+			{
+				float rgba[4];
+				sampleCubeMap(rgba, _image, ll, lod);
+
+				color[0] += rgba[0] * ndotl;
+				color[1] += rgba[1] * ndotl;
+				color[2] += rgba[2] * ndotl;
+				totalWeight += ndotl;
+			}
+		}
+
+		if (0.0f < totalWeight)
+		{
+			const float invWeight = 1.0f/totalWeight;
+			_result[0] = color[0] * invWeight;
+			_result[1] = color[1] * invWeight;
+			_result[2] = color[2] * invWeight;
+		}
+		else
+		{
+			float uu, vv;
+			uint8_t face;
+			dirToTexelUv(uu, vv, face, _dir);
+
+			imageGetRawData(_image, face, 0, _image.m_data, _image.m_size, mip);
+
+			const uint32_t xx = uint32_t(uu*widthMinusOne);
+			const uint32_t yy = uint32_t(vv*widthMinusOne);
+
+			float rgba[4];
+			unpack(rgba, mip.m_data + yy*pitch + xx*bpp/8);
+
+			_result[0] = rgba[0];
+			_result[1] = rgba[1];
+			_result[2] = rgba[2];
+		}
+	}
 
 	void processFilterArea(
 		  float* _result
@@ -697,24 +833,14 @@ namespace bimg
 				for (uint32_t yy = minY; yy <= maxY; ++yy)
 				{
 					const uint8_t* row = mip.m_data + yy*pitch;
+					BX_UNUSED(row);
 
 					for (uint32_t xx = minX; xx <= maxX; ++xx)
 					{
-#if !GGX
-#	if 0
-						const float uu = float(xx)*texelSize*2.0f - 1.0f;
-						const float vv = float(yy)*texelSize*2.0f - 1.0f;
-
-						float normal[4];
-						texelUvToDir(normal, side, uu, vv);
-
-						const float solidAngle = texelSolidAngle(uu, vv, texelSize);
-						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
-#	else
 						const float* normal = (const float*)&nsaMip.m_data[(yy*nsaMip.m_width+xx)*(nsaMip.m_bpp/8)];
 						const float solidAngle = normal[3];
 						const float ndotl = bx::clamp(bx::vec3Dot(normal, _dir), 0.0f, 1.0f);
-#	endif
+
 						if (ndotl >= _specularAngle)
 						{
 							const float weight = solidAngle * bx::pow(ndotl, _specularPower);
@@ -726,47 +852,6 @@ namespace bimg
 							color[2] += rgba[2] * weight;
 							totalWeight += weight;
 						}
-#else
-						BX_UNUSED(_specularAngle);
-						const float uu = float(xx)*texelSize; //*2.0f - 1.0f;
-						const float vv = float(yy)*texelSize; //*2.0f - 1.0f;
-
-						const float* normal = (const float*)&nsaMip.m_data[(yy*nsaMip.m_width+xx)*(nsaMip.m_bpp/8)];
-
-						float hh[3];
-						importanceSampleGgx(hh, uu, vv, _specularPower, normal);
-
-						const float ddoth2 = 2.0f * bx::vec3Dot(normal, hh);
-
-						float ll[3];
-						ll[0] = ddoth2 * hh[0] - normal[0];
-						ll[1] = ddoth2 * hh[1] - normal[1];
-						ll[2] = ddoth2 * hh[2] - normal[2];
-
-						const float ndotl = bx::clamp(bx::vec3Dot(normal, ll), 0.0f, 1.0f);
-
-//						if (ndotl > 0.0f)
-						{
-							const float solidAngle = normal[3];
-
-							const float weight = solidAngle * ndotl;
-
-							float rgba[4];
-							unpack(rgba, row + xx*bpp/8);
-#	if 1
-							color[0] += rgba[0] * weight;
-							color[1] += rgba[1] * weight;
-							color[2] += rgba[2] * weight;
-							totalWeight += weight;
-#	else
-							color[0] += ll[0];
-							color[1] += ll[1];
-							color[2] += ll[2];
-							totalWeight += 1.0f;
-#	endif // 0
-						}
-#endif // 0
-
 					}
 				}
 
@@ -890,7 +975,6 @@ namespace bimg
 		//  - https://web.archive.org/web/20180622232041/https://seblagarde.wordpress.com/2012/03/29/relationship-between-phong-and-blinn-lighting-model/
 		switch (_lightingModel)
 		{
-		case LightingModel::Phong:     return _specularPower;
 		case LightingModel::PhongBrdf: return _specularPower + 1.0f;
 		case LightingModel::Blinn:     return _specularPower/4.0f;
 		case LightingModel::BlinnBrdf: return _specularPower/4.0f + 1.0f;
@@ -900,7 +984,7 @@ namespace bimg
 		return _specularPower;
 	}
 
-	ImageContainer* imageCubemapRadianceFilter(bx::AllocatorI* _allocator, const ImageContainer& _image, LightingModel::Enum _lightingModel, float _glossScale, float _glossBias)
+	ImageContainer* imageCubemapRadianceFilter(bx::AllocatorI* _allocator, const ImageContainer& _image, LightingModel::Enum _lightingModel)
 	{
 		ImageContainer* input = imageConvert(_allocator, TextureFormat::RGBA32F, _image, true);
 
@@ -926,6 +1010,9 @@ namespace bimg
 			bx::memCopy(dstData, srcMip.m_data, srcMip.m_size);
 		}
 
+		const float glossScale = 10.0f;
+		const float glossBias  = 1.0f;
+
 		for (uint8_t lod = 1, numMips = input->m_numMips; lod < numMips; ++lod)
 		{
 			ImageContainer* nsa = imageCubemapNormalSolidAngle(_allocator, bx::max<uint32_t>(_image.m_width>>lod, 1) );
@@ -942,7 +1029,8 @@ namespace bimg
 				const float maxAngle = bx::kPiHalf;
 				const float toFilterSize     = 1.0f/(minAngle*dstWidth*2.0f);
 				const float glossiness       = glossinessFor(lod, float(numMips) );
-				const float specularPowerRef = bx::pow(2.0f, _glossScale * glossiness + _glossBias);
+				const float roughness        = 1.0f-glossiness;
+				const float specularPowerRef = bx::pow(2.0f, glossiness*glossScale + glossBias);
 				const float specularPower    = applyLightningModel(specularPowerRef, _lightingModel);
 				const float filterAngle      = bx::clamp(cosinePowerFilterAngle(specularPower), minAngle, maxAngle);
 				const float cosAngle   = bx::max(0.0f, bx::cos(filterAngle) );
@@ -961,14 +1049,17 @@ namespace bimg
 						float dir[3];
 						texelUvToDir(dir, side, uu, vv);
 
-						Aabb aabb[6];
-						calcFilterArea(aabb, dir, filterSize);
+						if (LightingModel::Ggx == _lightingModel)
+						{
+							processFilterAreaGgx(dstData, *input, lod, dir, roughness);
+						}
+						else
+						{
+							Aabb aabb[6];
+							calcFilterArea(aabb, dir, filterSize);
 
-#if GGX
-						processFilterArea(dstData, *input, *nsa, lod, aabb, dir, 1.0f-glossiness, cosAngle);
-#else
-						processFilterArea(dstData, *input, *nsa, lod, aabb, dir, specularPower, cosAngle);
-#endif // GGX
+							processFilterArea(dstData, *input, *nsa, lod, aabb, dir, specularPower, cosAngle);
+						}
 					}
 				}
 			}
