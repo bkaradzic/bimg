@@ -169,6 +169,15 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					outputHeight = _options.maxSize*2;
 				}
 			}
+			else if (outputDepth   == 1
+				 &&  outputWidth/6 == outputHeight)
+			{
+				if (outputWidth/6 > _options.maxSize)
+				{
+					outputWidth  = _options.maxSize*6;
+					outputHeight = _options.maxSize;
+				}
+			}
 			else
 			{
 				bimg::imageFree(input);
@@ -276,8 +285,18 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input);
 			bimg::imageFree(input);
 
-			bimg::ImageContainer* dst = bimg::imageCubemapFromLatLongRgba32F(_allocator, *src, true, _err);
-			bimg::imageFree(src);
+			bimg::ImageContainer* dst;
+
+			if (outputWidth/2 == outputHeight)
+			{
+				dst = bimg::imageCubemapFromLatLongRgba32F(_allocator, *src, true, _err);
+				bimg::imageFree(src);
+			}
+			else
+			{
+				dst = bimg::imageCubemapFromStripRgba32F(_allocator, *src, _err);
+				bimg::imageFree(src);
+			}
 
 			if (!_err->isOk() )
 			{
@@ -290,7 +309,12 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 		if (bimg::LightingModel::Count != _options.radiance)
 		{
-			output = bimg::imageCubemapRadianceFilter(_allocator, *input, _options.radiance);
+			output = bimg::imageCubemapRadianceFilter(_allocator, *input, _options.radiance, _err);
+
+			if (!_err->isOk() )
+			{
+				return NULL;
+			}
 
 			if (bimg::TextureFormat::RGBA32F != outputFormat)
 			{

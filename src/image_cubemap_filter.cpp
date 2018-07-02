@@ -306,6 +306,46 @@ namespace bimg
 		return output;
 	}
 
+	ImageContainer* imageCubemapFromStripRgba32F(bx::AllocatorI* _allocator, const ImageContainer& _input, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		if (_input.m_depth     != 1
+		&&  _input.m_numLayers != 1
+		&&  _input.m_format    != TextureFormat::RGBA32F
+		&&  _input.m_width/6   != _input.m_height)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Input image format is not strip projection.");
+			return NULL;
+		}
+
+		const uint32_t srcPitch = _input.m_width*16;
+		const uint32_t dstWidth = _input.m_height;
+		const uint32_t dstPitch = dstWidth*16;
+
+		ImageContainer* output = imageAlloc(_allocator
+			, _input.m_format
+			, uint16_t(dstWidth)
+			, uint16_t(dstWidth)
+			, uint16_t(1)
+			, 1
+			, true
+			, false
+			);
+
+		const uint8_t* srcData = (const uint8_t*)_input.m_data;
+
+		for (uint8_t side = 0; side < 6 && _err->isOk(); ++side, srcData += dstPitch)
+		{
+			ImageMip dstMip;
+			imageGetRawData(*output, side, 0, output->m_data, output->m_size, dstMip);
+
+			bx::memCopy(const_cast<uint8_t*>(dstMip.m_data), srcData, dstPitch, dstWidth, srcPitch, dstPitch);
+		}
+
+		return output;
+	}
+
 	inline float areaElement(float _x, float _y)
 	{
 		return bx::atan2(_x*_y, bx::sqrt(_x*_x + _y*_y + 1.0f));
@@ -984,8 +1024,14 @@ namespace bimg
 		return _specularPower;
 	}
 
-	ImageContainer* imageCubemapRadianceFilter(bx::AllocatorI* _allocator, const ImageContainer& _image, LightingModel::Enum _lightingModel)
+	ImageContainer* imageCubemapRadianceFilter(bx::AllocatorI* _allocator, const ImageContainer& _image, LightingModel::Enum _lightingModel, bx::Error* _err)
 	{
+		if (!_image.m_cubeMap)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Input image is not cubemap.");
+			return NULL;
+		}
+
 		ImageContainer* input = imageConvert(_allocator, TextureFormat::RGBA32F, _image, true);
 
 		if (1 >= input->m_numMips)
