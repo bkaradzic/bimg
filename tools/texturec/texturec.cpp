@@ -44,6 +44,8 @@ struct Options
 			"\t      pma: %s\n"
 			"\t      sdf: %s\n"
 			"\t radiance: %s\n"
+			"\t equirect: %s\n"
+			"\t    strip: %s\n"
 			, maxSize
 			, edge
 			, bimg::getName(format)
@@ -53,6 +55,8 @@ struct Options
 			, pma       ? "true" : "false"
 			, sdf       ? "true" : "false"
 			, radiance  ? "true" : "false"
+			, equirect  ? "true" : "false"
+			, strip     ? "true" : "false"
 			);
 	}
 
@@ -64,6 +68,7 @@ struct Options
 	bool mips      = false;
 	bool normalMap = false;
 	bool equirect  = false;
+	bool strip     = false;
 	bool iqa       = false;
 	bool pma       = false;
 	bool sdf       = false;
@@ -169,8 +174,18 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					outputHeight = _options.maxSize*2;
 				}
 			}
-			else if (outputDepth   == 1
-				 &&  outputWidth/6 == outputHeight)
+			else
+			{
+				bimg::imageFree(input);
+
+				BX_ERROR_SET(_err, TEXTRUREC_ERROR, "Input image format is not equirectangular projection.");
+				return NULL;
+			}
+		}
+		else if (_options.strip)
+		{
+			if (outputDepth   == 1
+			&&  outputWidth/6 == outputHeight)
 			{
 				if (outputWidth/6 > _options.maxSize)
 				{
@@ -182,7 +197,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			{
 				bimg::imageFree(input);
 
-				BX_ERROR_SET(_err, TEXTRUREC_ERROR, "Input image format is not equirectangular projection.");
+				BX_ERROR_SET(_err, TEXTRUREC_ERROR, "Input image format is not horizontal strip.");
 				return NULL;
 			}
 		}
@@ -222,7 +237,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			&& !_options.sdf
 			&& !_options.alphaTest
 			&& !_options.normalMap
-			&& !_options.equirect
+			&& !(_options.equirect || _options.strip)
 			&& !_options.iqa
 			&& !_options.pma
 			&& (bimg::LightingModel::Count == _options.radiance)
@@ -280,7 +295,8 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			return output;
 		}
 
-		if (_options.equirect)
+		if (_options.equirect
+		||  _options.strip)
 		{
 			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input);
 			bimg::imageFree(input);
@@ -816,7 +832,8 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "  -q <quality>             Encoding quality (default, fastest, highest).\n"
 		  "  -m, --mips               Generate mip-maps.\n"
 		  "  -n, --normalmap          Input texture is normal map.\n"
-		  "      --equirect           Input texture equirectangular projection of cubemap.\n"
+		  "      --equirect           Input texture is equirectangular projection of cubemap.\n"
+		  "      --strip              Input texture is horizontal strip of cubemap.\n"
 		  "      --sdf <edge>         Compute SDF texture.\n"
 		  "      --ref <alpha>        Alpha reference value.\n"
 		  "      --iqa                Image Quality Assessment\n"
@@ -945,8 +962,16 @@ int main(int _argc, const char* _argv[])
 	options.mips      = cmdLine.hasArg('m', "mips");
 	options.normalMap = cmdLine.hasArg('n', "normalmap");
 	options.equirect  = cmdLine.hasArg("equirect");
+	options.strip     = cmdLine.hasArg("strip");
 	options.iqa       = cmdLine.hasArg("iqa");
 	options.pma       = cmdLine.hasArg("pma");
+
+	if (options.equirect
+	&&  options.strip)
+	{
+		help("Image can't be equirect and strip at the same time.");
+		return bx::kExitFailure;
+	}
 
 	const char* maxSize = cmdLine.findOption("max");
 	if (NULL != maxSize)
