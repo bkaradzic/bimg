@@ -663,10 +663,17 @@ namespace bimg
 
 	struct Sampler
 	{
-		Sampler(const ImageContainer& _image, uint16_t _side, float _lod)
+		Sampler(const ImageContainer& _image, uint16_t _side, float _lod, float (*func)(float) )
 		{
-			const uint8_t lod = uint8_t(bx::clamp(_lod, 0.0f, 1.0f) * _image.m_numMips);
-			imageGetRawData(_image, _side, lod, _image.m_data, _image.m_size, mip);
+			const float lod = bx::clamp(_lod, 0.0f, 1.0f) * (_image.m_numMips - 1);
+			imageGetRawData(
+				  _image
+				, _side
+				, uint8_t(func(lod) )
+				, _image.m_data
+				, _image.m_size
+				, mip
+				);
 		}
 
 		ImageMip mip;
@@ -688,34 +695,70 @@ namespace bimg
 		uint8_t side;
 		dirToTexelUv(uu, vv, side, _dir);
 
-		Sampler sampler(_image, side, _lod);
-
-		const uint32_t widthMinusOne = sampler.mip.m_width-1;
-
-		const uint32_t u0 = uint32_t(uu*widthMinusOne+0.5f);
-		const uint32_t v0 = uint32_t(vv*widthMinusOne+0.5f);
-		const uint32_t u1 = bx::min(u0 + 1, widthMinusOne);
-		const uint32_t v1 = bx::min(v0 + 1, widthMinusOne);
-
 		const float fu = bx::fract(uu);
 		const float fv = bx::fract(vv);
+		const float fl = bx::fract(_lod);
 
-		float rgba00[4];
-		texelFetch(rgba00, sampler, u0, v0);
+		float rgbaA[4];
+		{
+			Sampler sampler(_image, side, _lod, bx::floor);
+			const uint32_t widthMinusOne = sampler.mip.m_width-1;
 
-		float rgba01[4];
-		texelFetch(rgba01, sampler, u0, v1);
+			const uint32_t u0 = uint32_t(uu*widthMinusOne+0.5f);
+			const uint32_t v0 = uint32_t(vv*widthMinusOne+0.5f);
+			const uint32_t u1 = bx::min(u0 + 1, widthMinusOne);
+			const uint32_t v1 = bx::min(v0 + 1, widthMinusOne);
 
-		float rgba10[4];
-		texelFetch(rgba10, sampler, u1, v0);
+			float rgba00[4];
+			texelFetch(rgba00, sampler, u0, v0);
 
-		float rgba11[4];
-		texelFetch(rgba11, sampler, u1, v1);
+			float rgba01[4];
+			texelFetch(rgba01, sampler, u0, v1);
 
-		_rgba[0] = bx::lerp(bx::lerp(rgba00[0], rgba01[0], fv), bx::lerp(rgba10[0], rgba11[0], fv), fu);
-		_rgba[1] = bx::lerp(bx::lerp(rgba00[1], rgba01[1], fv), bx::lerp(rgba10[1], rgba11[1], fv), fu);
-		_rgba[2] = bx::lerp(bx::lerp(rgba00[2], rgba01[2], fv), bx::lerp(rgba10[2], rgba11[2], fv), fu);
-		_rgba[3] = bx::lerp(bx::lerp(rgba00[3], rgba01[3], fv), bx::lerp(rgba10[3], rgba11[3], fv), fu);
+			float rgba10[4];
+			texelFetch(rgba10, sampler, u1, v0);
+
+			float rgba11[4];
+			texelFetch(rgba11, sampler, u1, v1);
+
+			rgbaA[0] = bx::lerp(bx::lerp(rgba00[0], rgba01[0], fv), bx::lerp(rgba10[0], rgba11[0], fv), fu);
+			rgbaA[1] = bx::lerp(bx::lerp(rgba00[1], rgba01[1], fv), bx::lerp(rgba10[1], rgba11[1], fv), fu);
+			rgbaA[2] = bx::lerp(bx::lerp(rgba00[2], rgba01[2], fv), bx::lerp(rgba10[2], rgba11[2], fv), fu);
+			rgbaA[3] = bx::lerp(bx::lerp(rgba00[3], rgba01[3], fv), bx::lerp(rgba10[3], rgba11[3], fv), fu);
+		}
+
+		float rgbaB[4];
+		{
+			Sampler sampler(_image, side, _lod, bx::ceil);
+			const uint32_t widthMinusOne = sampler.mip.m_width-1;
+
+			const uint32_t u0 = uint32_t(uu*widthMinusOne+0.5f);
+			const uint32_t v0 = uint32_t(vv*widthMinusOne+0.5f);
+			const uint32_t u1 = bx::min(u0 + 1, widthMinusOne);
+			const uint32_t v1 = bx::min(v0 + 1, widthMinusOne);
+
+			float rgba00[4];
+			texelFetch(rgba00, sampler, u0, v0);
+
+			float rgba01[4];
+			texelFetch(rgba01, sampler, u0, v1);
+
+			float rgba10[4];
+			texelFetch(rgba10, sampler, u1, v0);
+
+			float rgba11[4];
+			texelFetch(rgba11, sampler, u1, v1);
+
+			rgbaB[0] = bx::lerp(bx::lerp(rgba00[0], rgba01[0], fv), bx::lerp(rgba10[0], rgba11[0], fv), fu);
+			rgbaB[1] = bx::lerp(bx::lerp(rgba00[1], rgba01[1], fv), bx::lerp(rgba10[1], rgba11[1], fv), fu);
+			rgbaB[2] = bx::lerp(bx::lerp(rgba00[2], rgba01[2], fv), bx::lerp(rgba10[2], rgba11[2], fv), fu);
+			rgbaB[3] = bx::lerp(bx::lerp(rgba00[3], rgba01[3], fv), bx::lerp(rgba10[3], rgba11[3], fv), fu);
+		}
+
+		_rgba[0] = bx::lerp(rgbaA[0], rgbaB[0], fl);
+		_rgba[1] = bx::lerp(rgbaA[1], rgbaB[1], fl);
+		_rgba[2] = bx::lerp(rgbaA[2], rgbaB[2], fl);
+		_rgba[3] = bx::lerp(rgbaA[3], rgbaB[3], fl);
 	}
 
 	void importanceSampleGgx(float* _result, float _u, float _v, float _roughness, const float* _normal)
@@ -749,6 +792,15 @@ namespace bimg
 		_result[2] = tangentX[2] * hh[0] + tangentY[2] * hh[1] + _normal[2] * hh[2];
 	}
 
+	float normalDistributionGgx(float _ndoth, float _roughness)
+	{
+		const float alpha   = bx::square(_roughness);
+		const float alphaSq = bx::square(alpha);
+		const float denom   = bx::square(_ndoth) * (alphaSq - 1.0f) + 1.0f;
+		const float denomSq = bx::square(denom);
+		return alphaSq/(bx::kPi * denomSq);
+	}
+
 	void processFilterAreaGgx(
 		  float* _result
 		, const ImageContainer& _image
@@ -761,10 +813,11 @@ namespace bimg
 		imageGetRawData(_image, 0, _lod, _image.m_data, _image.m_size, mip);
 
 		const uint32_t bpp = getBitsPerPixel(_image.m_format);
-		const float    lod = float(_lod)/_image.m_numMips;
 
+		constexpr int32_t kNumSamples = 64;
 		const uint32_t pitch      = mip.m_width*bpp/8;
 		const float widthMinusOne = float(mip.m_width-1);
+		const float mipBias       = 0.5f*bx::log2(bx::square(float(mip.m_width) )/float(kNumSamples) );
 
 		UnpackFn unpack = getUnpack(_image.m_format);
 
@@ -773,9 +826,9 @@ namespace bimg
 
 		bx::RngMwc mwc;
 
-		for (uint32_t ii = 0; ii < 1024; ++ii)
+		for (uint32_t ii = 0; ii < kNumSamples; ++ii)
 		{
-			const float uu = ii/1024.0f;
+			const float uu = ii/float(kNumSamples);
 			const float vv = bx::frnd(&mwc);
 
 			float hh[3];
@@ -792,6 +845,14 @@ namespace bimg
 
 			if (ndotl > 0.0f)
 			{
+				const float ndoth = ndotl;
+				const float vdoth = ndotl;
+
+				// Chapter 20. GPU-Based Importance Sampling
+				// http://archive.today/2018.07.14-004914/https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
+				const float pdf = normalDistributionGgx(ndoth, _roughness) * ndoth / (4.0f * vdoth);
+				const float lod = bx::max(0.0f, mipBias - 0.5f*bx::log2(pdf) );
+
 				float rgba[4];
 				sampleCubeMap(rgba, _image, ll, lod);
 
@@ -1061,7 +1122,12 @@ namespace bimg
 
 		for (uint8_t lod = 1, numMips = input->m_numMips; lod < numMips; ++lod)
 		{
-			ImageContainer* nsa = imageCubemapNormalSolidAngle(_allocator, bx::max<uint32_t>(_image.m_width>>lod, 1) );
+			ImageContainer* nsa = NULL;
+
+			if (LightingModel::Ggx != _lightingModel)
+			{
+				nsa = imageCubemapNormalSolidAngle(_allocator, bx::max<uint32_t>(_image.m_width>>lod, 1) );
+			}
 
 			for (uint8_t side = 0; side < 6; ++side)
 			{
@@ -1110,7 +1176,10 @@ namespace bimg
 				}
 			}
 
-			imageFree(nsa);
+			if (NULL != nsa)
+			{
+				imageFree(nsa);
+			}
 		}
 
 		return output;
