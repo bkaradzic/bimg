@@ -356,6 +356,7 @@ namespace bimg
 		// Reference:
 		//  - https://web.archive.org/web/20180614195754/http://www.mpia.de/~mathar/public/mathar20051002.pdf
 		//  - https://web.archive.org/web/20180614195725/http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
+		//
 		const float x0 = _u - _invFaceSize;
 		const float x1 = _u + _invFaceSize;
 		const float y0 = _v - _invFaceSize;
@@ -665,7 +666,7 @@ namespace bimg
 	{
 		Sampler(const ImageContainer& _image, uint16_t _side, float _lod, float (*func)(float) )
 		{
-			const float lod = bx::clamp(_lod, 0.0f, 1.0f) * (_image.m_numMips - 1);
+			const float lod = bx::clamp(_lod, 0.0f, float(_image.m_numMips - 1) );
 			imageGetRawData(
 				  _image
 				, _side
@@ -761,7 +762,7 @@ namespace bimg
 		_rgba[3] = bx::lerp(rgbaA[3], rgbaB[3], fl);
 	}
 
-	void importanceSampleGgx(float* _result, float _u, float _v, float _roughness, const float* _normal)
+	void importanceSampleGgx(float* _result, float _u, float _v, float _roughness, const float* _normal, const float* _tangentX, const float* _tangentY)
 	{
 		const float aa  = bx::square(_roughness);
 		const float phi = bx::kPi2 * _u;
@@ -775,21 +776,9 @@ namespace bimg
 			cosTheta,
 		};
 
-		float up[3] = { 0.0f, 0.0f, 0.0f };
-		up[bx::abs(_normal[2]) < 0.999f ? 2 : 0] = 1.0f;
-
-		float right[3];
-		bx::vec3Cross(right, up, _normal);
-
-		float tangentX[3];
-		bx::vec3Norm(tangentX, right);
-
-		float tangentY[3];
-		bx::vec3Cross(tangentY, _normal, tangentX);
-
-		_result[0] = tangentX[0] * hh[0] + tangentY[0] * hh[1] + _normal[0] * hh[2];
-		_result[1] = tangentX[1] * hh[0] + tangentY[1] * hh[1] + _normal[1] * hh[2];
-		_result[2] = tangentX[2] * hh[0] + tangentY[2] * hh[1] + _normal[2] * hh[2];
+		_result[0] = _tangentX[0] * hh[0] + _tangentY[0] * hh[1] + _normal[0] * hh[2];
+		_result[1] = _tangentX[1] * hh[0] + _tangentY[1] * hh[1] + _normal[1] * hh[2];
+		_result[2] = _tangentX[2] * hh[0] + _tangentY[2] * hh[1] + _normal[2] * hh[2];
 	}
 
 	float normalDistributionGgx(float _ndoth, float _roughness)
@@ -814,25 +803,35 @@ namespace bimg
 
 		const uint32_t bpp = getBitsPerPixel(_image.m_format);
 
-		constexpr int32_t kNumSamples = 64;
+		constexpr int32_t kNumSamples = 512;
 		const uint32_t pitch      = mip.m_width*bpp/8;
 		const float widthMinusOne = float(mip.m_width-1);
-		const float mipBias       = 0.5f*bx::log2(bx::square(float(mip.m_width) )/float(kNumSamples) );
+		const float mipBias       = 0.5f*bx::log2(bx::square(float(_image.m_width) )/float(kNumSamples) );
 
 		UnpackFn unpack = getUnpack(_image.m_format);
 
 		float color[3]    = { 0.0f, 0.0f, 0.0f };
 		float totalWeight = 0.0f;
 
-		bx::RngMwc mwc;
+		// Golden Ratio Sequences for Low-Discrepancy Sampling
+		// https://web.archive.org/web/20180717194847/https://www.graphics.rwth-aachen.de/publication/2/jgt.pdf
+		//
+		// kGoldenSection = (0.5f*bx::sqrt(5.0f) + 0.5f) - 1.0f = 0.61803398875f
+		//
+		const float kGoldenSection = 0.61803398875f;
+		float offset = kGoldenSection;
+
+		float tangentX[3];
+		float tangentY[3];
+		bx::vec3TangentFrame(_dir, tangentX, tangentY);
 
 		for (uint32_t ii = 0; ii < kNumSamples; ++ii)
 		{
-			const float uu = ii/float(kNumSamples);
-			const float vv = bx::frnd(&mwc);
+			offset += kGoldenSection;
+			const float vv = ii/float(kNumSamples);
 
 			float hh[3];
-			importanceSampleGgx(hh, uu, vv, _roughness, _dir);
+			importanceSampleGgx(hh, offset, vv, _roughness, _dir, tangentX, tangentY);
 
 			const float ddoth2 = 2.0f * bx::vec3Dot(_dir, hh);
 
@@ -845,30 +844,49 @@ namespace bimg
 
 			if (ndotl > 0.0f)
 			{
-				const float ndoth = ndotl;
-				const float vdoth = ndotl;
+				const float ndoth = bx::clamp(bx::vec3Dot(_dir, hh), 0.0f, 1.0f);
+				const float vdoth = ndoth;
 
 				// Chapter 20. GPU-Based Importance Sampling
 				// http://archive.today/2018.07.14-004914/https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
+				//
 				const float pdf = normalDistributionGgx(ndoth, _roughness) * ndoth / (4.0f * vdoth);
-				const float lod = bx::max(0.0f, mipBias - 0.5f*bx::log2(pdf) );
+				const float lod = bx::max(0.0f, mipBias - 0.5f*bx::log2(pdf));
 
 				float rgba[4];
 				sampleCubeMap(rgba, _image, ll, lod);
 
-				color[0] += rgba[0] * ndotl;
-				color[1] += rgba[1] * ndotl;
-				color[2] += rgba[2] * ndotl;
+				// Optimized Reversible Tonemapper for Resolve
+				// https://web.archive.org/web/20180717182019/https://gpuopen.com/optimized-reversible-tonemapper-for-resolve/
+				// "a single sample with a large HDR value can over-power all other samples"
+				// "instead accept a bias in the resolve and reduce the weighting of samples
+				// as a function of how bright they are"
+				// Include ndotl here to "fold the weighting into the tonemap operation"
+				//
+				const float tm = ndotl / (bx::max(rgba[0], rgba[1], rgba[2]) + 1.0f);
+
+				color[0] += rgba[0] * tm;
+				color[1] += rgba[1] * tm;
+				color[2] += rgba[2] * tm;
 				totalWeight += ndotl;
 			}
 		}
 
 		if (0.0f < totalWeight)
 		{
+			// Optimized Reversible Tonemapper for Resovle
+			// https://web.archive.org/web/20180717182019/https://gpuopen.com/optimized-reversible-tonemapper-for-resolve/
+			// Average, then reverse the tonemapper
+			//
 			const float invWeight = 1.0f/totalWeight;
-			_result[0] = color[0] * invWeight;
-			_result[1] = color[1] * invWeight;
-			_result[2] = color[2] * invWeight;
+			color[0] = color[0] * invWeight;
+			color[1] = color[1] * invWeight;
+			color[2] = color[2] * invWeight;
+
+			const float invTm = 1.0f / (1.0f - bx::max(0.00001f, bx::max(color[0], color[1], color[2])));
+			_result[0] = color[0] * invTm;
+			_result[1] = color[1] * invTm;
+			_result[2] = color[2] * invTm;
 		}
 		else
 		{
@@ -1069,11 +1087,12 @@ namespace bimg
 		return bx::max(0.0f, 1.0f - _mip/(_mipCount-1.0000001f) );
 	}
 
-	float applyLightningModel(float _specularPower, LightingModel::Enum _lightingModel)
+	float applyLightingModel(float _specularPower, LightingModel::Enum _lightingModel)
 	{
 		// Reference:
 		//  - https://web.archive.org/web/20180622232018/https://seblagarde.wordpress.com/2012/06/10/amd-cubemapgen-for-physically-based-rendering/
 		//  - https://web.archive.org/web/20180622232041/https://seblagarde.wordpress.com/2012/03/29/relationship-between-phong-and-blinn-lighting-model/
+		//
 		switch (_lightingModel)
 		{
 		case LightingModel::PhongBrdf: return _specularPower + 1.0f;
@@ -1143,7 +1162,7 @@ namespace bimg
 				const float glossiness       = glossinessFor(lod, float(numMips) );
 				const float roughness        = 1.0f-glossiness;
 				const float specularPowerRef = bx::pow(2.0f, glossiness*glossScale + glossBias);
-				const float specularPower    = applyLightningModel(specularPowerRef, _lightingModel);
+				const float specularPower    = applyLightingModel(specularPowerRef, _lightingModel);
 				const float filterAngle      = bx::clamp(cosinePowerFilterAngle(specularPower), minAngle, maxAngle);
 				const float cosAngle   = bx::max(0.0f, bx::cos(filterAngle) );
 				const float texelSize  = 1.0f/float(dstWidth);
