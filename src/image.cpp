@@ -3913,8 +3913,8 @@ namespace bimg
 		_imageContainer.m_depth       = depth;
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
-		_imageContainer.m_numLayers   = uint16_t(bx::uint32_max(numberOfArrayElements, 1) );
-		_imageContainer.m_numMips     = uint8_t(bx::uint32_max(numMips, 1) );
+		_imageContainer.m_numLayers   = bx::max<uint16_t>(numberOfArrayElements, 1);
+		_imageContainer.m_numMips     = bx::max<uint8_t>(numMips, 1);
 		_imageContainer.m_hasAlpha    = hasAlpha;
 		_imageContainer.m_cubeMap     = numFaces > 1;
 		_imageContainer.m_ktx         = true;
@@ -4079,7 +4079,7 @@ namespace bimg
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
 		_imageContainer.m_numLayers   = 1;
-		_imageContainer.m_numMips     = uint8_t(bx::uint32_max(numMips, 1) );
+		_imageContainer.m_numMips     = bx::max<uint8_t>(numMips, 1);
 		_imageContainer.m_hasAlpha    = hasAlpha;
 		_imageContainer.m_cubeMap     = numFaces > 1;
 		_imageContainer.m_ktx         = false;
@@ -5377,7 +5377,7 @@ namespace bimg
 
 		const uint8_t* src = (const uint8_t*)_src;
 
-		const uint32_t numLayers = bx::uint32_max(_numLayers, 1);
+		const uint32_t numLayers = bx::max<uint32_t>(_numLayers, 1);
 		const uint32_t numSides = _cubeMap ? 6 : 1;
 
 		uint32_t width  = _width;
@@ -5433,7 +5433,7 @@ namespace bimg
 		}
 
 		const uint32_t numMips   = _imageContainer.m_numMips;
-		const uint32_t numLayers = bx::uint32_max(_imageContainer.m_numLayers, 1);
+		const uint32_t numLayers = bx::max<uint32_t>(_imageContainer.m_numLayers, 1);
 		const uint32_t numSides  = _imageContainer.m_cubeMap ? 6 : 1;
 
 		for (uint8_t lod = 0; lod < numMips && _err->isOk(); ++lod)
