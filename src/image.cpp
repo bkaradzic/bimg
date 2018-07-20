@@ -3913,8 +3913,8 @@ namespace bimg
 		_imageContainer.m_depth       = depth;
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
-		_imageContainer.m_numLayers   = bx::max<uint16_t>(numberOfArrayElements, 1);
-		_imageContainer.m_numMips     = bx::max<uint8_t>(numMips, 1);
+		_imageContainer.m_numLayers   = uint16_t(bx::max<uint32_t>(numberOfArrayElements, 1) );
+		_imageContainer.m_numMips     = uint8_t(bx::max<uint32_t>(numMips, 1) );
 		_imageContainer.m_hasAlpha    = hasAlpha;
 		_imageContainer.m_cubeMap     = numFaces > 1;
 		_imageContainer.m_ktx         = true;
@@ -4079,7 +4079,7 @@ namespace bimg
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
 		_imageContainer.m_numLayers   = 1;
-		_imageContainer.m_numMips     = bx::max<uint8_t>(numMips, 1);
+		_imageContainer.m_numMips     = uint8_t(bx::max<uint32_t>(numMips, 1) );
 		_imageContainer.m_hasAlpha    = hasAlpha;
 		_imageContainer.m_cubeMap     = numFaces > 1;
 		_imageContainer.m_ktx         = false;
