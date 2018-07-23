@@ -3,8 +3,14 @@
  * License: https://github.com/bkaradzic/bimg#license-bsd-2-clause
  */
 
+#define BIMG_CONFIG_ASTC_DECODE 1
+
 #include "bimg_p.h"
 #include <bx/hash.h>
+
+#if BIMG_CONFIG_ASTC_DECODE
+    #include "../3rdparty/astc/astc_lib.h"
+#endif
 
 namespace bimg
 {
@@ -4476,8 +4482,24 @@ namespace bimg
 		case TextureFormat::ASTC8x5:
 		case TextureFormat::ASTC8x6:
 		case TextureFormat::ASTC10x5:
-			BX_WARN(false, "ASTC decoder is not implemented.");
+#       if BIMG_CONFIG_ASTC_DECODE
+            astc_decompress
+            (
+                (const uint8_t*) _src,
+                s_imageBlockInfo[_srcFormat].blockWidth,
+                s_imageBlockInfo[_srcFormat].blockHeight,
+                ASTC_DECODE_LDR_LINEAR,
+
+                _width,
+                _height,
+                (uint8_t*) _dst,
+                ASTC_BGRA,
+                _dstPitch
+            );
+#       else
+            BX_WARN(false, "ASTC decoder is not implemented.");
 			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+#       endif
 			break;
 
 		case TextureFormat::RGBA8:
@@ -5179,8 +5201,9 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
-		uint32_t ddspf      = UINT32_MAX;
-		uint32_t dxgiFormat = UINT32_MAX;
+		uint32_t ddspf        = UINT32_MAX;
+		uint32_t dxgiFormat   = UINT32_MAX;
+        uint32_t fourccFormat = UINT32_MAX;
 
 		for (uint32_t ii = 0; ii < BX_COUNTOF(s_translateDdsPixelFormat); ++ii)
 		{
@@ -5201,13 +5224,25 @@ namespace bimg
 					break;
 				}
 			}
-
-			if (UINT32_MAX == dxgiFormat)
-			{
-				BX_ERROR_SET(_err, BIMG_ERROR, "DDS: DXGI format not supported.");
-				return 0;
-			}
 		}
+
+        if (UINT32_MAX == ddspf && UINT32_MAX == dxgiFormat)
+        {
+            for (uint32_t ii = 0; ii < BX_COUNTOF(s_translateDdsFourccFormat); ++ii)
+            {
+                if (s_translateDdsFourccFormat[ii].m_textureFormat == _format)
+                {
+                    fourccFormat = s_translateDdsFourccFormat[ii].m_format;
+                    break;
+                }
+            }
+        }
+
+        if (UINT32_MAX == ddspf && UINT32_MAX == dxgiFormat && UINT32_MAX == fourccFormat)
+        {
+            BX_ERROR_SET(_err, BIMG_ERROR, "DDS: output format not supported.");
+            return 0;
+        }
 
 		const uint32_t bpp = getBitsPerPixel(_format);
 
@@ -5254,9 +5289,14 @@ namespace bimg
 		{
 			total += bx::write(_writer, uint32_t(8*sizeof(uint32_t) ), _err); // pixelFormatSize
 			total += bx::write(_writer, uint32_t(DDPF_FOURCC), _err);
-			total += bx::write(_writer, uint32_t(DDS_DX10), _err);
-			total += bx::write(_writer, uint32_t(0), _err); // bitCount
-			total += bx::writeRep(_writer, 0, 4*sizeof(uint32_t), _err); // bitmask
+
+            if (UINT32_MAX != fourccFormat)
+                total += bx::write(_writer, fourccFormat, _err);
+            else
+                total += bx::write(_writer, uint32_t(DDS_DX10), _err);
+
+            total += bx::write(_writer, uint32_t(0), _err); // bitCount
+            total += bx::writeRep(_writer, 0, 4*sizeof(uint32_t), _err); // bitmask
 		}
 
 		uint32_t caps[4] =
