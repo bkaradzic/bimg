@@ -127,6 +127,49 @@ namespace bimg
 		, float _alphaRef
 		);
 
+	///
+	ImageContainer* imageCubemapFromLatLongRgba32F(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _input
+		, bool _useBilinearInterpolation
+		, bx::Error* _err
+		);
+
+	///
+	ImageContainer* imageCubemapFromStripRgba32F(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _input
+		, bx::Error* _err
+		);
+
+	///
+	ImageContainer* imageGenerateMips(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _image
+		);
+
+	struct LightingModel
+	{
+		enum Enum
+		{
+			Phong,
+			PhongBrdf,
+			Blinn,
+			BlinnBrdf,
+			Ggx,
+
+			Count
+		};
+	};
+
+	///
+	ImageContainer* imageCubemapRadianceFilter(
+		  bx::AllocatorI* _allocator
+		, const ImageContainer& _image
+		, LightingModel::Enum _lightingModel
+		, bx::Error* _err
+		);
+
 } // namespace bimg
 
 #endif // BIMG_ENCODE_H_HEADER_GUARD

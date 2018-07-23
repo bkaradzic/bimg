@@ -9,7 +9,7 @@
 #include <stdint.h> // uint32_t
 #include <stdlib.h> // NULL
 
-#define BIMG_API_VERSION UINT32_C(6)
+#define BIMG_API_VERSION UINT32_C(7)
 
 namespace bx
 {
@@ -73,7 +73,7 @@ namespace bimg
 			ASTC6x6,      //!< ASTC 6x6 3.56 BPP
 			ASTC8x5,      //!< ASTC 8x5 3.20 BPP
 			ASTC8x6,      //!< ASTC 8x6 2.67 BPP
-			ASTC10x5,	  //!< ASTC 10x5 2.56 BPP
+			ASTC10x5,     //!< ASTC 10x5 2.56 BPP
 
 			Unknown,      // Compressed formats above.
 
@@ -335,6 +335,16 @@ namespace bimg
 		);
 
 	///
+	void imageRgba32fDownsample2x2(
+		  void* _dst
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _depth
+		, uint32_t _srcPitch
+		, const void* _src
+		);
+
+	///
 	void imageRgba32fDownsample2x2NormalMap(
 		  void* _dst
 		, uint32_t _width
@@ -494,6 +504,18 @@ namespace bimg
 		);
 
 	///
+	int32_t imageWriteHdr(
+		  bx::WriterI* _writer
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, TextureFormat::Enum _format
+		, bool _yflip
+		, bx::Error* _err
+		);
+
+	///
 	int32_t imageWriteDds(
 		  bx::WriterI* _writer
 		, ImageContainer& _imageContainer
@@ -626,14 +648,6 @@ namespace bimg
 		, const void* _data
 		, uint32_t _size
 		, ImageMip& _mip
-		);
-
-	///
-	ImageContainer* imageCubemapFromLatLongRgba32F(
-		  bx::AllocatorI* _allocator
-		, const ImageContainer& _input
-		, bool _useBilinearInterpolation
-		, bx::Error* _err
 		);
 
 } // namespace bimg
