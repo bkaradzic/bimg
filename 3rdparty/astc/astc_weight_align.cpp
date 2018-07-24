@@ -37,6 +37,8 @@
  */
 /*----------------------------------------------------------------------------*/
 
+#define _USE_MATH_DEFINES    // for M_PI on windows
+
 #include <math.h>
 #include "astc_codec_internals.h"
 

@@ -13,11 +13,20 @@
  */ 
 /*----------------------------------------------------------------------------*/ 
 
+#define _USE_MATH_DEFINES    // for M_PI on windows
+
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include "mathlib.h"
+
+#ifdef WIN32
+    double cbrt(double n)
+    {
+        return n < 0 ? -pow(-n, 1.0 / 3.0) : pow(n, 1.0 / 3.0);
+    }
+#endif
 
 /**************************
   basic OpenCL functions
