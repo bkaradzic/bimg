@@ -20,8 +20,8 @@
 BX_ERROR_RESULT(BIMG_ERROR, BX_MAKEFOURCC('b', 'i', 'm', 'g') );
 
 #ifndef BIMG_CONFIG_ASTC_DECODE
-    #define BIMG_CONFIG_ASTC_DECODE 0
-#endif
+#	define BIMG_CONFIG_ASTC_DECODE 0
+#endif // BIMG_CONFIG_ASTC_DECODE
 
 namespace bimg
 {

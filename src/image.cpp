@@ -3,14 +3,12 @@
  * License: https://github.com/bkaradzic/bimg#license-bsd-2-clause
  */
 
-#define BIMG_CONFIG_ASTC_DECODE 1
-
 #include "bimg_p.h"
 #include <bx/hash.h>
 
 #if BIMG_CONFIG_ASTC_DECODE
-    #include "../3rdparty/astc/astc_lib.h"
-#endif
+#	include "../3rdparty/astc/astc_lib.h"
+#endif // BIMG_CONFIG_ASTC_DECODE
 
 namespace bimg
 {
@@ -4482,24 +4480,24 @@ namespace bimg
 		case TextureFormat::ASTC8x5:
 		case TextureFormat::ASTC8x6:
 		case TextureFormat::ASTC10x5:
-#       if BIMG_CONFIG_ASTC_DECODE
-            astc_decompress
-            (
-                (const uint8_t*) _src,
-                s_imageBlockInfo[_srcFormat].blockWidth,
-                s_imageBlockInfo[_srcFormat].blockHeight,
-                ASTC_DECODE_LDR_LINEAR,
+#if BIMG_CONFIG_ASTC_DECODE
+			astc_decompress
+				(
+				 (const uint8_t*) _src,
+				 s_imageBlockInfo[_srcFormat].blockWidth,
+				 s_imageBlockInfo[_srcFormat].blockHeight,
+				 ASTC_DECODE_LDR_LINEAR,
 
-                _width,
-                _height,
-                (uint8_t*) _dst,
-                ASTC_BGRA,
-                _dstPitch
-            );
-#       else
-            BX_WARN(false, "ASTC decoder is not implemented.");
+				 _width,
+				 _height,
+				 (uint8_t*) _dst,
+				 ASTC_BGRA,
+				 _dstPitch
+				);
+#else
+			BX_WARN(false, "ASTC decoder is not implemented.");
 			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
-#       endif
+#endif
 			break;
 
 		case TextureFormat::RGBA8:
