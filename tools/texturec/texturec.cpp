@@ -956,13 +956,13 @@ int main(int _argc, const char* _argv[])
 		return bx::kExitFailure;
 	}
 
-	const char* saveAs = cmdLine.findOption("as");
-	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".ktx") : saveAs;
-	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".dds") : saveAs;
-	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".png") : saveAs;
-	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".exr") : saveAs;
-	saveAs = NULL == saveAs ? bx::strFindI(outputFileName, ".hdr") : saveAs;
-	if (NULL == saveAs)
+	bx::StringView saveAs = cmdLine.findOption("as");
+	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".ktx") : saveAs;
+	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".dds") : saveAs;
+	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".png") : saveAs;
+	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".exr") : saveAs;
+	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".hdr") : saveAs;
+	if (saveAs.isEmpty() )
 	{
 		help("Output file format must be specified.");
 		return bx::kExitFailure;
@@ -1039,7 +1039,7 @@ int main(int _argc, const char* _argv[])
 		}
 	}
 
-	if (NULL != bx::strFindI(saveAs, "png") )
+	if (!bx::strFindI(saveAs, "png").isEmpty() )
 	{
 		if (options.format == bimg::TextureFormat::Count)
 		{
@@ -1051,7 +1051,7 @@ int main(int _argc, const char* _argv[])
 			return bx::kExitFailure;
 		}
 	}
-	else if (NULL != bx::strFindI(saveAs, "exr") )
+	else if (!bx::strFindI(saveAs, "exr").isEmpty() )
 	{
 		if (options.format == bimg::TextureFormat::Count)
 		{
@@ -1133,15 +1133,15 @@ int main(int _argc, const char* _argv[])
 		bx::FileWriter writer;
 		if (bx::open(&writer, outputFileName, false, &err) )
 		{
-			if (NULL != bx::strFindI(saveAs, "ktx") )
+			if (!bx::strFindI(saveAs, "ktx").isEmpty() )
 			{
 				bimg::imageWriteKtx(&writer, *output, output->m_data, output->m_size, &err);
 			}
-			else if (NULL != bx::strFindI(saveAs, "dds") )
+			else if (!bx::strFindI(saveAs, "dds").isEmpty() )
 			{
 				bimg::imageWriteDds(&writer, *output, output->m_data, output->m_size, &err);
 			}
-			else if (NULL != bx::strFindI(saveAs, "png") )
+			else if (!bx::strFindI(saveAs, "png").isEmpty() )
 			{
 				if (output->m_format != bimg::TextureFormat::RGBA8)
 				{
@@ -1161,7 +1161,7 @@ int main(int _argc, const char* _argv[])
 					, &err
 					);
 			}
-			else if (NULL != bx::strFindI(saveAs, "exr") )
+			else if (!bx::strFindI(saveAs, "exr").isEmpty() )
 			{
 				bimg::ImageMip mip;
 				bimg::imageGetRawData(*output, 0, 0, output->m_data, output->m_size, mip);
@@ -1175,7 +1175,7 @@ int main(int _argc, const char* _argv[])
 					, &err
 					);
 			}
-			else if (NULL != bx::strFindI(saveAs, "hdr") )
+			else if (!bx::strFindI(saveAs, "hdr").isEmpty() )
 			{
 				bimg::ImageMip mip;
 				bimg::imageGetRawData(*output, 0, 0, output->m_data, output->m_size, mip);
