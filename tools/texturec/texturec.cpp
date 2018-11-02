@@ -256,7 +256,8 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			&& (bimg::LightingModel::Count == _options.radiance)
 			;
 
-		if (needResize)
+		if (!_options.sdf
+		&&  needResize)
 		{
 			bimg::ImageContainer* src = bimg::imageConvert(_allocator, bimg::TextureFormat::RGBA32F, *input, false);
 
@@ -630,7 +631,6 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, mip.m_width
 						, mip.m_height
 						, mip.m_width
-						, _options.edge
 						, rgba
 						);
 				}
@@ -848,7 +848,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "  -n, --normalmap          Input texture is normal map.\n"
 		  "      --equirect           Input texture is equirectangular projection of cubemap.\n"
 		  "      --strip              Input texture is horizontal strip of cubemap.\n"
-		  "      --sdf <edge>         Compute SDF texture.\n"
+		  "      --sdf                Compute SDF texture.\n"
 		  "      --ref <alpha>        Alpha reference value.\n"
 		  "      --iqa                Image Quality Assessment\n"
 		  "      --pma                Premultiply alpha into RGB channel.\n"
@@ -970,28 +970,17 @@ int main(int _argc, const char* _argv[])
 
 	Options options;
 
-	const char* edgeOpt = cmdLine.findOption("sdf");
-	if (NULL != edgeOpt)
+	const char* alphaRef = cmdLine.findOption("ref");
+	if (NULL != alphaRef)
 	{
-		options.sdf  = true;
-		if (!bx::fromString(&options.edge, edgeOpt) )
+		options.alphaTest = true;
+		if (!bx::fromString(&options.edge, alphaRef))
 		{
-			options.edge = 255.0f;
-		}
-	}
-	else
-	{
-		const char* alphaRef = cmdLine.findOption("ref");
-		if (NULL != alphaRef)
-		{
-			options.alphaTest = true;
-			if (!bx::fromString(&options.edge, alphaRef))
-			{
-				options.edge = 0.5f;
-			}
+			options.edge = 0.5f;
 		}
 	}
 
+	options.sdf       = cmdLine.hasArg("sdf");
 	options.mips      = cmdLine.hasArg('m', "mips");
 	options.normalMap = cmdLine.hasArg('n', "normalmap");
 	options.equirect  = cmdLine.hasArg("equirect");
