@@ -25,7 +25,7 @@
 #include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
-#define BIMG_TEXTUREC_VERSION_MINOR 17
+#define BIMG_TEXTUREC_VERSION_MINOR 18
 
 BX_ERROR_RESULT(TEXTRUREC_ERROR, BX_MAKEFOURCC('t', 'c', 0, 0) );
 
@@ -46,6 +46,7 @@ struct Options
 			"\t radiance: %s\n"
 			"\t equirect: %s\n"
 			"\t    strip: %s\n"
+			"\t   linear: %s\n"
 			, maxSize
 			, mipSkip
 			, edge
@@ -58,6 +59,7 @@ struct Options
 			, radiance  ? "true" : "false"
 			, equirect  ? "true" : "false"
 			, strip     ? "true" : "false"
+			, linear    ? "true" : "false"
 			);
 	}
 
@@ -75,6 +77,7 @@ struct Options
 	bool pma       = false;
 	bool sdf       = false;
 	bool alphaTest = false;
+	bool linear    = false;
 };
 
 void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
@@ -272,7 +275,17 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				, false
 				);
 
+			if (!_options.linear)
+			{
+				bimg::imageRgba32fToLinear(src);
+			}
+
 			bimg::imageResizeRgba32fLinear(dst, src);
+
+			if (!_options.linear)
+			{
+				bimg::imageRgba32fToGamma(dst);
+			}
 
 			bimg::imageFree(src);
 			bimg::imageFree(input);
@@ -852,6 +865,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "      --ref <alpha>        Alpha reference value.\n"
 		  "      --iqa                Image Quality Assessment\n"
 		  "      --pma                Premultiply alpha into RGB channel.\n"
+		  "      --linear             Input and output texture is linear color space (gamma correction won't be applied).\n"
 		  "      --max <max size>     Maximum width/height (image will be scaled down and\n"
 		  "                           aspect ratio will be preserved.\n"
 		  "      --radiance <model>   Radiance cubemap filter. (Lighting model: Phong, PhongBrdf, Blinn, BlinnBrdf, GGX)\n"
@@ -987,6 +1001,7 @@ int main(int _argc, const char* _argv[])
 	options.strip     = cmdLine.hasArg("strip");
 	options.iqa       = cmdLine.hasArg("iqa");
 	options.pma       = cmdLine.hasArg("pma");
+	options.linear    = cmdLine.hasArg("linear");
 
 	if (options.equirect
 	&&  options.strip)
