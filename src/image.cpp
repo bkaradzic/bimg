@@ -5207,7 +5207,7 @@ namespace bimg
 		total += bx::write(_writer, "FORMAT=32-bit_rle_rgbe\n" , _err);
 		total += bx::write(_writer, '\n' , _err);
 
-		total += bx::writePrintf(_writer, "%cY %d +X %d\n", _yflip ? '+' : '-', _height, _width);
+		total += bx::write(_writer, _err, "%cY %d +X %d\n", _yflip ? '+' : '-', _height, _width);
 
 		UnpackFn unpack = getUnpack(_format);
 		const uint32_t bpp  = getBitsPerPixel(_format);
