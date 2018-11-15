@@ -2429,9 +2429,9 @@ namespace bimg
 
 				switch (rotationMode)
 				{
-				case 1: bx::xchg(aa, rr); break;
-				case 2: bx::xchg(aa, gg); break;
-				case 3: bx::xchg(aa, bb); break;
+				case 1: bx::swap(aa, rr); break;
+				case 2: bx::swap(aa, gg); break;
+				case 3: bx::swap(aa, bb); break;
 				default:                  break;
 				};
 
