@@ -928,7 +928,7 @@ namespace bimg
 				xyz[1] += rgba1[5];
 				xyz[2] += rgba1[6];
 
-				bx::vec3Norm( (float*)dst, xyz);
+				bx::store(dst, bx::normalize(bx::load(xyz) ) );
 			}
 		}
 	}
