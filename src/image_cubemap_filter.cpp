@@ -352,9 +352,9 @@ namespace bimg
 
 	float texelSolidAngle(float _u, float _v, float _invFaceSize)
 	{
-		// Reference:
-		//  - https://web.archive.org/web/20180614195754/http://www.mpia.de/~mathar/public/mathar20051002.pdf
-		//  - https://web.archive.org/web/20180614195725/http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
+		// Reference(s):
+		// - https://web.archive.org/web/20180614195754/http://www.mpia.de/~mathar/public/mathar20051002.pdf
+		// - https://web.archive.org/web/20180614195725/http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
 		//
 		const float x0 = _u - _invFaceSize;
 		const float x1 = _u + _invFaceSize;
@@ -1085,9 +1085,9 @@ namespace bimg
 
 	float applyLightingModel(float _specularPower, LightingModel::Enum _lightingModel)
 	{
-		// Reference:
-		//  - https://web.archive.org/web/20180622232018/https://seblagarde.wordpress.com/2012/06/10/amd-cubemapgen-for-physically-based-rendering/
-		//  - https://web.archive.org/web/20180622232041/https://seblagarde.wordpress.com/2012/03/29/relationship-between-phong-and-blinn-lighting-model/
+		// Reference(s):
+		// - https://web.archive.org/web/20180622232018/https://seblagarde.wordpress.com/2012/06/10/amd-cubemapgen-for-physically-based-rendering/
+		// - https://web.archive.org/web/20180622232041/https://seblagarde.wordpress.com/2012/03/29/relationship-between-phong-and-blinn-lighting-model/
 		//
 		switch (_lightingModel)
 		{

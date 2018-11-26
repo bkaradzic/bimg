@@ -1468,11 +1468,10 @@ namespace bimg
 
 	// BC6H, BC7
 	//
-	// Reference:
+	// Reference(s):
+	// - https://web.archive.org/web/20181126035446/https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
+	// - https://web.archive.org/web/20181126035538/https://docs.microsoft.com/en-us/windows/desktop/direct3d11/bc6h-format
 	//
-	// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/hh308952(v=vs.85).aspx
-
 	static const uint16_t s_bptcP2[] =
 	{ //  3210     0000000000   1111111111   2222222222   3333333333
 		0xcccc, // 0, 0, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1,  0, 0, 1, 1
