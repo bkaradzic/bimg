@@ -1060,7 +1060,7 @@ namespace bimg
 		{ NULL,               NULL                 }, // ASTC10x5
 		{ NULL,               NULL                 }, // Unknown
 		{ NULL,               NULL                 }, // R1
-		{ bx::packR8,         bx::unpackR8         }, // A8
+		{ bx::packA8,         bx::unpackA8         }, // A8
 		{ bx::packR8,         bx::unpackR8         }, // R8
 		{ bx::packR8I,        bx::unpackR8I        }, // R8I
 		{ bx::packR8U,        bx::unpackR8U        }, // R8U
