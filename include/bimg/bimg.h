@@ -425,6 +425,7 @@ namespace bimg
 		, uint32_t _height
 		, uint32_t _depth
 		, uint32_t _srcPitch
+		, uint32_t _dstPitch
 		);
 
 	///
