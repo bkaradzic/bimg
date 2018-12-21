@@ -259,22 +259,46 @@ namespace bimg
 						const float* src2 = (const float*)&srcData[y1*srcPitch + x0*16];
 						const float* src3 = (const float*)&srcData[y1*srcPitch + x1*16];
 
-						const float tx   = srcU - float(int32_t(x0) );
-						const float ty   = srcV - float(int32_t(y0) );
-						const float omtx = 1.0f - tx;
-						const float omty = 1.0f - ty;
+						const float tx    = srcU - float(int32_t(x0) );
+						const float ty    = srcV - float(int32_t(y0) );
+						const float omtx  = 1.0f - tx;
+						const float omty  = 1.0f - ty;
 
-						float p0[4];
-						bx::vec4Mul(p0, src0, omtx*omty);
+						const float p0x = omtx*omty;
+						const float p0[4] =
+						{
+							src0[0] * p0x,
+							src0[1] * p0x,
+							src0[2] * p0x,
+							src0[3] * p0x,
+						};
 
-						float p1[4];
-						bx::vec4Mul(p1, src1, tx*omty);
+						const float p1x = tx*omty;
+						const float p1[4] =
+						{
+							src1[0] * p1x,
+							src1[1] * p1x,
+							src1[2] * p1x,
+							src1[3] * p1x,
+						};
 
-						float p2[4];
-						bx::vec4Mul(p2, src2, omtx*ty);
+						const float p2x = omtx*ty;
+						const float p2[4] =
+						{
+							src2[0] * p2x,
+							src2[1] * p2x,
+							src2[2] * p2x,
+							src2[3] * p2x,
+						};
 
-						float p3[4];
-						bx::vec4Mul(p3, src3, tx*ty);
+						const float p3x = tx*ty;
+						const float p3[4] =
+						{
+							src3[0] * p3x,
+							src3[1] * p3x,
+							src3[2] * p3x,
+							src3[3] * p3x,
+						};
 
 						const float rr = p0[0] + p1[0] + p2[0] + p3[0];
 						const float gg = p0[1] + p1[1] + p2[1] + p3[1];
