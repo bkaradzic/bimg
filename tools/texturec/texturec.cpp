@@ -90,7 +90,7 @@ void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32
 		const float* rgba = (const float*)&src[0];
 		for (uint32_t xx = 0; xx < _width; ++xx, rgba += 4, dst += 16)
 		{
-			const bx::Vec3 xyz = bx::load(rgba);
+			const bx::Vec3 xyz = bx::load<bx::Vec3>(rgba);
 			bx::store(dst, bx::normalize(xyz) );
 		}
 	}

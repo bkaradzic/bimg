@@ -978,7 +978,7 @@ namespace bimg
 					{
 						const float* normal = (const float*)&nsaMip.m_data[(yy*nsaMip.m_width+xx)*(nsaMip.m_bpp/8)];
 						const float solidAngle = normal[3];
-						const float ndotl = bx::clamp(bx::dot(bx::load(normal), _dir), 0.0f, 1.0f);
+						const float ndotl = bx::clamp(bx::dot(bx::load<bx::Vec3>(normal), _dir), 0.0f, 1.0f);
 
 						if (ndotl >= _specularAngle)
 						{
