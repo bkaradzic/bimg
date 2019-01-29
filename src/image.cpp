@@ -4803,12 +4803,7 @@ namespace bimg
 				depth  = bx::max<uint32_t>(1, depth);
 
 				const uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
-				if (mipSize != width*height*depth*bpp/8)
-				{
-					BX_TRACE("x");
-				}
-
-				const uint32_t size = mipSize*numSides;
+				const uint32_t size    = mipSize*numSides;
 				uint32_t imageSize = bx::toHostEndian(*(const uint32_t*)&data[offset], _imageContainer.m_ktxLE);
 				BX_CHECK(size == imageSize, "KTX: Image size mismatch %d (expected %d).", size, imageSize);
 				BX_UNUSED(size, imageSize);
