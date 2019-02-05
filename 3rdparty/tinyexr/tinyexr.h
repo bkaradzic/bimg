@@ -8868,7 +8868,7 @@ static bool getCode(int po, int rlc, long long &c, int &lc, const char *&in,
     if (out + cs > oe) return false;
 
     // Bounds check for safety
-    // Issue 100.  
+    // Issue 100.
     if ((out - 1) < ob) return false;
     unsigned short s = out[-1];
 
@@ -10855,8 +10855,8 @@ static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
   } else {  // scanline format
 
     // Don't allow too large image(256GB * pixel_data_size or more). Workaround for #104.
-    size_t data_len = size_t(data_width) * size_t(data_height) * size_t(num_channels);
-    if ((data_len == 0) || (data_len >= 0x4000000000)) {
+    size_t data_len0 = size_t(data_width) * size_t(data_height) * size_t(num_channels);
+    if ((data_len0 == 0) || (data_len0 >= 0x4000000000)) {
       if (err) {
         std::stringstream ss;
         ss << "Image data size is zero or too large: width = " << data_width << ", height = " << data_height << ", channels = " << num_channels << std::endl;
@@ -11339,7 +11339,7 @@ int IsEXR(const char *filename) {
   if (ret != TINYEXR_SUCCESS) {
     return TINYEXR_ERROR_INVALID_HEADER;
   }
-  
+
   return TINYEXR_SUCCESS;
 }
 
