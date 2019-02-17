@@ -153,7 +153,7 @@ bool EncodeColorsLuma(const RgbaColor& endpoint_low,
                       int max_value, ColorEndpointMode* const astc_mode,
                       std::vector<int>* const vals) {
   assert(vals->size() ==
-         NumValuesForEncodingMode(EndpointEncodingMode::kDirectLuma));
+         size_t(NumValuesForEncodingMode(EndpointEncodingMode::kDirectLuma)));
   int avg1 = AverageRGB(endpoint_low);
   int avg2 = AverageRGB(endpoint_high);
 

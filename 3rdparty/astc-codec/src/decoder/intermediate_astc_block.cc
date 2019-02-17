@@ -369,10 +369,10 @@ base::Optional<VoidExtentData> UnpackVoidExtent(const PhysicalASTCBlock& pb) {
 
   const auto void_extent_coords = pb.VoidExtentCoords();
   if (void_extent_coords) {
-    data.coords[0] = void_extent_coords->at(0);
-    data.coords[1] = void_extent_coords->at(1);
-    data.coords[2] = void_extent_coords->at(2);
-    data.coords[3] = void_extent_coords->at(3);
+    data.coords[0] = uint16_t(void_extent_coords->at(0));
+    data.coords[1] = uint16_t(void_extent_coords->at(1));
+    data.coords[2] = uint16_t(void_extent_coords->at(2));
+    data.coords[3] = uint16_t(void_extent_coords->at(3));
   } else {
     uint16_t all_ones = (1 << 13) - 1;
     for (auto& coord : data.coords) {
