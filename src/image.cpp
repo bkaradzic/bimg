@@ -4518,6 +4518,16 @@ namespace bimg
 			}
 			break;
 
+		case TextureFormat::ASTC4x4:
+		case TextureFormat::ASTC5x5:
+		case TextureFormat::ASTC6x6:
+		case TextureFormat::ASTC8x5:
+		case TextureFormat::ASTC8x6:
+		case TextureFormat::ASTC10x5:
+			imageDecodeToRgba8(_allocator, _dst, _src, _width, _height, _dstPitch, _srcFormat);
+			imageSwizzleBgra8(_dst, _dstPitch, _width, _height, _dst, _dstPitch);
+			break;
+
 		case TextureFormat::RGBA8:
 			{
 				const uint32_t srcPitch = _width * 4;
