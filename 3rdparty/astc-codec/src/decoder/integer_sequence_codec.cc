@@ -299,8 +299,8 @@ void EncodeISEBlock(const std::vector<int>& vals, int bits_per_val,
   // We only need to add as many bits as necessary, so let's limit it based
   // on the computation described in Section C.2.22 of the ASTC specification
   const int total_num_bits =
-      ((vals.size() * kNumEncodedBitsPerBlock + kNumVals - 1) / kNumVals)
-      + vals.size() * bits_per_val;
+      int(((vals.size() * kNumEncodedBitsPerBlock + kNumVals - 1) / kNumVals)
+      + vals.size() * bits_per_val);
   int bits_added = 0;
 
   // The number of bits used for the quint/trit encoding is necessary to know

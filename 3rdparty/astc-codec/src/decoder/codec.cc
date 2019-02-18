@@ -90,7 +90,7 @@ bool DecompressToImage(const uint8_t* astc_data, size_t astc_data_size,
         }
 
         uint8_t* pixel = out_row + px * kBytesPerPixelUNORM8;
-        const RgbaColor decoded_color = logical_block.ColorAt(x, y);
+        const RgbaColor decoded_color = logical_block.ColorAt(int(x), int(y));
         for (size_t i = 0; i < kBytesPerPixelUNORM8; ++i) {
           pixel[i] = static_cast<uint8_t>(decoded_color[i]);
         }

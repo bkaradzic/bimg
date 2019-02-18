@@ -131,7 +131,7 @@ std::unique_ptr<ASTCFile> ASTCFile::LoadFile(const std::string& path,
 }
 
 base::Optional<Footprint> ASTCFile::GetFootprint() const {
-  return Footprint::FromDimensions(header_.block_width_, header_.block_height_);
+  return Footprint::FromDimensions(int(header_.block_width_), int(header_.block_height_));
 }
 
 std::string ASTCFile::GetFootprintString() const {

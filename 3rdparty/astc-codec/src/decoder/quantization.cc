@@ -311,7 +311,7 @@ class BitQuantizationMap : public QuantizationMap {
       }
       assert(num_unquantized_bits == TotalUnquantizedBits);
 
-      unquantization_map_.push_back(unquantized);
+      unquantization_map_.push_back(int(unquantized));
 
       // Fill half of the quantization map with the previous value for bits
       // and the other half with the current value for bits

@@ -60,7 +60,7 @@ Partition ComputePartition(const Footprint& footprint,
                            const IntermediateBlockData& block) {
   if (block.partition_id) {
     const int part_id = block.partition_id.value();
-    const size_t num_parts = block.endpoints.size();
+    const int num_parts = int(block.endpoints.size());
     return GetASTCPartition(footprint, num_parts, part_id);
   } else {
     return GenerateSinglePartition(footprint);

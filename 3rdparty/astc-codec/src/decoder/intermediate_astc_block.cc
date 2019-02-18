@@ -214,7 +214,7 @@ int ExtraConfigBitPosition(const IntermediateBlockData& data) {
 
   int extra_config_bits = 0;
   if (!SharedEndpointModes(data)) {
-    const int num_encoded_cem_bits = 2 + data.endpoints.size() * 3;
+    const int num_encoded_cem_bits = 2 + int(data.endpoints.size()) * 3;
     extra_config_bits = num_encoded_cem_bits - 6;
   }
 
@@ -304,7 +304,7 @@ int EndpointRangeForBlock(const IntermediateBlockData& data) {
     return kEndpointRange_ReturnInvalidWeightDims;
   }
 
-  const int num_partitions = data.endpoints.size();
+  const int num_partitions = int(data.endpoints.size());
 
   // Calculate the number of bits that we would write prior to getting to the
   // color endpoint data
@@ -406,7 +406,7 @@ base::Optional<std::string> Pack(const IntermediateBlockData& data,
   }
 
   // Next, we place the number of partitions minus one.
-  const int num_partitions = data.endpoints.size();
+  const int num_partitions = int(data.endpoints.size());
   bit_sink.PutBits(num_partitions - 1, 2);
 
   // If we have more than one partition, then we also have a partition ID.

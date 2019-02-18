@@ -79,7 +79,7 @@ void InvertBitTransferSigned(int* const a, int* const b) {
 template<typename ContainerType>
 void Quantize(ContainerType* const c, size_t max_value) {
   for (auto& x : *c) {
-    x = QuantizeCEValueToRange(x, max_value);
+    x = QuantizeCEValueToRange(x, int(max_value));
   }
 }
 
@@ -93,7 +93,7 @@ ArrayType QuantizeColor(const ArrayType& c, size_t max_value) {
 template<typename ContainerType>
 void Unquantize(ContainerType* const c, size_t max_value) {
   for (auto& x : *c) {
-    x = UnquantizeCEValueFromRange(x, max_value);
+    x = UnquantizeCEValueFromRange(x, int(max_value));
   }
 }
 
