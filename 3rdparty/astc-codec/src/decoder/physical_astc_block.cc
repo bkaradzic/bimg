@@ -31,7 +31,7 @@ static_assert(static_cast<int>(ColorEndpointMode::kNumColorEndpointModes) == 16,
               "incorrect.");
 
 constexpr int kASTCBlockSizeBits = 128;
-constexpr int kASTCBlockSizeBytes = kASTCBlockSizeBits / 8;
+//constexpr int kASTCBlockSizeBytes = kASTCBlockSizeBits / 8;
 constexpr uint32_t kVoidExtentMaskBits = 9;
 constexpr uint32_t kVoidExtentMask = 0x1FC;
 constexpr int kWeightGridMinBitLength = 24;
