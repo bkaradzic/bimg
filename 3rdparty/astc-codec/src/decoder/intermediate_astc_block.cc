@@ -429,7 +429,7 @@ base::Optional<std::string> Pack(const IntermediateBlockData& data,
   const int num_weight_bits = weight_sink.Bits();
   assert(num_weight_bits ==
            IntegerSequenceCodec::GetBitCountForRange(
-               data.weights.size(), data.weight_range));
+               int(data.weights.size()), data.weight_range));
 
   // Let's continue... how much after the color data do we need to write?
   int extra_config = 0;
