@@ -4861,8 +4861,9 @@ namespace bimg
 				{
 					BX_CHECK(offset <= _size, "Reading past size of data buffer! (offset %d, size %d)", offset, _size);
 
-					width  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
-					height = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
+					uint32_t mipwidth = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
+					uint32_t mipheight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
+
 					depth  = bx::max<uint32_t>(1, depth);
 
 					uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
@@ -4870,8 +4871,8 @@ namespace bimg
 					if (side == _side
 					&&  lod  == _lod)
 					{
-						_mip.m_width     = width;
-						_mip.m_height    = height;
+						_mip.m_width     = mipwidth;
+						_mip.m_height    = mipheight;
 						_mip.m_depth     = depth;
 						_mip.m_blockSize = blockSize;
 						_mip.m_size      = mipSize;
