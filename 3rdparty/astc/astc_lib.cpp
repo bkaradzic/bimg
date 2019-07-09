@@ -52,6 +52,7 @@ namespace
     {
         { 0, 1, 2, 3 }, // ASTC_RGBA
         { 2, 1, 0, 3 }, // ASTC_BGRA
+        { 0, 0, 0, 1 }, // ASTC_RA
     };
 
     void alloc_temp_buffers(compress_symbolic_block_buffers* temp_buffers)
@@ -273,13 +274,20 @@ namespace
     void setup_ewp(ASTC_COMPRESS_MODE mode, int ydim, int xdim, error_weighting_params& ewp)
     {
         float oplimit_autoset    = 0.0;
+        float oplimit_user_specified = 0.0;
+        int oplimit_set_by_user = 0;
+
         float dblimit_autoset_2d = 0.0;
         float bmc_autoset        = 0.0;
         float mincorrel_autoset  = 0.0;
+        float mincorrel_user_specified = 0.0;
+        int mincorrel_set_by_user = 0;
 
         int plimit_autoset       = -1;
         int maxiters_autoset     = 0;
         int pcdiv                = 1;
+        int dblimit_set_by_user  = 0;
+        float dblimit_user_specified = 0.0;
 
         float log10_texels_2d = log((float)(xdim * ydim)) / log(10.0f);
 
@@ -453,11 +461,47 @@ namespace
                 break;
             }
         }
+        else if (mode == ASTC_COMPRESS_NORMAL_PSNR)
+        {
+            ewp.rgba_weights[0] = 1.0f;
+            ewp.rgba_weights[1] = 0.0f;
+            ewp.rgba_weights[2] = 0.0f;
+            ewp.rgba_weights[3] = 1.0f;
+            ewp.ra_normal_angular_scale = 1;
+            oplimit_user_specified = 1000.0f;
+            oplimit_set_by_user = 1;
+            mincorrel_user_specified = 0.99f;
+            mincorrel_set_by_user = 1;
+        }
+        else if (mode == ASTC_COMPRESS_NORMAL_PERCEP)
+        {
+            ewp.rgba_weights[0] = 1.0f;
+            ewp.rgba_weights[1] = 0.0f;
+            ewp.rgba_weights[2] = 0.0f;
+            ewp.rgba_weights[3] = 1.0f;
+            ewp.ra_normal_angular_scale = 1;
+
+            oplimit_user_specified = 1000.0f;
+            oplimit_set_by_user = 1;
+            mincorrel_user_specified = 0.99f;
+            mincorrel_set_by_user = 1;
+
+            dblimit_user_specified = 999;
+            dblimit_set_by_user = 1;
+
+            ewp.block_artifact_suppression = 1.8f;
+            ewp.mean_stdev_radius = 3;
+            ewp.rgb_mean_weight = 0;
+            ewp.rgb_stdev_weight = 50;
+            ewp.rgb_mean_and_stdev_mixing = 0.0;
+            ewp.alpha_mean_weight = 0;
+            ewp.alpha_stdev_weight = 50;
+        }
 
         int partitions_to_test = plimit_autoset;
-        float dblimit_2d = dblimit_autoset_2d;
-        float oplimit = oplimit_autoset;
-        float mincorrel = mincorrel_autoset;
+        float dblimit_2d = dblimit_set_by_user ? dblimit_user_specified : dblimit_autoset_2d;
+        float oplimit = oplimit_set_by_user ? oplimit_user_specified : oplimit_autoset;
+        float mincorrel = mincorrel_set_by_user ? mincorrel_user_specified : mincorrel_autoset;
 
         int maxiters = maxiters_autoset;
         ewp.max_refinement_iters = maxiters;
