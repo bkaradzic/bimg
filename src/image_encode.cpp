@@ -36,13 +36,13 @@ namespace bimg
 	};
 	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_squishQuality) );
 
-    static const ASTC_COMPRESS_MODE s_astcQuality[] =
-    {
-        ASTC_COMPRESS_MEDIUM,       // Default
-        ASTC_COMPRESS_THOROUGH,     // Highest
-        ASTC_COMPRESS_FAST,         // Fastest
-    };
-    BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_astcQuality));
+	static const ASTC_COMPRESS_MODE s_astcQuality[] =
+	{
+		ASTC_COMPRESS_MEDIUM,       // Default
+		ASTC_COMPRESS_THOROUGH,     // Highest
+		ASTC_COMPRESS_FAST,         // Fastest
+	};
+	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_astcQuality));
 
 	void imageEncodeFromRgba8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
 	{
@@ -138,12 +138,12 @@ namespace bimg
 			case TextureFormat::ASTC8x6:
 			case TextureFormat::ASTC10x5:
 				{
-                    const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
+					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
 
-                    ASTC_COMPRESS_MODE  compress_mode = s_astcQuality[_quality];
+					ASTC_COMPRESS_MODE  compress_mode = s_astcQuality[_quality];
 					ASTC_DECODE_MODE    decode_mode   = ASTC_DECODE_LDR_LINEAR;
 
-                    astc_compress(_width, _height, src, ASTC_RGBA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+					astc_compress(_width, _height, src, ASTC_RGBA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
 				}
 				break;
 
