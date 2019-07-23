@@ -252,6 +252,11 @@ namespace bimg
 
 	const char* getName(TextureFormat::Enum _format)
 	{
+		if (_format >= TextureFormat::Count)
+		{
+			return "Unknown?!";
+		}
+
 		return s_textureFormatName[_format];
 	}
 
