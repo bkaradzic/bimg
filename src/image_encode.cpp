@@ -30,6 +30,11 @@ namespace bimg
 {
 	static uint32_t s_squishQuality[] =
 	{
+		// Standard
+		squish::kColourClusterFit,          // Default
+		squish::kColourIterativeClusterFit, // Highest
+		squish::kColourRangeFit,            // Fastest
+		// Normal map
 		squish::kColourClusterFit,          // Default
 		squish::kColourIterativeClusterFit, // Highest
 		squish::kColourRangeFit,            // Fastest
@@ -38,6 +43,11 @@ namespace bimg
 
 	static const ASTC_COMPRESS_MODE s_astcQuality[] =
 	{
+		// Standard
+		ASTC_COMPRESS_MEDIUM,       // Default
+		ASTC_COMPRESS_THOROUGH,     // Highest
+		ASTC_COMPRESS_FAST,         // Fastest
+		// Normal map
 		ASTC_COMPRESS_MEDIUM,       // Default
 		ASTC_COMPRESS_THOROUGH,     // Highest
 		ASTC_COMPRESS_FAST,         // Fastest
@@ -143,7 +153,10 @@ namespace bimg
 					ASTC_COMPRESS_MODE  compress_mode = s_astcQuality[_quality];
 					ASTC_DECODE_MODE    decode_mode   = ASTC_DECODE_LDR_LINEAR;
 
-					astc_compress(_width, _height, src, ASTC_RGBA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+                    if (Quality::NormalMap_Default <= _quality)
+                        astc_compress(_width, _height, src, ASTC_ENC_NORMAL_RA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+                    else
+                        astc_compress(_width, _height, src, ASTC_RGBA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
 				}
 				break;
 

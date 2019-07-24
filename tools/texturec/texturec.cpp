@@ -450,6 +450,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, rgba
 						);
 
+                    bimg::Quality::Enum nmapQuality = bimg::Quality::Enum(_options.quality + bimg::Quality::NormalMap_Default);
 					bimg::imageEncodeFromRgba32f(_allocator
 						, dstData
 						, rgbaDst
@@ -457,7 +458,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, dstMip.m_height
 						, dstMip.m_depth
 						, outputFormat
-						, _options.quality
+						, nmapQuality
 						, _err
 						);
 
@@ -489,7 +490,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, dstMip.m_height
 							, dstMip.m_depth
 							, outputFormat
-							, _options.quality
+							, nmapQuality
 							, _err
 							);
 					}
@@ -1362,7 +1363,7 @@ int main(int _argc, const char* _argv[])
 	}
 	else
 	{
-		help(NULL, err);
+		help("Failed to create output", err);
 		return bx::kExitFailure;
 	}
 
