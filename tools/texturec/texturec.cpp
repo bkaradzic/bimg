@@ -3,7 +3,6 @@
  * License: https://github.com/bkaradzic/bimg#license-bsd-2-clause
  */
 
-#include <stdio.h>
 #include <bx/allocator.h>
 #include <bx/readerwriter.h>
 #include <bx/endian.h>
@@ -157,12 +156,12 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		const bimg::ImageBlockInfo&  inputBlockInfo  = bimg::getBlockInfo(inputFormat);
 		const bimg::ImageBlockInfo&  outputBlockInfo = bimg::getBlockInfo(outputFormat);
 		const uint32_t blockWidth  = outputBlockInfo.blockWidth;
-        const uint32_t blockHeight = outputBlockInfo.blockHeight;
-        const uint32_t minBlockX   = outputBlockInfo.minBlockX;
-        const uint32_t minBlockY   = outputBlockInfo.minBlockY;
-        uint32_t outputWidth  = bx::max(blockWidth  * minBlockX, ( (input->m_width  + blockWidth  - 1) / blockWidth )*blockWidth);
-        uint32_t outputHeight = bx::max(blockHeight * minBlockY, ( (input->m_height + blockHeight - 1) / blockHeight)*blockHeight);
-        uint32_t outputDepth  = input->m_depth;
+		const uint32_t blockHeight = outputBlockInfo.blockHeight;
+		const uint32_t minBlockX   = outputBlockInfo.minBlockX;
+		const uint32_t minBlockY   = outputBlockInfo.minBlockY;
+		uint32_t outputWidth  = bx::max(blockWidth  * minBlockX, ( (input->m_width  + blockWidth  - 1) / blockWidth )*blockWidth);
+		uint32_t outputHeight = bx::max(blockHeight * minBlockY, ( (input->m_height + blockHeight - 1) / blockHeight)*blockHeight);
+		uint32_t outputDepth  = input->m_depth;
 
 		if (_options.mips
 		&&  _options.mipSkip != 0)
@@ -450,7 +449,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, rgba
 						);
 
-                    bimg::Quality::Enum nmapQuality = bimg::Quality::Enum(_options.quality + bimg::Quality::NormalMap_Default);
+					bimg::Quality::Enum nmapQuality = bimg::Quality::Enum(_options.quality + bimg::Quality::NormalMapDefault);
 					bimg::imageEncodeFromRgba32f(_allocator
 						, dstData
 						, rgbaDst
@@ -861,7 +860,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, uint16_t(mip.m_height)
 							);
 
-						printf("%f\n", result);
+						bx::printf("%f\n", result);
 
 						BX_FREE(_allocator, ref);
 					}
@@ -888,7 +887,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 {
 	if (NULL != _error)
 	{
-		fprintf(stderr, "Error:\n%s\n\n", _error);
+		bx::printf("Error:\n%s\n\n", _error);
 
 		if (!_showHelp)
 		{
@@ -896,8 +895,8 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		}
 	}
 
-	fprintf(stderr
-		, "texturec, bgfx texture compiler tool, version %d.%d.%d.\n"
+	bx::printf(
+		  "texturec, bgfx texture compiler tool, version %d.%d.%d.\n"
 		  "Copyright 2011-2019 Branimir Karadzic. All rights reserved.\n"
 		  "License: https://github.com/bkaradzic/bimg#license-bsd-2-clause\n\n"
 		, BIMG_TEXTUREC_VERSION_MAJOR
@@ -905,8 +904,8 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		, BIMG_API_VERSION
 		);
 
-	fprintf(stderr
-		, "Usage: texturec -f <in> -o <out> [-t <texture format>]\n"
+	bx::printf(
+		  "Usage: texturec -f <in> -o <out> [-t <texture format>]\n"
 
 		  "\n"
 		  "Supported file formats:\n"
@@ -944,7 +943,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "                           aspect ratio will be preserved.\n"
 		  "      --radiance <model>   Radiance cubemap filter. (Lighting model: Phong, PhongBrdf, Blinn, BlinnBrdf, GGX)\n"
 		  "      --as <extension>     Save as.\n"
-          "      --formats            List all supported formats.\n"
+		  "      --formats            List all supported formats.\n"
 		  "      --validate           *DEBUG* Validate that output image produced matches after loading.\n"
 
 		  "\n"
@@ -1014,20 +1013,26 @@ int main(int _argc, const char* _argv[])
 
     if (cmdLine.hasArg("formats"))
     {
-        printf("Uncompressed formats:\n");
+		bx::printf("Uncompressed formats:\n");
 
-        for (int format = bimg::TextureFormat::Unknown + 1; format < bimg::TextureFormat::UnknownDepth; format++)
-            printf("  %s\n", bimg::getName((bimg::TextureFormat::Enum) format));
+		for (int format = bimg::TextureFormat::Unknown + 1; format < bimg::TextureFormat::UnknownDepth; format++)
+		{
+			bx::printf("  %s\n", bimg::getName((bimg::TextureFormat::Enum) format));
+		}
 
-        for (int format = bimg::TextureFormat::UnknownDepth + 1; format < bimg::TextureFormat::Count; format++)
-            printf("  %s\n", bimg::getName((bimg::TextureFormat::Enum) format));
+		for (int format = bimg::TextureFormat::UnknownDepth + 1; format < bimg::TextureFormat::Count; format++)
+		{
+			bx::printf("  %s\n", bimg::getName((bimg::TextureFormat::Enum) format));
+		}
 
-        printf("Compressed formats:\n");
+		bx::printf("Compressed formats:\n");
 
-        for (int format = 0; format < bimg::TextureFormat::Unknown; format++)
-            printf("  %s\n", bimg::getName((bimg::TextureFormat::Enum) format));
+		for (int format = 0; format < bimg::TextureFormat::Unknown; format++)
+		{
+			bx::printf("  %s\n", bimg::getName((bimg::TextureFormat::Enum) format));
+		}
 
-        return bx::kExitSuccess;
+		return bx::kExitSuccess;
     }
 
 	const char* inputFileName = cmdLine.findOption('f');

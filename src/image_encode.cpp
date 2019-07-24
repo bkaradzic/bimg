@@ -150,13 +150,17 @@ namespace bimg
 				{
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
 
-					ASTC_COMPRESS_MODE  compress_mode = s_astcQuality[_quality];
-					ASTC_DECODE_MODE    decode_mode   = ASTC_DECODE_LDR_LINEAR;
+					ASTC_COMPRESS_MODE compress_mode = s_astcQuality[_quality];
+					ASTC_DECODE_MODE   decode_mode   = ASTC_DECODE_LDR_LINEAR;
 
-                    if (Quality::NormalMap_Default <= _quality)
-                        astc_compress(_width, _height, src, ASTC_ENC_NORMAL_RA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
-                    else
-                        astc_compress(_width, _height, src, ASTC_RGBA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+					if (Quality::NormalMapDefault <= _quality)
+					{
+						astc_compress(_width, _height, src, ASTC_ENC_NORMAL_RA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+					}
+					else
+					{
+						astc_compress(_width, _height, src, ASTC_RGBA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+					}
 				}
 				break;
 
