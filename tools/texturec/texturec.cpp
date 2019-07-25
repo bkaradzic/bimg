@@ -12,7 +12,7 @@
 #include <bimg/encode.h>
 
 #if 0
-#	define DBG(_format, ...) fprintf(stderr, "" _format "\n", ##__VA_ARGS__)
+#	define DBG(_format, ...) bx::printf("" _format "\n", ##__VA_ARGS__)
 #else
 #	define DBG(...) BX_NOOP()
 #endif // DEBUG
@@ -996,8 +996,8 @@ int main(int _argc, const char* _argv[])
 
 	if (cmdLine.hasArg('v', "version") )
 	{
-		fprintf(stderr
-			, "texturec, bgfx texture compiler tool, version %d.%d.%d.\n"
+		bx::printf(
+			  "texturec, bgfx texture compiler tool, version %d.%d.%d.\n"
 			, BIMG_TEXTUREC_VERSION_MAJOR
 			, BIMG_TEXTUREC_VERSION_MINOR
 			, BIMG_API_VERSION
