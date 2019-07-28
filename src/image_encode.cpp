@@ -169,7 +169,7 @@ namespace bimg
 				break;
 
 			case TextureFormat::RGBA8:
-				bx::memCopy(_dst, _src, srcPitch, _height, srcPitch, dstPitch);
+				bx::memCopy(_dst, dstPitch, _src, srcPitch, srcPitch, _height);
 				break;
 
 			default:
