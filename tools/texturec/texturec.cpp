@@ -411,9 +411,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					bimg::imageDecodeToRgba32f(_allocator
 						, rgba
 						, mip.m_data
-						, dstMip.m_width
-						, dstMip.m_height
-						, dstMip.m_depth
+						, mip.m_width
+						, mip.m_height
+						, mip.m_depth
 						, dstMip.m_width*16
 						, mip.m_format
 						);
@@ -522,7 +522,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, mip.m_width
 						, mip.m_height
 						, mip.m_depth
-						, mip.m_width*16
+						, dstMip.m_width*16
 						, mip.m_format
 						);
 
