@@ -64,6 +64,7 @@ struct Options
 
 	uint32_t maxSize = UINT32_MAX;
 	uint32_t mipSkip = 0;
+	uint32_t numLayers = 1;
 	float edge       = 0.0f;
 	bimg::TextureFormat::Enum format   = bimg::TextureFormat::Count;
 	bimg::Quality::Enum quality        = bimg::Quality::Default;
@@ -936,6 +937,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "      --strip              Input texture is horizontal strip of cubemap.\n"
 		  "      --sdf                Compute SDF texture.\n"
 		  "      --ref <alpha>        Alpha reference value.\n"
+		  "      --layers <numLayers> Declare image layers where size of image should be w * (numLayers * h).\n"
 		  "      --iqa                Image Quality Assessment\n"
 		  "      --pma                Premultiply alpha into RGB channel.\n"
 		  "      --linear             Input and output texture is linear color space (gamma correction won't be applied).\n"
@@ -1070,6 +1072,15 @@ int main(int _argc, const char* _argv[])
 		if (!bx::fromString(&options.edge, alphaRef))
 		{
 			options.edge = 0.5f;
+		}
+	}
+
+	const char* layers = cmdLine.findOption("layers");
+	if (NULL != layers)
+	{
+		if (!bx::fromString(&options.numLayers, layers))
+		{
+			options.numLayers = 1;
 		}
 	}
 
@@ -1210,6 +1221,14 @@ int main(int _argc, const char* _argv[])
 	bimg::ImageContainer* output = convert(&allocator, inputData, inputSize, options, &err);
 
 	BX_FREE(&allocator, inputData);
+
+	if (options.numLayers > 1) {
+		// then user is requesting that we treat image size as width *
+		// (numLayers * h) where height is divisible by numLayers.
+		BX_CHECK(output->m_height % options.numLayers == 0);
+		output->m_height = output->m_height / options.numLayers;
+		output->m_numLayers = options.numLayers;
+	}
 
 	if (NULL != output)
 	{
