@@ -31,7 +31,7 @@ project "texturec"
 			"Cocoa.framework",
 		}
 
-	configuration { "vs20* or mingw*" }
+	configuration { "vs20* or mingw* or cmake", "windows" }
 		links {
 			"psapi",
 		}
