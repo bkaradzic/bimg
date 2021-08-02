@@ -2596,7 +2596,7 @@ namespace bimg
 
 		// 0       1       2       3       4       5       6       7
 		// 7654321076543210765432107654321076543210765432107654321076543210
-		// ...rr.rrggggbbbbrrrrggggbbbbDDD.mmmmmmmmmmmmmmmmllllllllllllllll
+		// ...rr.rrggggbbbbrrrrggggbbbbDD.Dmmmmmmmmmmmmmmmmllllllllllllllll
 		//    ^            ^           ^   ^               ^
 		//    +-- c0       +-- c1      |   +-- msb         +-- lsb
 		//                             +-- dist
@@ -2618,7 +2618,7 @@ namespace bimg
 		rgb[ 9] = bitRangeConvert(rgb[ 9], 4, 8);
 		rgb[10] = bitRangeConvert(rgb[10], 4, 8);
 
-		uint8_t dist = (_src[3] >> 1) & 0x7;
+		uint8_t dist = ((_src[3] >> 1) & 0x6) | (_src[3] & 0x1);
 		int32_t mod = s_etc2Mod[dist];
 
 		rgb[ 4] = uint8_satadd(rgb[ 8],  mod);
@@ -2655,7 +2655,7 @@ namespace bimg
 
 		// 0       1       2       3       4       5       6       7
 		// 7654321076543210765432107654321076543210765432107654321076543210
-		// .rrrrggg...gb.bbbrrrrggggbbbbDD.mmmmmmmmmmmmmmmmllllllllllllllll
+		// .rrrrggg...gb.bbbrrrrggggbbbbD.Dmmmmmmmmmmmmmmmmllllllllllllllll
 		//  ^               ^           ^  ^               ^
 		//  +-- c0          +-- c1      |  +-- msb         +-- lsb
 		//                              +-- dist
@@ -2673,7 +2673,7 @@ namespace bimg
 		rgb[ 9] = ( (_src[2] << 1) & 0xe)
 				|   (_src[3] >> 7)
 				;
-		rgb[10] = (_src[2] >> 3) & 0xf;
+		rgb[10] = (_src[3] >> 3) & 0xf;
 
 		rgb[ 0] = bitRangeConvert(rgb[ 0], 4, 8);
 		rgb[ 1] = bitRangeConvert(rgb[ 1], 4, 8);
@@ -2684,7 +2684,7 @@ namespace bimg
 
 		uint32_t col0 = uint32_t(rgb[0]<<16) | uint32_t(rgb[1]<<8) | uint32_t(rgb[ 2]);
 		uint32_t col1 = uint32_t(rgb[8]<<16) | uint32_t(rgb[9]<<8) | uint32_t(rgb[10]);
-		uint8_t  dist = (_src[3] & 0x6) | (col0 >= col1);
+		uint8_t  dist = (_src[3] & 0x4) | ((_src[3]<<1)&0x2) | (col0 >= col1);
 		int32_t  mod  = s_etc2Mod[dist];
 
 		rgb[ 4] = uint8_satadd(rgb[ 0], -mod);
