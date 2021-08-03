@@ -2934,6 +2934,52 @@ namespace bimg
 		}
 	}
 
+	static const int8_t s_etc2aMod[16][8] =
+	{
+		{ -3, -6,  -9, -15, 2, 5, 8, 14 },
+		{ -3, -7, -10, -13, 2, 6, 9, 12 },
+		{ -2, -5,  -8, -13, 1, 4, 7, 12 },
+		{ -2, -4,  -6, -13, 1, 3, 5, 12 },
+		{ -3, -6,  -8, -12, 2, 5, 7, 11 },
+		{ -3, -7,  -9, -11, 2, 6, 8, 10 },
+		{ -4, -7,  -8, -11, 3, 6, 7, 10 },
+		{ -3, -5,  -8, -11, 2, 4, 7, 10 },
+		{ -2, -6,  -8, -10, 1, 5, 7,  9 },
+		{ -2, -5,  -8, -10, 1, 4, 7,  9 },
+		{ -2, -4,  -8, -10, 1, 3, 7,  9 },
+		{ -2, -5,  -7, -10, 1, 4, 6,  9 },
+		{ -3, -4,  -7, -10, 2, 3, 6,  9 },
+		{ -1, -2,  -3, -10, 0, 1, 2,  9 },
+		{ -4, -6,  -8,  -9, 3, 5, 7,  8 },
+		{ -3, -5,  -7,  -9, 2, 4, 6,  8 }
+	};
+
+	void decodeBlockEtc2Alpha(uint8_t _dst[16 * 4], const uint8_t _src[8])
+	{
+		if (!BX_ENABLED(BIMG_DECODE_ETC2))
+		{
+			return;
+		}
+
+		const int32_t bc = _src[0];
+		const int8_t *modTable = s_etc2aMod[_src[1] & 0x0f];
+		const int32_t mult = (_src[1] & 0xf0) >> 4;
+		const uint64_t indices = ((uint64_t)_src[2] << 40)
+			| ((uint64_t)_src[3] << 32)
+			| ((uint64_t)_src[4] << 24)
+			| ((uint64_t)_src[5] << 16)
+			| ((uint64_t)_src[6] << 8)
+			| _src[7];
+
+		for (int ii = 0; ii < 16; ii++) {
+			const uint32_t idx = (ii & 0xc) | ((ii & 0x3) << 4);
+			const  int32_t mod = modTable[(indices >> (45 - ii * 3)) & 0x7];
+
+			_dst[idx + 3] = uint8_satadd(bc, mod*mult);
+		}
+	}
+
+
 	static const uint8_t s_pvrtcFactors[16][4] =
 	{
 		{  4,  4,  4,  4 },
@@ -4544,8 +4590,30 @@ namespace bimg
 			break;
 
 		case TextureFormat::ETC2A:
-			BX_WARN(false, "ETC2A decoder is not implemented.");
-			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+			if (BX_ENABLED(BIMG_DECODE_ETC2))
+			{
+				for (uint32_t yy = 0; yy < height; ++yy)
+				{
+					for (uint32_t xx = 0; xx < width; ++xx)
+					{
+						decodeBlockEtc12(temp, src + 8);
+						decodeBlockEtc2Alpha(temp, src);
+
+						src += 16;
+
+						uint8_t* block = &dst[yy*_dstPitch * 4 + xx * 16];
+						bx::memCopy(&block[0 * _dstPitch], &temp[0], 16);
+						bx::memCopy(&block[1 * _dstPitch], &temp[16], 16);
+						bx::memCopy(&block[2 * _dstPitch], &temp[32], 16);
+						bx::memCopy(&block[3 * _dstPitch], &temp[48], 16);
+					}
+				}
+			}
+			else
+			{
+				BX_WARN(false, "ETC2 decoder is disabled (BIMG_DECODE_ETC2).");
+				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00));
+			}
 			break;
 
 		case TextureFormat::ETC2A1:
