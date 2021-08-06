@@ -3282,6 +3282,7 @@ namespace bimg
 		imageContainer->m_hasAlpha    = false;
 		imageContainer->m_cubeMap     = _cubeMap;
 		imageContainer->m_ktx         = false;
+		imageContainer->m_pvr3        = false;
 		imageContainer->m_ktxLE       = false;
 		imageContainer->m_srgb        = false;
 
@@ -3738,6 +3739,7 @@ namespace bimg
 		_imageContainer.m_cubeMap     = cubeMap;
 		_imageContainer.m_ktx         = false;
 		_imageContainer.m_ktxLE       = false;
+		_imageContainer.m_pvr3        = false;
 		_imageContainer.m_srgb        = srgb;
 
 		return true;
@@ -4093,6 +4095,7 @@ namespace bimg
 		_imageContainer.m_cubeMap     = numFaces > 1;
 		_imageContainer.m_ktx         = true;
 		_imageContainer.m_ktxLE       = fromLittleEndian;
+		_imageContainer.m_pvr3        = false;
 		_imageContainer.m_srgb        = srgb;
 
 		if (TextureFormat::Unknown == format)
@@ -4258,6 +4261,7 @@ namespace bimg
 		_imageContainer.m_cubeMap     = numFaces > 1;
 		_imageContainer.m_ktx         = false;
 		_imageContainer.m_ktxLE       = false;
+		_imageContainer.m_pvr3        = true;
 		_imageContainer.m_srgb        = colorSpace > 0;
 
 		return TextureFormat::Unknown != format;
@@ -4319,6 +4323,7 @@ namespace bimg
 			_imageContainer.m_cubeMap   = tc.m_cubeMap;
 			_imageContainer.m_ktx       = false;
 			_imageContainer.m_ktxLE     = false;
+			_imageContainer.m_pvr3      = false;
 			_imageContainer.m_srgb      = false;
 
 			return _err->isOk();
@@ -5018,7 +5023,7 @@ namespace bimg
 		const uint8_t* data = (const uint8_t*)_data;
 		const uint16_t numSides = _imageContainer.m_numLayers * (_imageContainer.m_cubeMap ? 6 : 1);
 
-		if (_imageContainer.m_ktx)
+		if (_imageContainer.m_ktx || _imageContainer.m_pvr3)
 		{
 			uint32_t width  = _imageContainer.m_width;
 			uint32_t height = _imageContainer.m_height;
@@ -5031,12 +5036,16 @@ namespace bimg
 				depth  = bx::max<uint32_t>(1, depth);
 
 				const uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
-				const uint32_t size    = mipSize*numSides;
-				uint32_t imageSize = bx::toHostEndian(*(const uint32_t*)&data[offset], _imageContainer.m_ktxLE);
-				BX_ASSERT(size == imageSize, "KTX: Image size mismatch %d (expected %d).", size, imageSize);
-				BX_UNUSED(size, imageSize);
 
-				offset += sizeof(uint32_t);
+				if (_imageContainer.m_ktx)
+				{
+					const uint32_t size = mipSize * ((_imageContainer.m_numLayers<=1 && _imageContainer.m_cubeMap) ? 1 : numSides);
+					uint32_t imageSize  = bx::toHostEndian(*(const uint32_t*)&data[offset], _imageContainer.m_ktxLE);
+					BX_ASSERT(size == imageSize, "KTX: Image size mismatch %d (expected %d).", size, imageSize);
+					BX_UNUSED(size, imageSize);
+
+					offset += sizeof(uint32_t);
+				}
 
 				for (uint16_t side = 0; side < numSides; ++side)
 				{
