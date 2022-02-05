@@ -896,7 +896,7 @@ namespace bimg
 
 		if (0.0f < totalWeight)
 		{
-			// Optimized Reversible Tonemapper for Resovle
+			// Optimized Reversible Tonemapper for Resolve
 			// https://web.archive.org/web/20180717182019/https://gpuopen.com/optimized-reversible-tonemapper-for-resolve/
 			// Average, then reverse the tonemapper
 			//
