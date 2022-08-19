@@ -122,7 +122,7 @@ namespace bimg
 			RGBA32U,
 			RGBA32F,
 			B5G6R5,
-			RGBA4,
+			BGRA4,
 			RGB5A1,
 			RGB10A2,
 			RG11B10F,
