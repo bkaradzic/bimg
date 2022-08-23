@@ -430,10 +430,10 @@ namespace bimg
 	{
 		Aabb()
 		{
-			m_min[0] =  bx::kFloatMax;
-			m_min[1] =  bx::kFloatMax;
-			m_max[0] = -bx::kFloatMax;
-			m_max[1] = -bx::kFloatMax;
+			m_min[0] = bx::max<float>();
+			m_min[1] = bx::max<float>();
+			m_max[0] = bx::min<float>();
+			m_max[1] = bx::min<float>();
 		}
 
 		void add(float _x, float _y)
@@ -455,10 +455,10 @@ namespace bimg
 		bool isEmpty() const
 		{
 			// Has to have at least two points added so that no value is equal to initial state.
-			return ( (m_min[0] ==  bx::kFloatMax)
-				||   (m_min[1] ==  bx::kFloatMax)
-				||   (m_max[0] == -bx::kFloatMax)
-				||   (m_max[1] == -bx::kFloatMax)
+			return ( (m_min[0] == bx::max<float>() )
+				||   (m_min[1] == bx::max<float>() )
+				||   (m_max[0] == bx::min<float>() )
+				||   (m_max[1] == bx::min<float>() )
 				);
 		}
 
