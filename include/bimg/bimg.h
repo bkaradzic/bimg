@@ -124,6 +124,7 @@ namespace bimg
 			R5G6B5,
 			BGRA4,
 			RGBA4,
+			BGR5A1,
 			RGB5A1,
 			RGB10A2,
 			RG11B10F,

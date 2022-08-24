@@ -99,6 +99,7 @@ namespace bimg
 		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  6,  5,  0, uint8_t(bx::EncodingType::Unorm) }, // R5G6B5
 		{  16,  1, 1,  2, 1, 1,  0, 0,  4,  4,  4,  4, uint8_t(bx::EncodingType::Unorm) }, // BGRA4
 		{  16,  1, 1,  2, 1, 1,  0, 0,  4,  4,  4,  4, uint8_t(bx::EncodingType::Unorm) }, // RGBA4
+		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  5,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // BGR5A1
 		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  5,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // RGB5A1
 		{  32,  1, 1,  4, 1, 1,  0, 0, 10, 10, 10,  2, uint8_t(bx::EncodingType::Unorm) }, // RGB10A2
 		{  32,  1, 1,  4, 1, 1,  0, 0, 11, 11, 10,  0, uint8_t(bx::EncodingType::Unorm) }, // RG11B10F
@@ -190,6 +191,7 @@ namespace bimg
 		"R5G6B5",     // R5G6B5
 		"BGRA4",      // BGRA4
 		"RGBA4",      // RGBA4
+		"BGR5A1",     // BGR5A1
 		"RGB5A1",     // RGB5A1
 		"RGB10A2",    // RGB10A2
 		"RG11B10F",   // RG11B10F
@@ -1113,6 +1115,7 @@ namespace bimg
 		{ bx::packR5G6B5,     bx::unpackR5G6B5     }, // R5G6B5
 		{ bx::packBgra4,      bx::unpackBgra4      }, // BGRA4
 		{ bx::packRgba4,      bx::unpackRgba4      }, // RGBA4
+		{ bx::packBgr5a1,     bx::unpackBgr5a1     }, // BGR5A1
 		{ bx::packRgb5a1,     bx::unpackRgb5a1     }, // RGB5A1
 		{ bx::packRgb10A2,    bx::unpackRgb10A2    }, // RGB10A2
 		{ bx::packRG11B10F,   bx::unpackRG11B10F   }, // RG11B10F
@@ -3485,6 +3488,7 @@ namespace bimg
 		{ DDS_R5G6B5,                TextureFormat::R5G6B5,   false },
 		{ DDS_A4R4G4B4,              TextureFormat::BGRA4,    false },
 		{ DDS_A4R4G4B4,              TextureFormat::RGBA4,    false },
+		{ DDS_A1R5G5B5,              TextureFormat::BGR5A1,   false },
 		{ DDS_A1R5G5B5,              TextureFormat::RGB5A1,   false },
 		{ DDS_A2B10G10R10,           TextureFormat::RGB10A2,  false },
 	};
@@ -3526,6 +3530,7 @@ namespace bimg
 		{ DDS_FORMAT_B5G6R5_UNORM,        TextureFormat::R5G6B5,     false },
 		{ DDS_FORMAT_B4G4R4A4_UNORM,      TextureFormat::BGRA4,      false },
 		{ DDS_FORMAT_B4G4R4A4_UNORM,      TextureFormat::RGBA4,      false },
+		{ DDS_FORMAT_B5G5R5A1_UNORM,      TextureFormat::BGR5A1,     false },
 		{ DDS_FORMAT_B5G5R5A1_UNORM,      TextureFormat::RGB5A1,     false },
 		{ DDS_FORMAT_R10G10B10A2_UNORM,   TextureFormat::RGB10A2,    false },
 		{ DDS_FORMAT_R11G11B10_FLOAT,     TextureFormat::RG11B10F,   false },
@@ -3547,6 +3552,7 @@ namespace bimg
 		{ 16, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x0000000f, 0x000000f0, 0x00000f00, 0x0000f000 }, TextureFormat::BGRA4   },
 		{ 16, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x00000f00, 0x000000f0, 0x0000000f, 0x0000f000 }, TextureFormat::RGBA4   },
 		{ 16, DDPF_RGB,                  { 0x0000f800, 0x000007e0, 0x0000001f, 0x00000000 }, TextureFormat::R5G6B5  },
+		{ 16, DDPF_RGB,                  { 0x0000001f, 0x000003e0, 0x00007c00, 0x00008000 }, TextureFormat::BGR5A1  },
 		{ 16, DDPF_RGB,                  { 0x00007c00, 0x000003e0, 0x0000001f, 0x00008000 }, TextureFormat::RGB5A1  },
 		{ 24, DDPF_RGB,                  { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::RGB8    },
 		{ 24, DDPF_RGB,                  { 0x000000ff, 0x0000ff00, 0x00ff0000, 0x00000000 }, TextureFormat::RGB8    },
@@ -3975,6 +3981,7 @@ namespace bimg
 		{ KTX_RGB565,                                   KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_SHORT_5_6_5,         }, // R5G6B5
 		{ KTX_RGBA4,                                    KTX_ZERO,                                       KTX_BGRA,                                     KTX_UNSIGNED_SHORT_4_4_4_4,       }, // BGRA4
 		{ KTX_RGBA4,                                    KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_4_4_4_4,       }, // RGBA4
+		{ KTX_RGB5_A1,                                  KTX_ZERO,                                       KTX_BGRA,                                     KTX_UNSIGNED_SHORT_5_5_5_1,       }, // BGR5A1
 		{ KTX_RGB5_A1,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_5_5_5_1,       }, // RGB5A1
 		{ KTX_RGB10_A2,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2
 		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // RG11B10F
@@ -4156,6 +4163,7 @@ namespace bimg
 #define PVR3_RGB565           PVR3_MAKE8CC('r', 'g', 'b',   0,  5,  6,  5,  0)
 #define PVR3_BGRA4            PVR3_MAKE8CC('b', 'g', 'r', 'a',  4,  4,  4,  4)
 #define PVR3_RGBA4            PVR3_MAKE8CC('r', 'g', 'b', 'a',  4,  4,  4,  4)
+#define PVR3_BGRA51           PVR3_MAKE8CC('b', 'g', 'r', 'a',  5,  5,  5,  1)
 #define PVR3_RGBA51           PVR3_MAKE8CC('r', 'g', 'b', 'a',  5,  5,  5,  1)
 #define PVR3_RGB10A2          PVR3_MAKE8CC('r', 'g', 'b', 'a', 10, 10, 10,  2)
 
@@ -4203,6 +4211,7 @@ namespace bimg
 		{ PVR3_RGB565,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::R5G6B5  },
 		{ PVR3_BGRA4,            PVR3_CHANNEL_TYPE_ANY,   TextureFormat::BGRA4   },
 		{ PVR3_RGBA4,            PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGBA4   },
+		{ PVR3_BGRA51,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::BGR5A1  },
 		{ PVR3_RGBA51,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGB5A1  },
 		{ PVR3_RGB10A2,          PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGB10A2 },
 	};
