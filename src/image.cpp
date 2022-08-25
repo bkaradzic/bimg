@@ -96,8 +96,11 @@ namespace bimg
 		{ 128,  1, 1, 16, 1, 1,  0, 0, 32, 32, 32, 32, uint8_t(bx::EncodingType::Int  ) }, // RGBA32I
 		{ 128,  1, 1, 16, 1, 1,  0, 0, 32, 32, 32, 32, uint8_t(bx::EncodingType::Uint ) }, // RGBA32U
 		{ 128,  1, 1, 16, 1, 1,  0, 0, 32, 32, 32, 32, uint8_t(bx::EncodingType::Float) }, // RGBA32F
+		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  6,  5,  0, uint8_t(bx::EncodingType::Unorm) }, // B5G6R5
 		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  6,  5,  0, uint8_t(bx::EncodingType::Unorm) }, // R5G6B5
+		{  16,  1, 1,  2, 1, 1,  0, 0,  4,  4,  4,  4, uint8_t(bx::EncodingType::Unorm) }, // BGRA4
 		{  16,  1, 1,  2, 1, 1,  0, 0,  4,  4,  4,  4, uint8_t(bx::EncodingType::Unorm) }, // RGBA4
+		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  5,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // BGR5A1
 		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  5,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // RGB5A1
 		{  32,  1, 1,  4, 1, 1,  0, 0, 10, 10, 10,  2, uint8_t(bx::EncodingType::Unorm) }, // RGB10A2
 		{  32,  1, 1,  4, 1, 1,  0, 0, 11, 11, 10,  0, uint8_t(bx::EncodingType::Unorm) }, // RG11B10F
@@ -186,11 +189,14 @@ namespace bimg
 		"RGBA32I",    // RGBA32I
 		"RGBA32U",    // RGBA32U
 		"RGBA32F",    // RGBA32F
+		"B5G6R5",     // B5G6R5
 		"R5G6B5",     // R5G6B5
+		"BGRA4",      // BGRA4
 		"RGBA4",      // RGBA4
+		"BGR5A1",     // BGR5A1
 		"RGB5A1",     // RGB5A1
 		"RGB10A2",    // RGB10A2
-		"RG11B10F", // RG11B10F
+		"RG11B10F",   // RG11B10F
 		"<unknown>",  // UnknownDepth
 		"D16",        // D16
 		"D24",        // D24
@@ -1108,8 +1114,11 @@ namespace bimg
 		{ bx::packRgba32I,    bx::unpackRgba32I    }, // RGBA32I
 		{ bx::packRgba32U,    bx::unpackRgba32U    }, // RGBA32U
 		{ bx::packRgba32F,    bx::unpackRgba32F    }, // RGBA32F
+		{ bx::packB5G6R5,     bx::unpackB5G6R5     }, // B5G6R5
 		{ bx::packR5G6B5,     bx::unpackR5G6B5     }, // R5G6B5
+		{ bx::packBgra4,      bx::unpackBgra4      }, // BGRA4
 		{ bx::packRgba4,      bx::unpackRgba4      }, // RGBA4
+		{ bx::packBgr5a1,     bx::unpackBgr5a1     }, // BGR5A1
 		{ bx::packRgb5a1,     bx::unpackRgb5a1     }, // RGB5A1
 		{ bx::packRgb10A2,    bx::unpackRgb10A2    }, // RGB10A2
 		{ bx::packRG11B10F,   bx::unpackRG11B10F   }, // RG11B10F
@@ -3479,8 +3488,11 @@ namespace bimg
 		{ DDS_A16B16G16R16,          TextureFormat::RGBA16,   false },
 		{ DDS_A16B16G16R16F,         TextureFormat::RGBA16F,  false },
 		{ DDS_A32B32G32R32F,         TextureFormat::RGBA32F,  false },
+		{ DDS_R5G6B5,                TextureFormat::B5G6R5,   false },
 		{ DDS_R5G6B5,                TextureFormat::R5G6B5,   false },
+		{ DDS_A4R4G4B4,              TextureFormat::BGRA4,    false },
 		{ DDS_A4R4G4B4,              TextureFormat::RGBA4,    false },
+		{ DDS_A1R5G5B5,              TextureFormat::BGR5A1,   false },
 		{ DDS_A1R5G5B5,              TextureFormat::RGB5A1,   false },
 		{ DDS_A2B10G10R10,           TextureFormat::RGB10A2,  false },
 	};
@@ -3519,8 +3531,11 @@ namespace bimg
 		{ DDS_FORMAT_R16G16B16A16_FLOAT,  TextureFormat::RGBA16F,    false },
 		{ DDS_FORMAT_R32G32B32A32_UINT,   TextureFormat::RGBA32U,    false },
 		{ DDS_FORMAT_R32G32B32A32_FLOAT,  TextureFormat::RGBA32F,    false },
+		{ DDS_FORMAT_B5G6R5_UNORM,        TextureFormat::B5G6R5,     false },
 		{ DDS_FORMAT_B5G6R5_UNORM,        TextureFormat::R5G6B5,     false },
+		{ DDS_FORMAT_B4G4R4A4_UNORM,      TextureFormat::BGRA4,      false },
 		{ DDS_FORMAT_B4G4R4A4_UNORM,      TextureFormat::RGBA4,      false },
+		{ DDS_FORMAT_B5G5R5A1_UNORM,      TextureFormat::BGR5A1,     false },
 		{ DDS_FORMAT_B5G5R5A1_UNORM,      TextureFormat::RGB5A1,     false },
 		{ DDS_FORMAT_R10G10B10A2_UNORM,   TextureFormat::RGB10A2,    false },
 		{ DDS_FORMAT_R11G11B10_FLOAT,     TextureFormat::RG11B10F,   false },
@@ -3539,8 +3554,11 @@ namespace bimg
 		{  8, DDPF_LUMINANCE,            { 0x000000ff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R8      },
 		{ 16, DDPF_BUMPDUDV,             { 0x000000ff, 0x0000ff00, 0x00000000, 0x00000000 }, TextureFormat::RG8S    },
 		{ 16, DDPF_RGB,                  { 0x0000ffff, 0x00000000, 0x00000000, 0x00000000 }, TextureFormat::R16U    },
+		{ 16, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x0000000f, 0x000000f0, 0x00000f00, 0x0000f000 }, TextureFormat::BGRA4   },
 		{ 16, DDPF_RGB|DDPF_ALPHAPIXELS, { 0x00000f00, 0x000000f0, 0x0000000f, 0x0000f000 }, TextureFormat::RGBA4   },
+		{ 16, DDPF_RGB,                  { 0x0000001f, 0x000007e0, 0x0000f800, 0x00000000 }, TextureFormat::B5G6R5  },
 		{ 16, DDPF_RGB,                  { 0x0000f800, 0x000007e0, 0x0000001f, 0x00000000 }, TextureFormat::R5G6B5  },
+		{ 16, DDPF_RGB,                  { 0x0000001f, 0x000003e0, 0x00007c00, 0x00008000 }, TextureFormat::BGR5A1  },
 		{ 16, DDPF_RGB,                  { 0x00007c00, 0x000003e0, 0x0000001f, 0x00008000 }, TextureFormat::RGB5A1  },
 		{ 24, DDPF_RGB,                  { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }, TextureFormat::RGB8    },
 		{ 24, DDPF_RGB,                  { 0x000000ff, 0x0000ff00, 0x00ff0000, 0x00000000 }, TextureFormat::RGB8    },
@@ -3966,8 +3984,11 @@ namespace bimg
 		{ KTX_RGBA32I,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_INT,                          }, // RGBA32I
 		{ KTX_RGBA32UI,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_INT,                 }, // RGBA32U
 		{ KTX_RGBA32F,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_FLOAT,                        }, // RGBA32F
+		{ KTX_RGB565,                                   KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_SHORT_5_6_5,         }, // B5G6R5
 		{ KTX_RGB565,                                   KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_SHORT_5_6_5,         }, // R5G6B5
+		{ KTX_RGBA4,                                    KTX_ZERO,                                       KTX_BGRA,                                     KTX_UNSIGNED_SHORT_4_4_4_4,       }, // BGRA4
 		{ KTX_RGBA4,                                    KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_4_4_4_4,       }, // RGBA4
+		{ KTX_RGB5_A1,                                  KTX_ZERO,                                       KTX_BGRA,                                     KTX_UNSIGNED_SHORT_5_5_5_1,       }, // BGR5A1
 		{ KTX_RGB5_A1,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_5_5_5_1,       }, // RGB5A1
 		{ KTX_RGB10_A2,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2
 		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // RG11B10F
@@ -4146,8 +4167,11 @@ namespace bimg
 #define PVR3_BGRA8            PVR3_MAKE8CC('b', 'g', 'r', 'a',  8,  8,  8,  8)
 #define PVR3_RGBA16           PVR3_MAKE8CC('r', 'g', 'b', 'a', 16, 16, 16, 16)
 #define PVR3_RGBA32           PVR3_MAKE8CC('r', 'g', 'b', 'a', 32, 32, 32, 32)
+#define PVR3_BGR565           PVR3_MAKE8CC('b', 'g', 'r',   0,  5,  6,  5,  0)
 #define PVR3_RGB565           PVR3_MAKE8CC('r', 'g', 'b',   0,  5,  6,  5,  0)
+#define PVR3_BGRA4            PVR3_MAKE8CC('b', 'g', 'r', 'a',  4,  4,  4,  4)
 #define PVR3_RGBA4            PVR3_MAKE8CC('r', 'g', 'b', 'a',  4,  4,  4,  4)
+#define PVR3_BGRA51           PVR3_MAKE8CC('b', 'g', 'r', 'a',  5,  5,  5,  1)
 #define PVR3_RGBA51           PVR3_MAKE8CC('r', 'g', 'b', 'a',  5,  5,  5,  1)
 #define PVR3_RGB10A2          PVR3_MAKE8CC('r', 'g', 'b', 'a', 10, 10, 10,  2)
 
@@ -4192,8 +4216,11 @@ namespace bimg
 		{ PVR3_RGBA16,           PVR3_CHANNEL_TYPE_FLOAT, TextureFormat::RGBA16F },
 		{ PVR3_RGBA32,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGBA32U },
 		{ PVR3_RGBA32,           PVR3_CHANNEL_TYPE_FLOAT, TextureFormat::RGBA32F },
+		{ PVR3_RGB565,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::B5G6R5  },
 		{ PVR3_RGB565,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::R5G6B5  },
+		{ PVR3_BGRA4,            PVR3_CHANNEL_TYPE_ANY,   TextureFormat::BGRA4   },
 		{ PVR3_RGBA4,            PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGBA4   },
+		{ PVR3_BGRA51,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::BGR5A1  },
 		{ PVR3_RGBA51,           PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGB5A1  },
 		{ PVR3_RGB10A2,          PVR3_CHANNEL_TYPE_ANY,   TextureFormat::RGB10A2 },
 	};
