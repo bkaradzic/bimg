@@ -1132,7 +1132,7 @@ namespace bimg
 		{ bx::packR32F,       bx::unpackR32F       }, // D32F
 		{ bx::packR8,         bx::unpackR8         }, // D0S8
 	};
-	BX_STATIC_ASSERT(TextureFormat::Count ==       BX_COUNTOF(s_packUnpack) );
+	BX_STATIC_ASSERT(TextureFormat::Count == BX_COUNTOF(s_packUnpack) );
 
 	PackFn getPack(TextureFormat::Enum _format)
 	{
@@ -3665,6 +3665,8 @@ namespace bimg
 			uint32_t miscFlags2;
 			total += bx::read(_reader, miscFlags2, _err);
 		}
+
+		BX_UNUSED(total);
 
 		if (!_err->isOk() )
 		{
