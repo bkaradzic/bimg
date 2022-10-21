@@ -152,6 +152,7 @@ namespace bimg
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
 					const float quality = s_astcQuality[_quality];
 					const astcenc_profile profile = ASTCENC_PRF_LDR; //Linear LDR color profile
+					astcenc_error status;
 
 					//Create and init config and context
 					astcenc_config config{};
@@ -159,10 +160,18 @@ namespace bimg
 					if (Quality::NormalMapDefault <= _quality) {
 						astcFlags |= ASTCENC_FLG_MAP_NORMAL;
 					}
-					astcenc_config_init(profile, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, 1, quality, astcFlags, &config);
+					status = astcenc_config_init(profile, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, 1, quality, astcFlags, &config);
+					if (status != ASTCENC_SUCCESS) {
+						BX_TRACE("astc error %s", astcenc_get_error_string(status));
+						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to initialize astc config!");
+					}
 
 					astcenc_context* context;
-					astcenc_context_alloc(&config, thread_count, &context);
+					status = astcenc_context_alloc(&config, thread_count, &context);
+					if (status != ASTCENC_SUCCESS) {
+						BX_TRACE("astc error %s", astcenc_get_error_string(status));
+						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to alloc astc context!");
+					}
 
 					//Put image data into an astcenc_image
 					astcenc_image image{};
@@ -181,16 +190,19 @@ namespace bimg
 						static const astcenc_swizzle swizzle { //0001/rrrg swizzle corresponds to ASTC_ENC_NORMAL_RA
 							ASTCENC_SWZ_R, ASTCENC_SWZ_R, ASTCENC_SWZ_R, ASTCENC_SWZ_G
 						};
-						astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
+						status = astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
 					}
 					else
 					{
 						static const astcenc_swizzle swizzle { //0123/rgba swizzle corresponds to ASTC_RGBA
 							ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A
 						};
-						astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
+						status = astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
 					}
-
+					if (status != ASTCENC_SUCCESS) {
+						BX_TRACE("astc error %s", astcenc_get_error_string(status));
+						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to compress astc image!");
+					}
 					astcenc_context_free(context);
 					
 				}
