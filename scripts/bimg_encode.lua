@@ -6,6 +6,10 @@
 project "bimg_encode"
 	kind "StaticLib"
 
+	removeflags {
+		"FloatFast", -- astc-encoder doesn't work with it.
+	}
+
 	includedirs {
 		path.join(BIMG_DIR, "include"),
 		path.join(BIMG_DIR, "3rdparty"),
