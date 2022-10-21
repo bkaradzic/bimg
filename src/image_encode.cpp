@@ -12,7 +12,6 @@
 #include <nvtt/nvtt.h>
 #include <pvrtc/PvrTcEncoder.h>
 #include <edtaa3/edtaa3func.h>
-#include <astc/astc_lib.h>
 #include <astcenc.h>
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();
@@ -42,16 +41,16 @@ namespace bimg
 	};
 	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_squishQuality) );
 
-	static const ASTC_COMPRESS_MODE s_astcQuality[] =
+	static const float s_astcQuality[] =
 	{
 		// Standard
-		ASTC_COMPRESS_MEDIUM,       // Default
-		ASTC_COMPRESS_THOROUGH,     // Highest
-		ASTC_COMPRESS_FAST,         // Fastest
+		ASTCENC_PRE_MEDIUM,       // Default
+		ASTCENC_PRE_THOROUGH,     // Highest
+		ASTCENC_PRE_FAST,         // Fastest
 		// Normal map
-		ASTC_COMPRESS_MEDIUM,       // Default
-		ASTC_COMPRESS_THOROUGH,     // Highest
-		ASTC_COMPRESS_FAST,         // Fastest
+		ASTCENC_PRE_MEDIUM,       // Default
+		ASTCENC_PRE_THOROUGH,     // Highest
+		ASTCENC_PRE_FAST,         // Fastest
 	};
 	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_astcQuality));
 
@@ -149,19 +148,51 @@ namespace bimg
 			case TextureFormat::ASTC8x6:
 			case TextureFormat::ASTC10x5:
 				{
+					const unsigned int thread_count = 1;
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
+					const float quality = s_astcQuality[_quality];
+					const astcenc_profile profile = ASTCENC_PRF_LDR; //Linear LDR color profile
 
-					ASTC_COMPRESS_MODE compress_mode = s_astcQuality[_quality];
-					ASTC_DECODE_MODE   decode_mode   = ASTC_DECODE_LDR_LINEAR;
+					//Create and init config and context
+					astcenc_config config{};
+					unsigned int astcFlags = ASTCENC_FLG_SELF_DECOMPRESS_ONLY;
+					if (Quality::NormalMapDefault <= _quality) {
+						astcFlags |= ASTCENC_FLG_MAP_NORMAL;
+					}
+					astcenc_config_init(profile, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, 1, quality, astcFlags, &config);
+
+					astcenc_context* context;
+					astcenc_context_alloc(&config, thread_count, &context);
+
+					//Put image data into an astcenc_image
+					astcenc_image image{};
+					image.dim_x = _width;
+					image.dim_y = _height;
+					image.dim_z = 1;
+					image.data_type = ASTCENC_TYPE_U8;
+					image.data = reinterpret_cast<void**>(const_cast<uint8_t**>(&src));
+
+					const size_t block_count_x = (_width + astcBlockInfo.blockWidth - 1) / astcBlockInfo.blockWidth;
+					const size_t block_count_y = (_height + astcBlockInfo.blockHeight - 1) / astcBlockInfo.blockHeight;
+					const size_t comp_len = block_count_x * block_count_y * 16;
 
 					if (Quality::NormalMapDefault <= _quality)
 					{
-						astc_compress(_width, _height, src, ASTC_ENC_NORMAL_RA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+						static const astcenc_swizzle swizzle { //0001/rrrg swizzle corresponds to ASTC_ENC_NORMAL_RA
+							ASTCENC_SWZ_R, ASTCENC_SWZ_R, ASTCENC_SWZ_R, ASTCENC_SWZ_G
+						};
+						astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
 					}
 					else
 					{
-						astc_compress(_width, _height, src, ASTC_RGBA, srcPitch, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, compress_mode, decode_mode, dst);
+						static const astcenc_swizzle swizzle { //0123/rgba swizzle corresponds to ASTC_RGBA
+							ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A
+						};
+						astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
 					}
+
+					astcenc_context_free(context);
+					
 				}
 				break;
 
