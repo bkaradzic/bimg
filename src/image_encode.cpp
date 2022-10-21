@@ -162,15 +162,17 @@ namespace bimg
 					}
 					status = astcenc_config_init(profile, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, 1, quality, astcFlags, &config);
 					if (status != ASTCENC_SUCCESS) {
-						BX_TRACE("astc error %s", astcenc_get_error_string(status));
+						BX_TRACE("astc error in config init %s", astcenc_get_error_string(status));
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to initialize astc config!");
+						break;
 					}
 
 					astcenc_context* context;
 					status = astcenc_context_alloc(&config, thread_count, &context);
 					if (status != ASTCENC_SUCCESS) {
-						BX_TRACE("astc error %s", astcenc_get_error_string(status));
+						BX_TRACE("astc error in context alloc %s", astcenc_get_error_string(status));
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to alloc astc context!");
+						break;
 					}
 
 					//Put image data into an astcenc_image
@@ -200,7 +202,7 @@ namespace bimg
 						status = astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
 					}
 					if (status != ASTCENC_SUCCESS) {
-						BX_TRACE("astc error %s", astcenc_get_error_string(status));
+						BX_TRACE("astc error in compress image %s", astcenc_get_error_string(status));
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to compress astc image!");
 					}
 					astcenc_context_free(context);
