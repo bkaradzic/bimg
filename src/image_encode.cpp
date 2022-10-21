@@ -204,9 +204,11 @@ namespace bimg
 					if (status != ASTCENC_SUCCESS) {
 						BX_TRACE("astc error in compress image %s", astcenc_get_error_string(status));
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to compress astc image!");
+						astcenc_context_free(context);
+						break;
 					}
+
 					astcenc_context_free(context);
-					
 				}
 				break;
 
