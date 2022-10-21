@@ -13,6 +13,7 @@
 #include <pvrtc/PvrTcEncoder.h>
 #include <edtaa3/edtaa3func.h>
 #include <astc/astc_lib.h>
+#include <astcenc.h>
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // warning C4100: 'alloc_context': unreferenced formal parameter
