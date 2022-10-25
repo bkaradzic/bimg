@@ -142,11 +142,19 @@ namespace bimg
 				break;
 
 			case TextureFormat::ASTC4x4:
+			case TextureFormat::ASTC5x4:
 			case TextureFormat::ASTC5x5:
+			case TextureFormat::ASTC6x5:
 			case TextureFormat::ASTC6x6:
 			case TextureFormat::ASTC8x5:
 			case TextureFormat::ASTC8x6:
+			case TextureFormat::ASTC8x8:
 			case TextureFormat::ASTC10x5:
+			case TextureFormat::ASTC10x6:
+			case TextureFormat::ASTC10x8:
+			case TextureFormat::ASTC10x10:
+			case TextureFormat::ASTC12x10:
+			case TextureFormat::ASTC12x12:
 				{
 					const unsigned int thread_count = 1;
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
