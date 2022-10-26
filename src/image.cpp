@@ -6,7 +6,7 @@
 #include "bimg_p.h"
 #include <bx/hash.h>
 
-#include <astc-codec/astc-codec.h>
+#include <astcenc.h>
 
 #include <bx/debug.h>
 
@@ -4918,32 +4918,52 @@ namespace bimg
 		case TextureFormat::ASTC12x12:
 			if (BX_ENABLED(BIMG_DECODE_ASTC) )
 			{
-				if (!astc_codec::ASTCDecompressToRGBA(
-					  (const uint8_t*)_src
-					, imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, _srcFormat)
-					, _width
-					, _height
-					, TextureFormat::ASTC4x4  == _srcFormat ? astc_codec::FootprintType::k4x4
-					: TextureFormat::ASTC5x4  == _srcFormat ? astc_codec::FootprintType::k5x4
-					: TextureFormat::ASTC5x5  == _srcFormat ? astc_codec::FootprintType::k5x5
-					: TextureFormat::ASTC6x5  == _srcFormat ? astc_codec::FootprintType::k6x5
-					: TextureFormat::ASTC6x6  == _srcFormat ? astc_codec::FootprintType::k6x6
-					: TextureFormat::ASTC8x5  == _srcFormat ? astc_codec::FootprintType::k8x5
-					: TextureFormat::ASTC8x6  == _srcFormat ? astc_codec::FootprintType::k8x6
-					: TextureFormat::ASTC8x8  == _srcFormat ? astc_codec::FootprintType::k8x8
-					: TextureFormat::ASTC10x5 == _srcFormat ? astc_codec::FootprintType::k10x5
-					: TextureFormat::ASTC10x6 == _srcFormat ? astc_codec::FootprintType::k10x6
-					: TextureFormat::ASTC10x8 == _srcFormat ? astc_codec::FootprintType::k10x8
-					: TextureFormat::ASTC10x10== _srcFormat ? astc_codec::FootprintType::k10x10
-					: TextureFormat::ASTC12x10== _srcFormat ? astc_codec::FootprintType::k12x10
-					:										  astc_codec::FootprintType::k12x12
-					, (uint8_t*)_dst
-					, _width*_height*4
-					, _dstPitch
-					) )
-				{
-					imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
-				}
+					const unsigned int thread_count = 1;
+					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_srcFormat);
+					const float quality = ASTCENC_PRE_MEDIUM;
+					const astcenc_profile profile = ASTCENC_PRF_LDR; //Linear LDR color profile
+					astcenc_error status;
+
+					//Create and init config and context
+					astcenc_config config{};
+					const unsigned int astcFlags = ASTCENC_FLG_DECOMPRESS_ONLY;
+					status = astcenc_config_init(profile, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, 1, quality, astcFlags, &config);
+					if (status != ASTCENC_SUCCESS) {
+						BX_TRACE("astc error in config init %s", astcenc_get_error_string(status));
+						imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+						break;
+					}
+
+					astcenc_context* context;
+					status = astcenc_context_alloc(&config, thread_count, &context);
+					if (status != ASTCENC_SUCCESS) {
+						BX_TRACE("astc error in context alloc %s", astcenc_get_error_string(status));
+						imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+						break;
+					}
+
+					//Put image data into an astcenc_image
+					astcenc_image image{};
+					image.dim_x = _width;
+					image.dim_y = _height;
+					image.dim_z = 1;
+					image.data_type = ASTCENC_TYPE_U8;
+					image.data = &_dst;
+					const uint32_t size = imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, _srcFormat);
+
+					static const astcenc_swizzle swizzle { //0123/rgba swizzle corresponds to ASTC_RGBA
+						ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A
+					};
+					status = astcenc_decompress_image(context, static_cast<const uint8_t*>(_src), size, &image, &swizzle, 0);
+					
+					if (status != ASTCENC_SUCCESS) {
+						BX_TRACE("astc error in compress image %s", astcenc_get_error_string(status));
+						imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+						astcenc_context_free(context);
+						break;
+					}
+
+					astcenc_context_free(context);
 			}
 			else
 			{
