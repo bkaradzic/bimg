@@ -5695,7 +5695,6 @@ namespace bimg
 		total += bx::write(_writer, pitchOrLinearSize, _err);
 		total += bx::write(_writer, _depth, _err);
 		total += bx::write(_writer, uint32_t(_numMips), _err);
-		//total += bx::write(_writer, uint32_t(_numLayers), _err);
 		total += bx::writeRep(_writer, 0, 44, _err); // reserved1
 
 		if (UINT32_MAX != ddspf)
