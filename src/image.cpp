@@ -5618,7 +5618,7 @@ namespace bimg
 		return total;
 	}
 
-	static int32_t imageWriteDdsHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, bx::Error* _err)
+	static int32_t imageWriteDdsHeader(bx::WriterI* _writer, TextureFormat::Enum _format, bool _cubeMap, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, uint32_t _numLayers, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
@@ -5695,7 +5695,6 @@ namespace bimg
 		total += bx::write(_writer, pitchOrLinearSize, _err);
 		total += bx::write(_writer, _depth, _err);
 		total += bx::write(_writer, uint32_t(_numMips), _err);
-
 		total += bx::writeRep(_writer, 0, 44, _err); // reserved1
 
 		if (UINT32_MAX != ddspf)
@@ -5749,7 +5748,7 @@ namespace bimg
 			total += bx::write(_writer, dxgiFormat, _err);
 			total += bx::write(_writer, uint32_t(1 < _depth ? DDS_DX10_DIMENSION_TEXTURE3D : DDS_DX10_DIMENSION_TEXTURE2D), _err); // dims
 			total += bx::write(_writer, uint32_t(_cubeMap   ? DDS_DX10_MISC_TEXTURECUBE    : 0), _err); // miscFlags
-			total += bx::write(_writer, uint32_t(1), _err); // arraySize
+			total += bx::write(_writer, uint32_t(_numLayers), _err); // arraySize
 			total += bx::write(_writer, uint32_t(0), _err); // miscFlags2
 
 			BX_WARN(total-headerStart == DDS_HEADER_SIZE+20
@@ -5775,6 +5774,7 @@ namespace bimg
 			, _imageContainer.m_height
 			, _imageContainer.m_depth
 			, _imageContainer.m_numMips
+			, _imageContainer.m_numLayers
 			, _err
 			);
 
@@ -5783,7 +5783,7 @@ namespace bimg
 			return total;
 		}
 
-		for (uint8_t side = 0, numSides = _imageContainer.m_cubeMap ? 6 : 1; side < numSides && _err->isOk(); ++side)
+		for (uint8_t side = 0, numSides = _imageContainer.m_numLayers * (_imageContainer.m_cubeMap ? 6 : 1); side < numSides && _err->isOk(); ++side)
 		{
 			for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num && _err->isOk(); ++lod)
 			{
