@@ -25,6 +25,12 @@ project "bimg"
 
 	using_bx()
 
+	configuration {}
+
+	removeflags {
+		"FloatFast", -- astc-encoder doesn't work with it.
+	}
+
 	configuration { "linux-*" }
 		buildoptions {
 			"-fPIC",

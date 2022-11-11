@@ -52,7 +52,7 @@ namespace bimg
 		ASTCENC_PRE_THOROUGH,     // Highest
 		ASTCENC_PRE_FAST,         // Fastest
 	};
-	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_astcQuality));
+	BX_STATIC_ASSERT(Quality::Count == BX_COUNTOF(s_astcQuality) );
 
 	void imageEncodeFromRgba8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
 	{
@@ -156,61 +156,83 @@ namespace bimg
 			case TextureFormat::ASTC12x10:
 			case TextureFormat::ASTC12x12:
 				{
-					const unsigned int thread_count = 1;
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
-					const float quality = s_astcQuality[_quality];
-					const astcenc_profile profile = ASTCENC_PRF_LDR; //Linear LDR color profile
-					astcenc_error status;
 
-					//Create and init config and context
 					astcenc_config config{};
-					unsigned int astcFlags = ASTCENC_FLG_SELF_DECOMPRESS_ONLY;
-					if (Quality::NormalMapDefault <= _quality) {
+
+					uint32_t astcFlags = ASTCENC_FLG_SELF_DECOMPRESS_ONLY;
+
+					if (Quality::NormalMapDefault <= _quality)
+					{
 						astcFlags |= ASTCENC_FLG_MAP_NORMAL;
 					}
-					status = astcenc_config_init(profile, astcBlockInfo.blockWidth, astcBlockInfo.blockHeight, 1, quality, astcFlags, &config);
-					if (status != ASTCENC_SUCCESS) {
-						BX_TRACE("astc error in config init %s", astcenc_get_error_string(status));
+
+					astcenc_error status = astcenc_config_init(
+						  ASTCENC_PRF_LDR
+						, astcBlockInfo.blockWidth
+						, astcBlockInfo.blockHeight
+						, 1
+						, s_astcQuality[_quality]
+						, astcFlags
+						, &config
+						);
+
+					if (status != ASTCENC_SUCCESS)
+					{
+						BX_TRACE("astc error in config init %s", astcenc_get_error_string(status) );
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to initialize astc config!");
 						break;
 					}
 
 					astcenc_context* context;
-					status = astcenc_context_alloc(&config, thread_count, &context);
-					if (status != ASTCENC_SUCCESS) {
-						BX_TRACE("astc error in context alloc %s", astcenc_get_error_string(status));
+					status = astcenc_context_alloc(&config, 1, &context);
+
+					if (status != ASTCENC_SUCCESS)
+					{
+						BX_TRACE("astc error in context alloc %s", astcenc_get_error_string(status) );
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to alloc astc context!");
 						break;
 					}
 
-					//Put image data into an astcenc_image
 					astcenc_image image{};
-					image.dim_x = _width;
-					image.dim_y = _height;
-					image.dim_z = 1;
+					image.dim_x     = _width;
+					image.dim_y     = _height;
+					image.dim_z     = 1;
 					image.data_type = ASTCENC_TYPE_U8;
-					image.data = reinterpret_cast<void**>(const_cast<uint8_t**>(&src));
+					image.data      = (void**)&src;
 
-					const size_t block_count_x = (_width + astcBlockInfo.blockWidth - 1) / astcBlockInfo.blockWidth;
-					const size_t block_count_y = (_height + astcBlockInfo.blockHeight - 1) / astcBlockInfo.blockHeight;
-					const size_t comp_len = block_count_x * block_count_y * 16;
+					const size_t blockCountX = (_width  + astcBlockInfo.blockWidth  - 1) / astcBlockInfo.blockWidth;
+					const size_t blockCountY = (_height + astcBlockInfo.blockHeight - 1) / astcBlockInfo.blockHeight;
+					const size_t compLen     = blockCountX * blockCountY * 16;
 
 					if (Quality::NormalMapDefault <= _quality)
 					{
-						static const astcenc_swizzle swizzle { //0001/rrrg swizzle corresponds to ASTC_ENC_NORMAL_RA
-							ASTCENC_SWZ_R, ASTCENC_SWZ_R, ASTCENC_SWZ_R, ASTCENC_SWZ_G
+						static const astcenc_swizzle swizzle
+						{  //0001/rrrg swizzle corresponds to ASTC_ENC_NORMAL_RA
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_G,
 						};
-						status = astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
+
+						status = astcenc_compress_image(context, &image, &swizzle, dst, compLen, 0);
 					}
 					else
 					{
-						static const astcenc_swizzle swizzle { //0123/rgba swizzle corresponds to ASTC_RGBA
-							ASTCENC_SWZ_R, ASTCENC_SWZ_G, ASTCENC_SWZ_B, ASTCENC_SWZ_A
+						static const astcenc_swizzle swizzle
+						{  //0123/rgba swizzle corresponds to ASTC_RGBA
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_G,
+							ASTCENC_SWZ_B,
+							ASTCENC_SWZ_A,
 						};
-						status = astcenc_compress_image(context, &image, &swizzle, dst, comp_len, 0);
+
+						status = astcenc_compress_image(context, &image, &swizzle, dst, compLen, 0);
 					}
-					if (status != ASTCENC_SUCCESS) {
-						BX_TRACE("astc error in compress image %s", astcenc_get_error_string(status));
+
+					if (status != ASTCENC_SUCCESS)
+					{
+						BX_TRACE("astc error in compress image %s", astcenc_get_error_string(status) );
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to compress astc image!");
 						astcenc_context_free(context);
 						break;

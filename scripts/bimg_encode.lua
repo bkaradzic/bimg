@@ -6,10 +6,6 @@
 project "bimg_encode"
 	kind "StaticLib"
 
-	removeflags {
-		"FloatFast", -- astc-encoder doesn't work with it.
-	}
-
 	includedirs {
 		path.join(BIMG_DIR, "include"),
 		path.join(BIMG_DIR, "3rdparty"),
@@ -41,6 +37,12 @@ project "bimg_encode"
 	}
 
 	using_bx()
+
+	configuration {}
+
+	removeflags {
+		"FloatFast", -- astc-encoder doesn't work with it.
+	}
 
 	configuration { "linux-*" }
 		buildoptions {

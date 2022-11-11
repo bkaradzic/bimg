@@ -424,11 +424,7 @@ static float compress_symbolic_block_for_partition_1plane(
 
 	// For each mode, use the angular method to compute a shift
 	compute_angular_endpoints_1plane(
-	    config.tune_low_weight_count_limit,
-	    only_always, bsd,
-	    dec_weights_ideal,
-	    max_weight_quant,
-	    tmpbuf);
+	    only_always, bsd, dec_weights_ideal, max_weight_quant, tmpbuf);
 
 	float* weight_low_value = tmpbuf.weight_low_value1;
 	float* weight_high_value = tmpbuf.weight_high_value1;
@@ -795,9 +791,7 @@ static float compress_symbolic_block_for_partition_2planes(
 	float min_wt_cutoff2 = hmin_s(select(err_max, min_ep2, err_mask));
 
 	compute_angular_endpoints_2planes(
-	    config.tune_low_weight_count_limit,
-	    bsd, dec_weights_ideal, max_weight_quant,
-	    tmpbuf);
+	    bsd, dec_weights_ideal, max_weight_quant, tmpbuf);
 
 	// For each mode (which specifies a decimation and a quantization):
 	//     * Compute number of bits needed for the quantized weights
@@ -1130,12 +1124,13 @@ static float prepare_block_statistics(
 
 	aa_var -= as * (as * rpt);
 
-	rg_cov *= astc::rsqrt(astc::max(rr_var * gg_var, 1e-30f));
-	rb_cov *= astc::rsqrt(astc::max(rr_var * bb_var, 1e-30f));
-	ra_cov *= astc::rsqrt(astc::max(rr_var * aa_var, 1e-30f));
-	gb_cov *= astc::rsqrt(astc::max(gg_var * bb_var, 1e-30f));
-	ga_cov *= astc::rsqrt(astc::max(gg_var * aa_var, 1e-30f));
-	ba_cov *= astc::rsqrt(astc::max(bb_var * aa_var, 1e-30f));
+	// These will give a NaN if a channel is constant - these are fixed up in the next step
+	rg_cov *= astc::rsqrt(rr_var * gg_var);
+	rb_cov *= astc::rsqrt(rr_var * bb_var);
+	ra_cov *= astc::rsqrt(rr_var * aa_var);
+	gb_cov *= astc::rsqrt(gg_var * bb_var);
+	ga_cov *= astc::rsqrt(gg_var * aa_var);
+	ba_cov *= astc::rsqrt(bb_var * aa_var);
 
 	if (astc::isnan(rg_cov)) rg_cov = 1.0f;
 	if (astc::isnan(rb_cov)) rb_cov = 1.0f;
@@ -1144,7 +1139,7 @@ static float prepare_block_statistics(
 	if (astc::isnan(ga_cov)) ga_cov = 1.0f;
 	if (astc::isnan(ba_cov)) ba_cov = 1.0f;
 
-	float lowest_correlation = astc::min(fabsf(rg_cov), fabsf(rb_cov));
+	float lowest_correlation = astc::min(fabsf(rg_cov),      fabsf(rb_cov));
 	lowest_correlation       = astc::min(lowest_correlation, fabsf(ra_cov));
 	lowest_correlation       = astc::min(lowest_correlation, fabsf(gb_cov));
 	lowest_correlation       = astc::min(lowest_correlation, fabsf(ga_cov));
@@ -1196,6 +1191,18 @@ void compress_block(
 
 	bool block_skip_two_plane = false;
 	int max_partitions = ctx.config.tune_partition_count_limit;
+
+	unsigned int requested_partition_indices[3] {
+		ctx.config.tune_2partition_index_limit,
+		ctx.config.tune_3partition_index_limit,
+		ctx.config.tune_4partition_index_limit
+	};
+
+	unsigned int requested_partition_trials[3] {
+		ctx.config.tune_2partitioning_candidate_limit,
+		ctx.config.tune_3partitioning_candidate_limit,
+		ctx.config.tune_4partitioning_candidate_limit
+	};
 
 #if defined(ASTCENC_DIAGNOSTICS)
 	// Do this early in diagnostic builds so we can dump uniform metrics
@@ -1366,13 +1373,19 @@ void compress_block(
 	// Find best blocks for 2, 3 and 4 partitions
 	for (int partition_count = 2; partition_count <= max_partitions; partition_count++)
 	{
-		unsigned int partition_indices[2] { 0 };
+		unsigned int partition_indices[TUNE_MAX_PARTITIIONING_CANDIDATES];
 
-		find_best_partition_candidates(bsd, blk, partition_count,
-		                               ctx.config.tune_partition_index_limit,
-		                               partition_indices);
+		unsigned int requested_indices = requested_partition_indices[partition_count - 2];
 
-		for (unsigned int i = 0; i < 2; i++)
+		unsigned int requested_trials = requested_partition_trials[partition_count - 2];
+		requested_trials = astc::min(requested_trials, requested_indices);
+
+		unsigned int actual_trials = find_best_partition_candidates(
+		    bsd, blk, partition_count, requested_indices, partition_indices, requested_trials);
+
+		float best_error_in_prev = best_errorvals_for_pcount[partition_count - 2];
+
+		for (unsigned int i = 0; i < actual_trials; i++)
 		{
 			TRACE_NODE(node1, "pass");
 			trace_add_data("partition_count", partition_count);
@@ -1387,6 +1400,20 @@ void compress_block(
 			    scb, tmpbuf, quant_limit);
 
 			best_errorvals_for_pcount[partition_count - 1] = astc::min(best_errorvals_for_pcount[partition_count - 1], errorval);
+
+			// If using N partitions doesn't improve much over using N-1 partitions then skip trying
+			// N+1. Error can dramatically improve if the data is correlated or non-correlated and
+			// aligns with a partitioning that suits that encoding, so for this inner loop check add
+			// a large error scale because the "other" trial could be a lot better. In total the
+			// error must be at least 2x worse than the best existing error to early-out.
+			float best_error = best_errorvals_for_pcount[partition_count - 1];
+			float best_error_scale = exit_thresholds_for_pcount[partition_count - 1] * 2.0f;
+			if (best_error > (best_error_in_prev * best_error_scale))
+			{
+				trace_add_data("skip", "tune_partition_early_out_limit_factor");
+				goto END_OF_TESTS;
+			}
+
 			if (errorval < error_threshold)
 			{
 				trace_add_data("exit", "quality hit");
@@ -1396,7 +1423,6 @@ void compress_block(
 
 		// If using N partitions doesn't improve much over using N-1 partitions then skip trying N+1
 		float best_error = best_errorvals_for_pcount[partition_count - 1];
-		float best_error_in_prev = best_errorvals_for_pcount[partition_count - 2];
 		float best_error_scale = exit_thresholds_for_pcount[partition_count - 1];
 		if (best_error > (best_error_in_prev * best_error_scale))
 		{
