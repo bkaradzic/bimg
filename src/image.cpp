@@ -4186,7 +4186,7 @@ namespace bimg
 		_imageContainer.m_numLayers   = uint16_t(bx::max<uint32_t>(numberOfArrayElements, 1) );
 		_imageContainer.m_numMips     = uint8_t(bx::max<uint32_t>(numMips, 1) );
 		_imageContainer.m_hasAlpha    = hasAlpha;
-		_imageContainer.m_cubeMap     = numFaces > 1;
+		_imageContainer.m_cubeMap     = numFaces == 6;
 		_imageContainer.m_ktx         = true;
 		_imageContainer.m_ktxLE       = fromLittleEndian;
 		_imageContainer.m_pvr3        = false;
@@ -5210,7 +5210,7 @@ namespace bimg
 
 				if (_imageContainer.m_ktx)
 				{
-					const uint32_t size = mipSize * numSides;
+					const uint32_t size = numSides == 6 ? mipSize : mipSize * numSides;
 					uint32_t imageSize  = bx::toHostEndian(*(const uint32_t*)&data[offset], _imageContainer.m_ktxLE);
 					BX_ASSERT(size == imageSize, "KTX: Image size mismatch %d (expected %d).", size, imageSize);
 					BX_UNUSED(size, imageSize);
@@ -5888,7 +5888,7 @@ namespace bimg
 			depth  = bx::max<uint32_t>(1, depth);
 
 			const uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
-			const uint32_t size    = mipSize * numLayers * numSides;
+			const uint32_t size = numSides == 6 && numLayers == 1 ? mipSize * numLayers : mipSize * numSides * numLayers;
 			total += bx::write(_writer, size, _err);
 
 			for (uint32_t layer = 0; layer < numLayers && _err->isOk(); ++layer)
@@ -5939,7 +5939,7 @@ namespace bimg
 			ImageMip mip;
 			imageGetRawData(_imageContainer, 0, lod, _data, _size, mip);
 
-			const uint32_t size = mip.m_size*numSides*numLayers;
+			const uint32_t size = numSides == 6 && numLayers == 1 ? mip.m_size * numLayers : mip.m_size * numSides * numLayers;
 			total += bx::write(_writer, size, _err);
 
 			for (uint32_t layer = 0; layer < numLayers && _err->isOk(); ++layer)
