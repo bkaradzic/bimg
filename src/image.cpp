@@ -5888,7 +5888,7 @@ namespace bimg
 			depth  = bx::max<uint32_t>(1, depth);
 
 			const uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
-			const uint32_t size = numSides == 6 && numLayers == 1 ? mipSize * numLayers : mipSize * numSides * numLayers;
+			const uint32_t size = numSides == 6 && numLayers == 1 ? mipSize : mipSize * numSides * numLayers;
 			total += bx::write(_writer, size, _err);
 
 			for (uint32_t layer = 0; layer < numLayers && _err->isOk(); ++layer)
@@ -5939,7 +5939,7 @@ namespace bimg
 			ImageMip mip;
 			imageGetRawData(_imageContainer, 0, lod, _data, _size, mip);
 
-			const uint32_t size = numSides == 6 && numLayers == 1 ? mip.m_size * numLayers : mip.m_size * numSides * numLayers;
+			const uint32_t size = numSides == 6 && numLayers == 1 ? mip.m_size : mip.m_size * numSides * numLayers;
 			total += bx::write(_writer, size, _err);
 
 			for (uint32_t layer = 0; layer < numLayers && _err->isOk(); ++layer)
