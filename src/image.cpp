@@ -4154,7 +4154,7 @@ namespace bimg
 			}
 
 			if (s_translateKtxFormat[ii].m_internalFmtSrgb == glInternalFormat
-			&&  s_translateKtxFormat[ii].m_fmt == glBaseInternalFormat)
+			&&  s_translateKtxFormat[ii].m_internalFmt == glBaseInternalFormat)
                         {
 				format = TextureFormat::Enum(ii);
 				srgb = true;
