@@ -122,7 +122,7 @@ namespace bimg
 		{  32,  1, 1,  4, 1, 1, 32, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // D32F
 		{   8,  1, 1,  1, 1, 1,  0, 8,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // D0S8
 	};
-	BX_STATIC_ASSERT(TextureFormat::Count == BX_COUNTOF(s_imageBlockInfo) );
+	static_assert(TextureFormat::Count == BX_COUNTOF(s_imageBlockInfo) );
 
 	static const char* s_textureFormatName[] =
 	{
@@ -223,7 +223,7 @@ namespace bimg
 		"D32F",       // D32F
 		"D0S8",       // D0S8
 	};
-	BX_STATIC_ASSERT(TextureFormat::Count == BX_COUNTOF(s_textureFormatName) );
+	static_assert(TextureFormat::Count == BX_COUNTOF(s_textureFormatName) );
 
 	bool isCompressed(TextureFormat::Enum _format)
 	{
@@ -1156,7 +1156,7 @@ namespace bimg
 		{ bx::packR32F,       bx::unpackR32F       }, // D32F
 		{ bx::packR8,         bx::unpackR8         }, // D0S8
 	};
-	BX_STATIC_ASSERT(TextureFormat::Count == BX_COUNTOF(s_packUnpack) );
+	static_assert(TextureFormat::Count == BX_COUNTOF(s_packUnpack) );
 
 	PackFn getPack(TextureFormat::Enum _format)
 	{
@@ -4124,7 +4124,7 @@ namespace bimg
 		{ KTX_RGB10_A2,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2
 		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // RG11B10F
 	};
-	BX_STATIC_ASSERT(TextureFormat::UnknownDepth == BX_COUNTOF(s_translateKtxFormat) );
+	static_assert(TextureFormat::UnknownDepth == BX_COUNTOF(s_translateKtxFormat) );
 
 	struct KtxFormatInfo2
 	{
