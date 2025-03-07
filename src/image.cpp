@@ -3702,7 +3702,7 @@ namespace bimg
 			return false;
 		}
 
-		if ( (flags & (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) ) != (DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT) )
+		if ( (flags & (DDSD_HEIGHT|DDSD_WIDTH) ) != (DDSD_HEIGHT|DDSD_WIDTH) )
 		{
 			BX_ERROR_SET(_err, BIMG_ERROR, "DDS: Invalid flags.");
 			return false;
