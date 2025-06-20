@@ -326,8 +326,8 @@ namespace bimg
 		const uint16_t minBlockY   = blockInfo.minBlockY;
 		const uint8_t  blockSize   = blockInfo.blockSize;
 
-		_width  = bx::max<uint16_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth)*blockWidth);
-		_height = bx::max<uint16_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
+		_width  = bx::max<uint16_t>(1, _width);
+		_height  = bx::max<uint16_t>(1, _height);
 		_depth  = bx::max<uint16_t>(1, _depth);
 		const uint8_t  numMips = calcNumMips(_hasMips, _width, _height, _depth);
 		const uint32_t sides   = _cubeMap ? 6 : 1;
@@ -339,11 +339,11 @@ namespace bimg
 
 		for (uint32_t lod = 0; lod < numMips; ++lod)
 		{
-			width  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
-			height = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
+			uint32_t mipMidth  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
+			uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 			depth  = bx::max<uint32_t>(1, depth);
 
-			size += uint32_t(uint64_t(width/blockWidth * height/blockHeight * depth)*blockSize * sides);
+			size += uint32_t(uint64_t(mipMidth/blockWidth * mipHeight/blockHeight * depth)*blockSize * sides);
 
 			width  >>= 1;
 			height >>= 1;
@@ -5265,11 +5265,11 @@ namespace bimg
 
 			for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num; ++lod)
 			{
-				width  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
-				height = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
+				uint32_t mipWidth  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
+				uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 				depth  = bx::max<uint32_t>(1, depth);
 
-				const uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
+				const uint32_t mipSize = mipWidth/blockWidth * mipHeight/blockHeight * depth * blockSize;
 
 				if (_imageContainer.m_ktx)
 				{
@@ -5288,8 +5288,8 @@ namespace bimg
 					if (side == _side
 					&&  lod  == _lod)
 					{
-						_mip.m_width     = width;
-						_mip.m_height    = height;
+						_mip.m_width     = mipWidth;
+						_mip.m_height    = mipHeight;
 						_mip.m_depth     = depth;
 						_mip.m_blockSize = blockSize;
 						_mip.m_size      = mipSize;
@@ -5322,17 +5322,17 @@ namespace bimg
 				{
 					BX_ASSERT(offset <= _size, "Reading past size of data buffer! (offset %d, size %d)", offset, _size);
 
-					width  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
-					height = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
+					uint32_t mipWidth  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
+					uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 					depth  = bx::max<uint32_t>(1, depth);
 
-					uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
+					uint32_t mipSize = mipWidth/blockWidth * mipHeight/blockHeight * depth * blockSize;
 
 					if (side == _side
 					&&  lod  == _lod)
 					{
-						_mip.m_width     = width;
-						_mip.m_height    = height;
+						_mip.m_width     = mipWidth;
+						_mip.m_height    = mipHeight;
 						_mip.m_depth     = depth;
 						_mip.m_blockSize = blockSize;
 						_mip.m_size      = mipSize;
@@ -5946,11 +5946,11 @@ namespace bimg
 
 		for (uint8_t lod = 0; lod < _numMips && _err->isOk(); ++lod)
 		{
-			width  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
-			height = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
+			uint32_t mipWidth  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
+			uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 			depth  = bx::max<uint32_t>(1, depth);
 
-			const uint32_t mipSize = width/blockWidth * height/blockHeight * depth * blockSize;
+			const uint32_t mipSize = mipWidth/blockWidth * mipHeight/blockHeight * depth * blockSize;
 			const uint32_t size = numSides == 6 && numLayers == 1 ? mipSize : mipSize * numSides * numLayers;
 			total += bx::write(_writer, size, _err);
 
