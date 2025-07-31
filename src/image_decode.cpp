@@ -547,7 +547,7 @@ namespace bimg
 						stepA  = 1;
 					}
 
-					data   = (uint8_t*)bx::alloc(_allocator, exrImage.width * exrImage.height * dstBpp/8);
+					data   = (uint8_t*)bx::alloc(_allocator, (size_t)exrImage.width * exrImage.height * dstBpp/8);
 					width  = exrImage.width;
 					height = exrImage.height;
 
