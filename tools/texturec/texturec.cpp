@@ -189,7 +189,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			{
 				bimg::imageFree(input);
 
-				BX_ERROR_SET(_err, TEXTRUREC_ERROR, "Input image format is not equirectangular projection.");
+				BX_ERROR_SET(_err, TEXTRUREC_ERROR, "Input image format is not equirectangular projection (expected aspect ratio is 2:1).");
 				return NULL;
 			}
 		}
