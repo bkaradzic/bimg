@@ -60,13 +60,10 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wsign-compare");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wunused-but-set-variable");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Warray-bounds");
-#if BX_COMPILER_GCC >= 60000
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wmisleading-indentation");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wshift-negative-value");
-#	if BX_COMPILER_GCC >= 70000
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wimplicit-fallthrough");
-#	endif // BX_COMPILER_GCC >= 70000
-#endif // BX_COMPILER_GCC >= 60000_
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // unreferenced function with internal linkage has been removed
 #define STBI_MALLOC(_size)        lodepng_malloc(_size)
 #define STBI_REALLOC(_ptr, _size) lodepng_realloc(_ptr, _size)
 #define STBI_FREE(_ptr)           lodepng_free(_ptr)
