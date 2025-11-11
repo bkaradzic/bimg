@@ -113,7 +113,7 @@ jobs:
           make -j$(nproc) linux-gcc-${{ matrix.config }}64
       - name: Check
         run: |
-          cd bgfx
+          cd bimg
           ls -lash ".build/linux64_gcc/bin"
           ".build/linux64_gcc/bin/texturec${{ matrix.binsuffix}}" --version
   osx:
@@ -143,7 +143,7 @@ jobs:
           make -j$(sysctl -n hw.physicalcpu) osx-arm64-${{ matrix.config }}
       - name: Check
         run: |
-          cd bgfx
+          cd bimg
           ls -lash ".build/osx-arm64/bin"
           ".build/osx-arm64/bin/texturec${{ matrix.binsuffix}}" --version
   android:
