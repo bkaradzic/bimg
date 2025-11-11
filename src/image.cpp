@@ -4042,10 +4042,10 @@ namespace bimg
 		{ KTX_COMPRESSED_LUMINANCE_LATC1_EXT,           KTX_ZERO,                                       KTX_RED,									  KTX_ZERO,                         }, // BC4
 		{ KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT,     KTX_ZERO,                                       KTX_RG,										  KTX_ZERO,                         }, // BC5
 		{ KTX_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB,     KTX_ZERO,                                       KTX_RGB,									  KTX_ZERO,                         }, // BC6H
-		{ KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB,           KTX_ZERO,                                       KTX_RGBA,									  KTX_ZERO,                         }, // BC7
+		{ KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB,           KTX_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB,       KTX_RGBA,									  KTX_ZERO,                         }, // BC7
 		{ KTX_ETC1_RGB8_OES,                            KTX_ZERO,                                       KTX_RGB,									  KTX_ZERO,                         }, // ETC1
-		{ KTX_COMPRESSED_RGB8_ETC2,                     KTX_ZERO,                                       KTX_RGB,									  KTX_ZERO,                         }, // ETC2
-		{ KTX_COMPRESSED_RGBA8_ETC2_EAC,                KTX_COMPRESSED_SRGB8_ETC2,                      KTX_RGBA,									  KTX_ZERO,                         }, // ETC2A
+		{ KTX_COMPRESSED_RGB8_ETC2,                     KTX_COMPRESSED_SRGB8_ETC2,                      KTX_RGB,									  KTX_ZERO,                         }, // ETC2
+		{ KTX_COMPRESSED_RGBA8_ETC2_EAC,                KTX_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,           KTX_RGBA,									  KTX_ZERO,                         }, // ETC2A
 		{ KTX_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2, KTX_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2,  KTX_RGB,									  KTX_ZERO,                         }, // ETC2A1
 		{ KTX_COMPRESSED_RGB_PVRTC_2BPPV1_IMG,          KTX_COMPRESSED_SRGB_PVRTC_2BPPV1_EXT,           KTX_RGB,									  KTX_ZERO,                         }, // PTC12
 		{ KTX_COMPRESSED_RGB_PVRTC_4BPPV1_IMG,          KTX_COMPRESSED_SRGB_PVRTC_4BPPV1_EXT,           KTX_RGB,									  KTX_ZERO,                         }, // PTC14
