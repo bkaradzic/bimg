@@ -36,6 +36,10 @@ namespace bimg
 		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2
 		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2A
 		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2A1
+		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // EACR11 UNORM
+		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // EACR11 SNORM
+		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // EACRG11 UNORM
+		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // EACRG11 SNORM
 		{   2,  8, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC12
 		{   4,  4, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC14
 		{   2,  8, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC12A
@@ -137,6 +141,10 @@ namespace bimg
 		"ETC2",       // ETC2
 		"ETC2A",      // ETC2A
 		"ETC2A1",     // ETC2A1
+		"EACR11",     // EAC R11 UNORM
+		"EACR11S",    // EAC R11 SNORM
+		"EACRG11",    // EAC RG11 UNORM
+		"EACRG11S",   // EAC RG11 SNORM
 		"PTC12",      // PTC12
 		"PTC14",      // PTC14
 		"PTC12A",     // PTC12A
@@ -1070,6 +1078,10 @@ namespace bimg
 		{ NULL,               NULL                 }, // ETC2
 		{ NULL,               NULL                 }, // ETC2A
 		{ NULL,               NULL                 }, // ETC2A1
+		{ NULL,               NULL                 }, // EACR11 UNORM
+		{ NULL,               NULL                 }, // EACR11 SNORM
+		{ NULL,               NULL                 }, // EACRG11 UNORM
+		{ NULL,               NULL                 }, // EACRG11 SNORM
 		{ NULL,               NULL                 }, // PTC12
 		{ NULL,               NULL                 }, // PTC14
 		{ NULL,               NULL                 }, // PTC12A
@@ -4036,93 +4048,97 @@ namespace bimg
 
 	static const KtxFormatInfo s_translateKtxFormat[] =
 	{
-		{ KTX_COMPRESSED_RGBA_S3TC_DXT1_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,        KTX_RGBA,									  KTX_ZERO,                         }, // BC1
-		{ KTX_COMPRESSED_RGBA_S3TC_DXT3_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,        KTX_RGBA,									  KTX_ZERO,                         }, // BC2
-		{ KTX_COMPRESSED_RGBA_S3TC_DXT5_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,        KTX_RGBA,									  KTX_ZERO,                         }, // BC3
-		{ KTX_COMPRESSED_LUMINANCE_LATC1_EXT,           KTX_ZERO,                                       KTX_RED,									  KTX_ZERO,                         }, // BC4
-		{ KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT,     KTX_ZERO,                                       KTX_RG,										  KTX_ZERO,                         }, // BC5
-		{ KTX_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB,     KTX_ZERO,                                       KTX_RGB,									  KTX_ZERO,                         }, // BC6H
-		{ KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB,           KTX_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB,       KTX_RGBA,									  KTX_ZERO,                         }, // BC7
-		{ KTX_ETC1_RGB8_OES,                            KTX_ZERO,                                       KTX_RGB,									  KTX_ZERO,                         }, // ETC1
-		{ KTX_COMPRESSED_RGB8_ETC2,                     KTX_COMPRESSED_SRGB8_ETC2,                      KTX_RGB,									  KTX_ZERO,                         }, // ETC2
-		{ KTX_COMPRESSED_RGBA8_ETC2_EAC,                KTX_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,           KTX_RGBA,									  KTX_ZERO,                         }, // ETC2A
-		{ KTX_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2, KTX_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2,  KTX_RGB,									  KTX_ZERO,                         }, // ETC2A1
-		{ KTX_COMPRESSED_RGB_PVRTC_2BPPV1_IMG,          KTX_COMPRESSED_SRGB_PVRTC_2BPPV1_EXT,           KTX_RGB,									  KTX_ZERO,                         }, // PTC12
-		{ KTX_COMPRESSED_RGB_PVRTC_4BPPV1_IMG,          KTX_COMPRESSED_SRGB_PVRTC_4BPPV1_EXT,           KTX_RGB,									  KTX_ZERO,                         }, // PTC14
-		{ KTX_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG,         KTX_COMPRESSED_SRGB_ALPHA_PVRTC_2BPPV1_EXT,     KTX_RGBA,									  KTX_ZERO,                         }, // PTC12A
-		{ KTX_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG,         KTX_COMPRESSED_SRGB_ALPHA_PVRTC_4BPPV1_EXT,     KTX_RGBA,									  KTX_ZERO,                         }, // PTC14A
-		{ KTX_COMPRESSED_RGBA_PVRTC_2BPPV2_IMG,         KTX_ZERO,                                       KTX_RGBA,									  KTX_ZERO,                         }, // PTC22
-		{ KTX_COMPRESSED_RGBA_PVRTC_4BPPV2_IMG,         KTX_ZERO,                                       KTX_RGBA,									  KTX_ZERO,                         }, // PTC24
-		{ KTX_ATC_RGB_AMD,                              KTX_ZERO,                                       KTX_RGB,									  KTX_ZERO,                         }, // ATC
-		{ KTX_ATC_RGBA_EXPLICIT_ALPHA_AMD,              KTX_ZERO,                                       KTX_RGBA,									  KTX_ZERO,                         }, // ATCE
-		{ KTX_ATC_RGBA_INTERPOLATED_ALPHA_AMD,          KTX_ZERO,                                       KTX_RGBA,									  KTX_ZERO,                         }, // ATCI
-		{ KTX_COMPRESSED_RGBA_ASTC_4x4_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC4x4
-		{ KTX_COMPRESSED_RGBA_ASTC_5x4_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC5x4
-		{ KTX_COMPRESSED_RGBA_ASTC_5x5_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC5x5
-		{ KTX_COMPRESSED_RGBA_ASTC_6x5_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC6x5
-		{ KTX_COMPRESSED_RGBA_ASTC_6x6_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC6x6
-		{ KTX_COMPRESSED_RGBA_ASTC_8x5_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC8x5
-		{ KTX_COMPRESSED_RGBA_ASTC_8x6_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC8x6
-		{ KTX_COMPRESSED_RGBA_ASTC_8x8_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR,       KTX_RGBA,									  KTX_ZERO,                         }, // ASTC8x8
-		{ KTX_COMPRESSED_RGBA_ASTC_10x5_KHR,            KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR,      KTX_RGBA,									  KTX_ZERO,                         }, // ASTC10x5
-		{ KTX_COMPRESSED_RGBA_ASTC_10x6_KHR,            KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR,      KTX_RGBA,									  KTX_ZERO,                         }, // ASTC10x6
-		{ KTX_COMPRESSED_RGBA_ASTC_10x8_KHR,            KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR,      KTX_RGBA,									  KTX_ZERO,                         }, // ASTC10x8
-		{ KTX_COMPRESSED_RGBA_ASTC_10x10_KHR,           KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR,     KTX_RGBA,									  KTX_ZERO,                         }, // ASTC10x10
-		{ KTX_COMPRESSED_RGBA_ASTC_12x10_KHR,           KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR,     KTX_RGBA,									  KTX_ZERO,                         }, // ASTC12x10
-		{ KTX_COMPRESSED_RGBA_ASTC_12x12_KHR,           KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR,     KTX_RGBA,									  KTX_ZERO,                         }, // ASTC12x12
-		{ KTX_ZERO,                                     KTX_ZERO,                                       KTX_ZERO,                                     KTX_ZERO,                         }, // Unknown
-		{ KTX_ZERO,                                     KTX_ZERO,                                       KTX_ZERO,                                     KTX_ZERO,                         }, // R1
-		{ KTX_ALPHA,                                    KTX_ZERO,                                       KTX_ALPHA,                                    KTX_UNSIGNED_BYTE,                }, // A8
-		{ KTX_R8,                                       KTX_ZERO,                                       KTX_RED,                                      KTX_UNSIGNED_BYTE,                }, // R8
-		{ KTX_R8I,                                      KTX_ZERO,                                       KTX_RED,                                      KTX_BYTE,                         }, // R8S
-		{ KTX_R8UI,                                     KTX_ZERO,                                       KTX_RED,                                      KTX_UNSIGNED_BYTE,                }, // R8S
-		{ KTX_R8_SNORM,                                 KTX_ZERO,                                       KTX_RED,                                      KTX_BYTE,                         }, // R8S
-		{ KTX_R16,                                      KTX_ZERO,                                       KTX_RED,                                      KTX_UNSIGNED_SHORT,               }, // R16
-		{ KTX_R16I,                                     KTX_ZERO,                                       KTX_RED,                                      KTX_SHORT,                        }, // R16I
-		{ KTX_R16UI,                                    KTX_ZERO,                                       KTX_RED,                                      KTX_UNSIGNED_SHORT,               }, // R16U
-		{ KTX_R16F,                                     KTX_ZERO,                                       KTX_RED,                                      KTX_HALF_FLOAT,                   }, // R16F
-		{ KTX_R16_SNORM,                                KTX_ZERO,                                       KTX_RED,                                      KTX_SHORT,                        }, // R16S
-		{ KTX_R32I,                                     KTX_ZERO,                                       KTX_RED,                                      KTX_INT,                          }, // R32I
-		{ KTX_R32UI,                                    KTX_ZERO,                                       KTX_RED,                                      KTX_UNSIGNED_INT,                 }, // R32U
-		{ KTX_R32F,                                     KTX_ZERO,                                       KTX_RED,                                      KTX_FLOAT,                        }, // R32F
-		{ KTX_RG8,                                      KTX_ZERO,                                       KTX_RG,                                       KTX_UNSIGNED_BYTE,                }, // RG8
-		{ KTX_RG8I,                                     KTX_ZERO,                                       KTX_RG,                                       KTX_BYTE,                         }, // RG8I
-		{ KTX_RG8UI,                                    KTX_ZERO,                                       KTX_RG,                                       KTX_UNSIGNED_BYTE,                }, // RG8U
-		{ KTX_RG8_SNORM,                                KTX_ZERO,                                       KTX_RG,                                       KTX_BYTE,                         }, // RG8S
-		{ KTX_RG16,                                     KTX_ZERO,                                       KTX_RG,                                       KTX_UNSIGNED_SHORT,               }, // RG16
-		{ KTX_RG16I,                                    KTX_ZERO,                                       KTX_RG,                                       KTX_SHORT,                        }, // RG16
-		{ KTX_RG16UI,                                   KTX_ZERO,                                       KTX_RG,                                       KTX_UNSIGNED_SHORT,               }, // RG16
-		{ KTX_RG16F,                                    KTX_ZERO,                                       KTX_RG,                                       KTX_FLOAT,                        }, // RG16F
-		{ KTX_RG16_SNORM,                               KTX_ZERO,                                       KTX_RG,                                       KTX_SHORT,                        }, // RG16S
-		{ KTX_RG32I,                                    KTX_ZERO,                                       KTX_RG,                                       KTX_INT,                          }, // RG32I
-		{ KTX_RG32UI,                                   KTX_ZERO,                                       KTX_RG,                                       KTX_UNSIGNED_INT,                 }, // RG32U
-		{ KTX_RG32F,                                    KTX_ZERO,                                       KTX_RG,                                       KTX_FLOAT,                        }, // RG32F
-		{ KTX_RGB8,                                     KTX_SRGB8,                                      KTX_RGB,                                      KTX_UNSIGNED_BYTE,                }, // RGB8
-		{ KTX_RGB8I,                                    KTX_ZERO,                                       KTX_RGB,                                      KTX_BYTE,                         }, // RGB8I
-		{ KTX_RGB8UI,                                   KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_BYTE,                }, // RGB8U
-		{ KTX_RGB8_SNORM,                               KTX_ZERO,                                       KTX_RGB,                                      KTX_BYTE,                         }, // RGB8S
-		{ KTX_RGB9_E5,                                  KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_INT_5_9_9_9_REV,     }, // RGB9E5F
-		{ KTX_BGRA,                                     KTX_SRGB8_ALPHA8,                               KTX_BGRA,                                     KTX_UNSIGNED_BYTE,                }, // BGRA8
-		{ KTX_RGBA8,                                    KTX_SRGB8_ALPHA8,                               KTX_RGBA,                                     KTX_UNSIGNED_BYTE,                }, // RGBA8
-		{ KTX_RGBA8I,                                   KTX_ZERO,                                       KTX_RGBA,                                     KTX_BYTE,                         }, // RGBA8I
-		{ KTX_RGBA8UI,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_BYTE,                }, // RGBA8U
-		{ KTX_RGBA8_SNORM,                              KTX_ZERO,                                       KTX_RGBA,                                     KTX_BYTE,                         }, // RGBA8S
-		{ KTX_RGBA16,                                   KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT,               }, // RGBA16
-		{ KTX_RGBA16I,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_SHORT,                        }, // RGBA16I
-		{ KTX_RGBA16UI,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT,               }, // RGBA16U
-		{ KTX_RGBA16F,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_HALF_FLOAT,                   }, // RGBA16F
-		{ KTX_RGBA16_SNORM,                             KTX_ZERO,                                       KTX_RGBA,                                     KTX_SHORT,                        }, // RGBA16S
-		{ KTX_RGBA32I,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_INT,                          }, // RGBA32I
-		{ KTX_RGBA32UI,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_INT,                 }, // RGBA32U
-		{ KTX_RGBA32F,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_FLOAT,                        }, // RGBA32F
-		{ KTX_RGB565,                                   KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_SHORT_5_6_5,         }, // B5G6R5
-		{ KTX_RGB565,                                   KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_SHORT_5_6_5,         }, // R5G6B5
-		{ KTX_RGBA4,                                    KTX_ZERO,                                       KTX_BGRA,                                     KTX_UNSIGNED_SHORT_4_4_4_4,       }, // BGRA4
-		{ KTX_RGBA4,                                    KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_4_4_4_4,       }, // RGBA4
-		{ KTX_RGB5_A1,                                  KTX_ZERO,                                       KTX_BGRA,                                     KTX_UNSIGNED_SHORT_5_5_5_1,       }, // BGR5A1
-		{ KTX_RGB5_A1,                                  KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_SHORT_5_5_5_1,       }, // RGB5A1
-		{ KTX_RGB10_A2,                                 KTX_ZERO,                                       KTX_RGBA,                                     KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2
-		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                       KTX_RGB,                                      KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // RG11B10F
+		{ KTX_COMPRESSED_RGBA_S3TC_DXT1_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,       KTX_RGBA,  KTX_ZERO,                         }, // BC1
+		{ KTX_COMPRESSED_RGBA_S3TC_DXT3_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,       KTX_RGBA,  KTX_ZERO,                         }, // BC2
+		{ KTX_COMPRESSED_RGBA_S3TC_DXT5_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,       KTX_RGBA,  KTX_ZERO,                         }, // BC3
+		{ KTX_COMPRESSED_LUMINANCE_LATC1_EXT,           KTX_ZERO,                                      KTX_RED,   KTX_ZERO,                         }, // BC4
+		{ KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT,     KTX_ZERO,                                      KTX_RG,    KTX_ZERO,                         }, // BC5
+		{ KTX_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB,     KTX_ZERO,                                      KTX_RGB,   KTX_ZERO,                         }, // BC6H
+		{ KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB,           KTX_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB,      KTX_RGBA,  KTX_ZERO,                         }, // BC7
+		{ KTX_ETC1_RGB8_OES,                            KTX_ZERO,                                      KTX_RGB,   KTX_ZERO,                         }, // ETC1
+		{ KTX_COMPRESSED_RGB8_ETC2,                     KTX_COMPRESSED_SRGB8_ETC2,                     KTX_RGB,   KTX_ZERO,                         }, // ETC2
+		{ KTX_COMPRESSED_RGBA8_ETC2_EAC,                KTX_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,          KTX_RGBA,  KTX_ZERO,                         }, // ETC2A
+		{ KTX_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2, KTX_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2, KTX_RGB,   KTX_ZERO,                         }, // ETC2A1
+		{ KTX_COMPRESSED_R11_EAC,                       KTX_ZERO,                                      KTX_RED,   KTX_ZERO,                         }, // EACR11 UNORM
+		{ KTX_COMPRESSED_SIGNED_R11_EAC,                KTX_ZERO,                                      KTX_RED,   KTX_ZERO,                         }, // EACR11 SNORM
+		{ KTX_COMPRESSED_RG11_EAC,                      KTX_ZERO,                                      KTX_RG,    KTX_ZERO,                         }, // EACRG11 UNORM
+		{ KTX_COMPRESSED_SIGNED_RG11_EAC,               KTX_ZERO,                                      KTX_RG,    KTX_ZERO,                         }, // EACRG11 SNORM
+		{ KTX_COMPRESSED_RGB_PVRTC_2BPPV1_IMG,          KTX_COMPRESSED_SRGB_PVRTC_2BPPV1_EXT,          KTX_RGB,   KTX_ZERO,                         }, // PTC12
+		{ KTX_COMPRESSED_RGB_PVRTC_4BPPV1_IMG,          KTX_COMPRESSED_SRGB_PVRTC_4BPPV1_EXT,          KTX_RGB,   KTX_ZERO,                         }, // PTC14
+		{ KTX_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG,         KTX_COMPRESSED_SRGB_ALPHA_PVRTC_2BPPV1_EXT,    KTX_RGBA,  KTX_ZERO,                         }, // PTC12A
+		{ KTX_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG,         KTX_COMPRESSED_SRGB_ALPHA_PVRTC_4BPPV1_EXT,    KTX_RGBA,  KTX_ZERO,                         }, // PTC14A
+		{ KTX_COMPRESSED_RGBA_PVRTC_2BPPV2_IMG,         KTX_ZERO,                                      KTX_RGBA,  KTX_ZERO,                         }, // PTC22
+		{ KTX_COMPRESSED_RGBA_PVRTC_4BPPV2_IMG,         KTX_ZERO,                                      KTX_RGBA,  KTX_ZERO,                         }, // PTC24
+		{ KTX_ATC_RGB_AMD,                              KTX_ZERO,                                      KTX_RGB,   KTX_ZERO,                         }, // ATC
+		{ KTX_ATC_RGBA_EXPLICIT_ALPHA_AMD,              KTX_ZERO,                                      KTX_RGBA,  KTX_ZERO,                         }, // ATCE
+		{ KTX_ATC_RGBA_INTERPOLATED_ALPHA_AMD,          KTX_ZERO,                                      KTX_RGBA,  KTX_ZERO,                         }, // ATCI
+		{ KTX_COMPRESSED_RGBA_ASTC_4x4_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC4x4
+		{ KTX_COMPRESSED_RGBA_ASTC_5x4_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC5x4
+		{ KTX_COMPRESSED_RGBA_ASTC_5x5_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC5x5
+		{ KTX_COMPRESSED_RGBA_ASTC_6x5_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC6x5
+		{ KTX_COMPRESSED_RGBA_ASTC_6x6_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC6x6
+		{ KTX_COMPRESSED_RGBA_ASTC_8x5_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC8x5
+		{ KTX_COMPRESSED_RGBA_ASTC_8x6_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC8x6
+		{ KTX_COMPRESSED_RGBA_ASTC_8x8_KHR,             KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR,      KTX_RGBA,  KTX_ZERO,                         }, // ASTC8x8
+		{ KTX_COMPRESSED_RGBA_ASTC_10x5_KHR,            KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR,     KTX_RGBA,  KTX_ZERO,                         }, // ASTC10x5
+		{ KTX_COMPRESSED_RGBA_ASTC_10x6_KHR,            KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR,     KTX_RGBA,  KTX_ZERO,                         }, // ASTC10x6
+		{ KTX_COMPRESSED_RGBA_ASTC_10x8_KHR,            KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR,     KTX_RGBA,  KTX_ZERO,                         }, // ASTC10x8
+		{ KTX_COMPRESSED_RGBA_ASTC_10x10_KHR,           KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR,    KTX_RGBA,  KTX_ZERO,                         }, // ASTC10x10
+		{ KTX_COMPRESSED_RGBA_ASTC_12x10_KHR,           KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR,    KTX_RGBA,  KTX_ZERO,                         }, // ASTC12x10
+		{ KTX_COMPRESSED_RGBA_ASTC_12x12_KHR,           KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR,    KTX_RGBA,  KTX_ZERO,                         }, // ASTC12x12
+		{ KTX_ZERO,                                     KTX_ZERO,                                      KTX_ZERO,  KTX_ZERO,                         }, // Unknown
+		{ KTX_ZERO,                                     KTX_ZERO,                                      KTX_ZERO,  KTX_ZERO,                         }, // R1
+		{ KTX_ALPHA,                                    KTX_ZERO,                                      KTX_ALPHA, KTX_UNSIGNED_BYTE,                }, // A8
+		{ KTX_R8,                                       KTX_ZERO,                                      KTX_RED,   KTX_UNSIGNED_BYTE,                }, // R8
+		{ KTX_R8I,                                      KTX_ZERO,                                      KTX_RED,   KTX_BYTE,                         }, // R8S
+		{ KTX_R8UI,                                     KTX_ZERO,                                      KTX_RED,   KTX_UNSIGNED_BYTE,                }, // R8S
+		{ KTX_R8_SNORM,                                 KTX_ZERO,                                      KTX_RED,   KTX_BYTE,                         }, // R8S
+		{ KTX_R16,                                      KTX_ZERO,                                      KTX_RED,   KTX_UNSIGNED_SHORT,               }, // R16
+		{ KTX_R16I,                                     KTX_ZERO,                                      KTX_RED,   KTX_SHORT,                        }, // R16I
+		{ KTX_R16UI,                                    KTX_ZERO,                                      KTX_RED,   KTX_UNSIGNED_SHORT,               }, // R16U
+		{ KTX_R16F,                                     KTX_ZERO,                                      KTX_RED,   KTX_HALF_FLOAT,                   }, // R16F
+		{ KTX_R16_SNORM,                                KTX_ZERO,                                      KTX_RED,   KTX_SHORT,                        }, // R16S
+		{ KTX_R32I,                                     KTX_ZERO,                                      KTX_RED,   KTX_INT,                          }, // R32I
+		{ KTX_R32UI,                                    KTX_ZERO,                                      KTX_RED,   KTX_UNSIGNED_INT,                 }, // R32U
+		{ KTX_R32F,                                     KTX_ZERO,                                      KTX_RED,   KTX_FLOAT,                        }, // R32F
+		{ KTX_RG8,                                      KTX_ZERO,                                      KTX_RG,    KTX_UNSIGNED_BYTE,                }, // RG8
+		{ KTX_RG8I,                                     KTX_ZERO,                                      KTX_RG,    KTX_BYTE,                         }, // RG8I
+		{ KTX_RG8UI,                                    KTX_ZERO,                                      KTX_RG,    KTX_UNSIGNED_BYTE,                }, // RG8U
+		{ KTX_RG8_SNORM,                                KTX_ZERO,                                      KTX_RG,    KTX_BYTE,                         }, // RG8S
+		{ KTX_RG16,                                     KTX_ZERO,                                      KTX_RG,    KTX_UNSIGNED_SHORT,               }, // RG16
+		{ KTX_RG16I,                                    KTX_ZERO,                                      KTX_RG,    KTX_SHORT,                        }, // RG16
+		{ KTX_RG16UI,                                   KTX_ZERO,                                      KTX_RG,    KTX_UNSIGNED_SHORT,               }, // RG16
+		{ KTX_RG16F,                                    KTX_ZERO,                                      KTX_RG,    KTX_FLOAT,                        }, // RG16F
+		{ KTX_RG16_SNORM,                               KTX_ZERO,                                      KTX_RG,    KTX_SHORT,                        }, // RG16S
+		{ KTX_RG32I,                                    KTX_ZERO,                                      KTX_RG,    KTX_INT,                          }, // RG32I
+		{ KTX_RG32UI,                                   KTX_ZERO,                                      KTX_RG,    KTX_UNSIGNED_INT,                 }, // RG32U
+		{ KTX_RG32F,                                    KTX_ZERO,                                      KTX_RG,    KTX_FLOAT,                        }, // RG32F
+		{ KTX_RGB8,                                     KTX_SRGB8,                                     KTX_RGB,   KTX_UNSIGNED_BYTE,                }, // RGB8
+		{ KTX_RGB8I,                                    KTX_ZERO,                                      KTX_RGB,   KTX_BYTE,                         }, // RGB8I
+		{ KTX_RGB8UI,                                   KTX_ZERO,                                      KTX_RGB,   KTX_UNSIGNED_BYTE,                }, // RGB8U
+		{ KTX_RGB8_SNORM,                               KTX_ZERO,                                      KTX_RGB,   KTX_BYTE,                         }, // RGB8S
+		{ KTX_RGB9_E5,                                  KTX_ZERO,                                      KTX_RGB,   KTX_UNSIGNED_INT_5_9_9_9_REV,     }, // RGB9E5F
+		{ KTX_BGRA,                                     KTX_SRGB8_ALPHA8,                              KTX_BGRA,  KTX_UNSIGNED_BYTE,                }, // BGRA8
+		{ KTX_RGBA8,                                    KTX_SRGB8_ALPHA8,                              KTX_RGBA,  KTX_UNSIGNED_BYTE,                }, // RGBA8
+		{ KTX_RGBA8I,                                   KTX_ZERO,                                      KTX_RGBA,  KTX_BYTE,                         }, // RGBA8I
+		{ KTX_RGBA8UI,                                  KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_BYTE,                }, // RGBA8U
+		{ KTX_RGBA8_SNORM,                              KTX_ZERO,                                      KTX_RGBA,  KTX_BYTE,                         }, // RGBA8S
+		{ KTX_RGBA16,                                   KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_SHORT,               }, // RGBA16
+		{ KTX_RGBA16I,                                  KTX_ZERO,                                      KTX_RGBA,  KTX_SHORT,                        }, // RGBA16I
+		{ KTX_RGBA16UI,                                 KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_SHORT,               }, // RGBA16U
+		{ KTX_RGBA16F,                                  KTX_ZERO,                                      KTX_RGBA,  KTX_HALF_FLOAT,                   }, // RGBA16F
+		{ KTX_RGBA16_SNORM,                             KTX_ZERO,                                      KTX_RGBA,  KTX_SHORT,                        }, // RGBA16S
+		{ KTX_RGBA32I,                                  KTX_ZERO,                                      KTX_RGBA,  KTX_INT,                          }, // RGBA32I
+		{ KTX_RGBA32UI,                                 KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_INT,                 }, // RGBA32U
+		{ KTX_RGBA32F,                                  KTX_ZERO,                                      KTX_RGBA,  KTX_FLOAT,                        }, // RGBA32F
+		{ KTX_RGB565,                                   KTX_ZERO,                                      KTX_RGB,   KTX_UNSIGNED_SHORT_5_6_5,         }, // B5G6R5
+		{ KTX_RGB565,                                   KTX_ZERO,                                      KTX_RGB,   KTX_UNSIGNED_SHORT_5_6_5,         }, // R5G6B5
+		{ KTX_RGBA4,                                    KTX_ZERO,                                      KTX_BGRA,  KTX_UNSIGNED_SHORT_4_4_4_4,       }, // BGRA4
+		{ KTX_RGBA4,                                    KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_SHORT_4_4_4_4,       }, // RGBA4
+		{ KTX_RGB5_A1,                                  KTX_ZERO,                                      KTX_BGRA,  KTX_UNSIGNED_SHORT_5_5_5_1,       }, // BGR5A1
+		{ KTX_RGB5_A1,                                  KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_SHORT_5_5_5_1,       }, // RGB5A1
+		{ KTX_RGB10_A2,                                 KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2
+		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                      KTX_RGB,   KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // RG11B10F
 	};
 	static_assert(TextureFormat::UnknownDepth == BX_COUNTOF(s_translateKtxFormat) );
 
