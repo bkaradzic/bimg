@@ -17,7 +17,7 @@
 
 #define nvNoAssert(exp) \
     NV_MULTI_LINE_MACRO_BEGIN \
-    (void)sizeof(exp); \
+    (void)(false && (exp)); \
     NV_MULTI_LINE_MACRO_END
 
 #if NV_NO_ASSERT
