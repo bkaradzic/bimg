@@ -22,6 +22,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: 'tinyexr::miniz::def_r
 #include <tinyexr/tinyexr.h>
 BX_PRAGMA_DIAGNOSTIC_POP()
 
+#if BIMG_CONFIG_PARSE_PNG
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4127) // warning C4127: conditional expression is constant
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4267) // warning C4267: '=' : conversion from 'size_t' to 'unsigned short', possible loss of data
@@ -33,10 +34,11 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4334) // warning C4334: '<<' : result of 32 - 
 #define LODEPNG_NO_COMPILE_CPP
 #include <lodepng/lodepng.cpp>
 BX_PRAGMA_DIAGNOSTIC_POP();
+#endif // BIMG_CONFIG_PARSE_PNG
 
-#if BIMG_DECODE_HEIF
+#if BIMG_CONFIG_PARSE_HEIF
 #	include <libheif/heif.h>
-#endif // BIMG_DECODE_HEIF
+#endif // BIMG_CONFIG_PARSE_HEIF
 
 void* lodepng_malloc(size_t _size)
 {
@@ -85,6 +87,7 @@ namespace bimg
 			return NULL;
 		}
 
+#if BIMG_CONFIG_PARSE_PNG
 		ImageContainer* output = NULL;
 		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
 		uint32_t width  = 0;
@@ -433,6 +436,10 @@ namespace bimg
 		lodepng_free(data);
 
 		return output;
+#else
+		BX_ERROR_SET(_err, BIMG_ERROR, "PNG parsing is disabled (BIMG_CONFIG_PARSE_PNG).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_PNG
 	}
 
 	static void errorSetTinyExr(int _result, bx::Error* _err)
@@ -715,6 +722,7 @@ namespace bimg
 			return NULL;
 		}
 
+#if BIMG_CONFIG_PARSE_JPEG
 		Orientation::Enum orientation = Orientation::R0;
 
 		while (err.isOk() )
@@ -834,11 +842,15 @@ namespace bimg
 		}
 
 		return image;
+#else
+		BX_ERROR_SET(_err, BIMG_ERROR, "JPEG parsing is disabled (BIMG_CONFIG_PARSE_JPEG).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_JPEG
 	}
 
 	static ImageContainer* imageParseLibHeif(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
-#if BIMG_DECODE_HEIF
+#if BIMG_CONFIG_PARSE_HEIF
 		heif_context* ctx = heif_context_alloc();
 
 		heif_context_read_from_memory_without_copy(ctx, _data, _size, NULL);
@@ -884,7 +896,7 @@ namespace bimg
 #else
 		BX_UNUSED(_allocator, _data, _size, _err);
 		return NULL;
-#endif // BIMG_DECODE_HEIF
+#endif // BIMG_CONFIG_PARSE_HEIF
 	}
 
 	ImageContainer* imageParse(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, TextureFormat::Enum _dstFormat, bx::Error* _err)
