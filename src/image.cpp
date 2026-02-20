@@ -1394,7 +1394,7 @@ namespace bimg
 
 	static void decodeBlockDxt(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_BC2 || BIMG_DECODE_BC3) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC2 || BIMG_CONFIG_DECODE_BC3) )
 		{
 			return;
 		}
@@ -1430,7 +1430,7 @@ namespace bimg
 
 	static void decodeBlockDxt1(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_BC1 || BIMG_DECODE_BC2 || BIMG_DECODE_BC3) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC1 || BIMG_CONFIG_DECODE_BC2 || BIMG_CONFIG_DECODE_BC3) )
 		{
 			return;
 		}
@@ -1486,7 +1486,7 @@ namespace bimg
 
 	static void decodeBlockDxt23A(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_BC2) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC2) )
 		{
 			return;
 		}
@@ -1500,7 +1500,7 @@ namespace bimg
 
 	static void decodeBlockDxt45A(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_BC3 || BIMG_DECODE_BC4 || BIMG_DECODE_BC5) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC3 || BIMG_CONFIG_DECODE_BC4 || BIMG_CONFIG_DECODE_BC5) )
 		{
 			return;
 		}
@@ -1880,7 +1880,7 @@ namespace bimg
 
 	static void decodeBlockBc6h(uint16_t _dst[16*3], const uint8_t _src[16], bool _signed)
 	{
-		if (!BX_ENABLED(BIMG_DECODE_BC6) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
 		{
 			return;
 		}
@@ -2305,7 +2305,7 @@ namespace bimg
 
 	static void decodeBlockBc6h(float _dst[16*4], const uint8_t _src[16])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_BC6) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
 		{
 			return;
 		}
@@ -2358,7 +2358,7 @@ namespace bimg
 
 	static void decodeBlockBc7(uint8_t _dst[16*4], const uint8_t _src[16])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_BC7) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC7) )
 		{
 			return;
 		}
@@ -2552,7 +2552,7 @@ namespace bimg
 	//
 	static void decodeBlockATC(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_ATC) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ATC) )
 		{
 			return;
 		}
@@ -2864,7 +2864,7 @@ namespace bimg
 
 	static void decodeBlockEtc12(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_ETC1 || BIMG_DECODE_ETC2) )
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC1 || BIMG_CONFIG_DECODE_ETC2) )
 		{
 			return;
 		}
@@ -3003,7 +3003,7 @@ namespace bimg
 
 	void decodeBlockEtc2Alpha(uint8_t _dst[16 * 4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_DECODE_ETC2))
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2))
 		{
 			return;
 		}
@@ -4565,7 +4565,7 @@ namespace bimg
 		switch (_srcFormat)
 		{
 		case TextureFormat::BC1:
-			if (BX_ENABLED(BIMG_DECODE_BC1) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC1) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4584,13 +4584,13 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "BC1 decoder is disabled (BIMG_DECODE_BC1).");
+				BX_WARN(false, "BC1 decoder is disabled (BIMG_CONFIG_DECODE_BC1).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::BC2:
-			if (BX_ENABLED(BIMG_DECODE_BC2) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC2) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4611,13 +4611,13 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "BC2 decoder is disabled (BIMG_DECODE_BC2).");
+				BX_WARN(false, "BC2 decoder is disabled (BIMG_CONFIG_DECODE_BC2).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::BC3:
-			if (BX_ENABLED(BIMG_DECODE_BC3) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC3) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4638,13 +4638,13 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "BC3 decoder is disabled (BIMG_DECODE_BC3).");
+				BX_WARN(false, "BC3 decoder is disabled (BIMG_CONFIG_DECODE_BC3).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::BC4:
-			if (BX_ENABLED(BIMG_DECODE_BC4) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC4) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4663,13 +4663,13 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "BC4 decoder is disabled (BIMG_DECODE_BC4).");
+				BX_WARN(false, "BC4 decoder is disabled (BIMG_CONFIG_DECODE_BC4).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::BC5:
-			if (BX_ENABLED(BIMG_DECODE_BC5) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC5) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4699,13 +4699,13 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "BC5 decoder is disabled (BIMG_DECODE_BC5).");
+				BX_WARN(false, "BC5 decoder is disabled (BIMG_CONFIG_DECODE_BC5).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::BC6H:
-			if (BX_ENABLED(BIMG_DECODE_BC6) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
 			{
 				ImageContainer* rgba32f = imageAlloc(_allocator
 					, TextureFormat::RGBA32F
@@ -4722,13 +4722,13 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "BC6 decoder is disabled (BIMG_DECODE_BC6).");
+				BX_WARN(false, "BC6 decoder is disabled (BIMG_CONFIG_DECODE_BC6).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::BC7:
-			if (BX_ENABLED(BIMG_DECODE_BC7) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC7) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4747,14 +4747,14 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "BC7 decoder is disabled (BIMG_DECODE_BC7).");
+				BX_WARN(false, "BC7 decoder is disabled (BIMG_CONFIG_DECODE_BC7).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::ETC1:
 		case TextureFormat::ETC2:
-			if (BX_ENABLED(BIMG_DECODE_ETC1 || BIMG_DECODE_ETC2) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC1 || BIMG_CONFIG_DECODE_ETC2) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4773,13 +4773,13 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "ETC1/ETC2 decoder is disabled (BIMG_DECODE_ETC1/ETC2).");
+				BX_WARN(false, "ETC1/ETC2 decoder is disabled (BIMG_CONFIG_DECODE_ETC1/ETC2).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
 		case TextureFormat::ETC2A:
-			if (BX_ENABLED(BIMG_DECODE_ETC2))
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2))
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -4800,7 +4800,7 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "ETC2 decoder is disabled (BIMG_DECODE_ETC2).");
+				BX_WARN(false, "ETC2 decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00));
 			}
 			break;
@@ -4997,7 +4997,7 @@ namespace bimg
 		case TextureFormat::ASTC10x10:
 		case TextureFormat::ASTC12x10:
 		case TextureFormat::ASTC12x12:
-			if (BX_ENABLED(BIMG_DECODE_ASTC) )
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_ASTC) )
 			{
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_srcFormat);
 
@@ -5070,7 +5070,7 @@ namespace bimg
 			}
 			else
 			{
-				BX_WARN(false, "ASTC decoder is disabled (BIMG_DECODE_ASTC).");
+				BX_WARN(false, "ASTC decoder is disabled (BIMG_CONFIG_DECODE_ASTC).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;

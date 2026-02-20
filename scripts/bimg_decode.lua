@@ -30,7 +30,7 @@ project "bimg_decode"
 
 	if _OPTIONS["with-libheif"] then
 		defines {
-			"BIMG_DECODE_HEIF=1",
+			"BIMG_CONFIG_PARSE_HEIF=1",
 		}
 	end
 
