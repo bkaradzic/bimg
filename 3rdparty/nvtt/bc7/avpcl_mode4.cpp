@@ -354,8 +354,10 @@ static void sign_extend(Pattern &p, IntEndptsRGBA endpts[NREGIONS])
 		{
 			// endpts[0].A[i] = SIGN_EXTEND(endpts[0].B[i], p.chan[i].nbitsizes[0]);	// always positive here
 			endpts[0].B[i] = SIGN_EXTEND(endpts[0].B[i], p.chan[i].nbitsizes[0]);
+#if NREGIONS > 1
 			endpts[1].A[i] = SIGN_EXTEND(endpts[1].A[i], p.chan[i].nbitsizes[1]);
 			endpts[1].B[i] = SIGN_EXTEND(endpts[1].B[i], p.chan[i].nbitsizes[1]);
+#endif // NREGIONS > 1
 		}
 	}
 }
