@@ -8,6 +8,8 @@
 
 #include <bx/bx.h>
 
+// Decoders ---
+
 #ifndef BIMG_CONFIG_DECODE_ENABLE
 #	define BIMG_CONFIG_DECODE_ENABLE 1
 #endif // BIMG_CONFIG_DECODE_ENABLE
@@ -56,20 +58,78 @@
 #	define BIMG_CONFIG_DECODE_ETC2 BIMG_CONFIG_DECODE_ENABLE
 #endif // BIMG_CONFIG_DECODE_ETC2
 
+// Parsers ---
+
+/// Enable or disable all image format parsers.
+///
+#ifndef BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_ENABLE 1
+#endif // BIMG_CONFIG_PARSE_ENABLE
+
+/// BMP (Windows Bitmap) - uncompressed raster image format.
+///
+#ifndef BIMG_CONFIG_PARSE_BMP
+#	define BIMG_CONFIG_PARSE_BMP BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_BMP
+
+/// EXR (OpenEXR) - high dynamic range image format by ILM.
+///
 #ifndef BIMG_CONFIG_PARSE_EXR
-#	define BIMG_CONFIG_PARSE_EXR 1
+#	define BIMG_CONFIG_PARSE_EXR BIMG_CONFIG_PARSE_ENABLE
 #endif // BIMG_CONFIG_PARSE_EXR
 
+/// GIF (Graphics Interchange Format) - indexed-color image format with animation support.
+///
+#ifndef BIMG_CONFIG_PARSE_GIF
+#	define BIMG_CONFIG_PARSE_GIF BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_GIF
+
+/// HDR (Radiance RGBE) - high dynamic range image format.
+///
+#ifndef BIMG_CONFIG_PARSE_HDR
+#	define BIMG_CONFIG_PARSE_HDR BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_HDR
+
+/// HEIF (High Efficiency Image File Format) - modern image format based on HEVC.
+///
 #ifndef BIMG_CONFIG_PARSE_HEIF
 #	define BIMG_CONFIG_PARSE_HEIF 0
 #endif // BIMG_CONFIG_PARSE_HEIF
 
+/// JPEG (Joint Photographic Experts Group) - lossy compressed image format.
+///
 #ifndef BIMG_CONFIG_PARSE_JPEG
-#	define BIMG_CONFIG_PARSE_JPEG 1
+#	define BIMG_CONFIG_PARSE_JPEG BIMG_CONFIG_PARSE_ENABLE
 #endif // BIMG_CONFIG_PARSE_JPEG
 
+/// PIC (Softimage) - image format used by Softimage 3D tools.
+///
+#ifndef BIMG_CONFIG_PARSE_PIC
+#	define BIMG_CONFIG_PARSE_PIC BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_PIC
+
+/// PNG (Portable Network Graphics) - lossless compressed image format.
+///
 #ifndef BIMG_CONFIG_PARSE_PNG
-#	define BIMG_CONFIG_PARSE_PNG 1
+#	define BIMG_CONFIG_PARSE_PNG BIMG_CONFIG_PARSE_ENABLE
 #endif // BIMG_CONFIG_PARSE_PNG
+
+/// PNM (Portable Any Map) - family of simple image formats (PBM, PGM, PPM).
+///
+#ifndef BIMG_CONFIG_PARSE_PNM
+#	define BIMG_CONFIG_PARSE_PNM BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_PNM
+
+/// PSD (Adobe Photoshop Document) - layered image format.
+///
+#ifndef BIMG_CONFIG_PARSE_PSD
+#	define BIMG_CONFIG_PARSE_PSD BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_PSD
+
+/// TGA (Truevision TGA) - raster image format with optional RLE compression.
+///
+#ifndef BIMG_CONFIG_PARSE_TGA
+#	define BIMG_CONFIG_PARSE_TGA BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_TGA
 
 #endif // BIMG_CONFIG_H_HEADER_GUARD

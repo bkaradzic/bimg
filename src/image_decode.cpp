@@ -7,6 +7,7 @@
 
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function")
 
+#if BIMG_CONFIG_PARSE_EXR
 BX_PRAGMA_DIAGNOSTIC_PUSH()
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter")
@@ -19,8 +20,10 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: 'tinyexr::miniz::def_r
 #define MINIZ_NO_ARCHIVE_APIS
 #define MINIZ_NO_STDIO
 #define TINYEXR_IMPLEMENTATION
+#include <miniz/miniz.c>
 #include <tinyexr/tinyexr.h>
 BX_PRAGMA_DIAGNOSTIC_POP()
+#endif // BIMG_CONFIG_PARSE_EXR
 
 #if BIMG_CONFIG_PARSE_PNG
 BX_PRAGMA_DIAGNOSTIC_PUSH();
@@ -34,11 +37,6 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4334) // warning C4334: '<<' : result of 32 - 
 #define LODEPNG_NO_COMPILE_CPP
 #include <lodepng/lodepng.cpp>
 BX_PRAGMA_DIAGNOSTIC_POP();
-#endif // BIMG_CONFIG_PARSE_PNG
-
-#if BIMG_CONFIG_PARSE_HEIF
-#	include <libheif/heif.h>
-#endif // BIMG_CONFIG_PARSE_HEIF
 
 void* lodepng_malloc(size_t _size)
 {
@@ -54,7 +52,23 @@ void lodepng_free(void* _ptr)
 {
 	::free(_ptr);
 }
+#endif // BIMG_CONFIG_PARSE_PNG
 
+#if BIMG_CONFIG_PARSE_HEIF
+#	include <libheif/heif.h>
+#endif // BIMG_CONFIG_PARSE_HEIF
+
+#define BIMG_USE_STB_IMAGE 0   \
+	||  BIMG_CONFIG_PARSE_JPEG \
+	||  BIMG_CONFIG_PARSE_BMP  \
+	||  BIMG_CONFIG_PARSE_PSD  \
+	||  BIMG_CONFIG_PARSE_TGA  \
+	||  BIMG_CONFIG_PARSE_GIF  \
+	||  BIMG_CONFIG_PARSE_HDR  \
+	||  BIMG_CONFIG_PARSE_PIC  \
+	||  0
+
+#if BIMG_USE_STB_IMAGE
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wint-to-pointer-cast")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmissing-field-initializers");
@@ -71,8 +85,47 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // unreferenced function with internal 
 #define STBI_FREE(_ptr)           lodepng_free(_ptr)
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
+#define STBI_NO_PNG // supported via LODEPNG
+
+#if !BIMG_CONFIG_PARSE_JPEG
+#	define STBI_NO_JPEG
+#endif // !BIMG_CONFIG_PARSE_JPEG
+
+#if !BIMG_CONFIG_PARSE_BMP
+#	define STBI_NO_BMP
+#endif // !BIMG_CONFIG_PARSE_BMP
+
+#if !BIMG_CONFIG_PARSE_PSD
+#	define STBI_NO_PSD
+#endif // !BIMG_CONFIG_PARSE_PSD
+
+#if !BIMG_CONFIG_PARSE_PSD
+#	define STBI_NO_PSD
+#endif // !BIMG_CONFIG_PARSE_PSD
+
+#if !BIMG_CONFIG_PARSE_TGA
+#	define STBI_NO_TGA
+#endif // !BIMG_CONFIG_PARSE_TGA
+
+#if !BIMG_CONFIG_PARSE_GIF
+#	define STBI_NO_GIF
+#endif // !BIMG_CONFIG_PARSE_GIF
+
+#if !BIMG_CONFIG_PARSE_HDR
+#	define STBI_NO_HDR
+#endif // !BIMG_CONFIG_PARSE_HDR
+
+#if !BIMG_CONFIG_PARSE_PIC
+#	define STBI_NO_PIC
+#endif // !BIMG_CONFIG_PARSE_PIC
+
+#if !BIMG_CONFIG_PARSE_PNM
+#	define STBI_NO_PNM
+#endif // !BIMG_CONFIG_PARSE_PNM
+
 #include <stb/stb_image.h>
 BX_PRAGMA_DIAGNOSTIC_POP();
+#endif // BIMG_USE_STB_IMAGE
 
 namespace bimg
 {
@@ -437,11 +490,13 @@ namespace bimg
 
 		return output;
 #else
+		BX_UNUSED(_allocator, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "PNG parsing is disabled (BIMG_CONFIG_PARSE_PNG).");
 		return NULL;
 #endif // BIMG_CONFIG_PARSE_PNG
 	}
 
+#if BIMG_CONFIG_PARSE_EXR
 	static void errorSetTinyExr(int _result, bx::Error* _err)
 	{
 		switch (_result)
@@ -461,11 +516,20 @@ namespace bimg
 		default:                                 BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image.");                       break;
 		}
 	}
+#endif // BIMG_CONFIG_PARSE_EXR
 
 	static ImageContainer* imageParseTinyExr(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
+		static uint8_t exrMagic[] = { 0x76, 0x2f, 0x31, 0x01 };
+
+		if (0 != bx::memCmp(_data, exrMagic, sizeof(exrMagic) ) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_EXR
 		EXRVersion exrVersion;
 		int result = ParseEXRVersionFromMemory(&exrVersion, (uint8_t*)_data, _size);
 		if (TINYEXR_SUCCESS != result)
@@ -649,12 +713,18 @@ namespace bimg
 		}
 
 		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "EXR parsing is disabled (BIMG_CONFIG_PARSE_EXR).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_PNG
 	}
 
 	static ImageContainer* imageParseStbImage(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
+#if BIMG_USE_STB_IMAGE
 		const int isHdr = stbi_is_hdr_from_memory( (const uint8_t*)_data, (int)_size);
 
 		void* data;
@@ -705,18 +775,22 @@ namespace bimg
 		stbi_image_free(data);
 
 		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		return NULL;
+#endif
 	}
 
 	static ImageContainer* imageParseJpeg(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
 		bx::MemoryReader reader(_data, _size);
 
-		bx::Error err;
-
 		uint16_t magic = 0;
-		bx::readHE(&reader, magic, false, &err);
+		bx::readHE(&reader, magic, false, _err);
 
-		if (!err.isOk()
+		if (!_err->isOk()
 		||  0xffd8 != magic)
 		{
 			return NULL;
@@ -725,14 +799,14 @@ namespace bimg
 #if BIMG_CONFIG_PARSE_JPEG
 		Orientation::Enum orientation = Orientation::R0;
 
-		while (err.isOk() )
+		while (_err->isOk() )
 		{
-			bx::readHE(&reader, magic, false, &err);
+			bx::readHE(&reader, magic, false, _err);
 
 			uint16_t size;
-			bx::readHE(&reader, size, false, &err);
+			bx::readHE(&reader, size, false, _err);
 
-			if (!err.isOk() )
+			if (!_err->isOk() )
 			{
 				return NULL;
 			}
@@ -744,32 +818,32 @@ namespace bimg
 			}
 
 			char exif00[6];
-			bx::read(&reader, exif00, 6, &err);
+			bx::read(&reader, exif00, 6, _err);
 
 			if (0 == bx::memCmp(exif00, "Exif\0\0", 6) )
 			{
 				uint16_t iimm = 0;
-				bx::read(&reader, iimm, &err);
+				bx::read(&reader, iimm, _err);
 
 				const bool littleEndian = iimm == 0x4949; //II - Intel - little endian
-				if (!err.isOk()
+				if (!_err->isOk()
 				&&  !littleEndian
 				&&   iimm != 0x4d4d) // MM - Motorola - big endian
 				{
 					return NULL;
 				}
 
-				bx::readHE(&reader, magic, littleEndian, &err);
-				if (!err.isOk()
+				bx::readHE(&reader, magic, littleEndian, _err);
+				if (!_err->isOk()
 				||  0x2a != magic)
 				{
 					return NULL;
 				}
 
 				uint32_t ifd0;
-				bx::readHE(&reader, ifd0, littleEndian, &err);
+				bx::readHE(&reader, ifd0, littleEndian, _err);
 
-				if (!err.isOk()
+				if (!_err->isOk()
 				||  8 > ifd0)
 				{
 					return NULL;
@@ -778,25 +852,25 @@ namespace bimg
 				bx::seek(&reader, ifd0-8);
 
 				uint16_t numEntries;
-				bx::readHE(&reader, numEntries, littleEndian, &err);
+				bx::readHE(&reader, numEntries, littleEndian, _err);
 
-				for (uint32_t ii = 0; err.isOk() && ii < numEntries; ++ii)
+				for (uint32_t ii = 0; _err->isOk() && ii < numEntries; ++ii)
 				{
 					// Reference(s):
 					// - EXIF Tags
 					//   https://web.archive.org/web/20190218005249/https://sno.phy.queensu.ca/~phil/exiftool/TagNames/EXIF.html
 					//
 					uint16_t tag;
-					bx::readHE(&reader, tag, littleEndian, &err);
+					bx::readHE(&reader, tag, littleEndian, _err);
 
 					uint16_t format;
-					bx::readHE(&reader, format, littleEndian, &err);
+					bx::readHE(&reader, format, littleEndian, _err);
 
 					uint32_t length;
-					bx::readHE(&reader, length, littleEndian, &err);
+					bx::readHE(&reader, length, littleEndian, _err);
 
 					uint32_t data;
-					bx::readHE(&reader, data, littleEndian, &err);
+					bx::readHE(&reader, data, littleEndian, _err);
 
 					switch (tag)
 					{
@@ -806,10 +880,10 @@ namespace bimg
 							bx::seek(&reader, -4);
 
 							uint16_t u16;
-							bx::readHE(&reader, u16, littleEndian, &err);
+							bx::readHE(&reader, u16, littleEndian, _err);
 
 							uint16_t pad;
-							bx::read(&reader, pad, &err);
+							bx::read(&reader, pad, _err);
 
 							switch (u16)
 							{
@@ -843,6 +917,7 @@ namespace bimg
 
 		return image;
 #else
+		BX_UNUSED(_allocator, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "JPEG parsing is disabled (BIMG_CONFIG_PARSE_JPEG).");
 		return NULL;
 #endif // BIMG_CONFIG_PARSE_JPEG
@@ -850,6 +925,16 @@ namespace bimg
 
 	static ImageContainer* imageParseLibHeif(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
+		BX_ERROR_SCOPE(_err);
+
+		static uint8_t heifMagic[] = { 0x66, 0x74, 0x79, 0x70 }; // "ftyp" at offset 4
+
+		if (12 > _size
+		||  0 != bx::memCmp( (const uint8_t*)_data + 4, heifMagic, sizeof(heifMagic) ) )
+		{
+			return NULL;
+		}
+
 #if BIMG_CONFIG_PARSE_HEIF
 		heif_context* ctx = heif_context_alloc();
 
@@ -894,7 +979,8 @@ namespace bimg
 		BX_UNUSED(_err);
 		return output;
 #else
-		BX_UNUSED(_allocator, _data, _size, _err);
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "HEIF parsing is disabled (BIMG_CONFIG_PARSE_HEIF).");
 		return NULL;
 #endif // BIMG_CONFIG_PARSE_HEIF
 	}
