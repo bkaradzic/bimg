@@ -256,7 +256,7 @@ namespace bimg
 	{
 		return _format != TextureFormat::Unknown
 			&& _format != TextureFormat::UnknownDepth
-			&& _format != TextureFormat::Count
+			&& _format  < TextureFormat::Count
 			;
 	}
 
