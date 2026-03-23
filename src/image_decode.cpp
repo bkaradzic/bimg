@@ -799,16 +799,18 @@ namespace bimg
 #if BIMG_CONFIG_PARSE_JPEG
 		Orientation::Enum orientation = Orientation::R0;
 
-		while (_err->isOk() )
+		bx::Error exifErr;
+
+		while (exifErr.isOk() )
 		{
-			bx::readHE(&reader, magic, false, _err);
+			bx::readHE(&reader, magic, false, &exifErr);
 
 			uint16_t size;
-			bx::readHE(&reader, size, false, _err);
+			bx::readHE(&reader, size, false, &exifErr);
 
-			if (!_err->isOk() )
+			if (!exifErr.isOk() )
 			{
-				return NULL;
+				break;
 			}
 
 			if (0xffe1 != magic)
@@ -818,59 +820,58 @@ namespace bimg
 			}
 
 			char exif00[6];
-			bx::read(&reader, exif00, 6, _err);
+			bx::read(&reader, exif00, 6, &exifErr);
 
 			if (0 == bx::memCmp(exif00, "Exif\0\0", 6) )
 			{
 				uint16_t iimm = 0;
-				bx::read(&reader, iimm, _err);
+				bx::read(&reader, iimm, &exifErr);
 
 				const bool littleEndian = iimm == 0x4949; //II - Intel - little endian
-				if (!_err->isOk()
-				&&  !littleEndian
-				&&   iimm != 0x4d4d) // MM - Motorola - big endian
+				if (!exifErr.isOk()
+				|| (!littleEndian && iimm != 0x4d4d) ) // MM - Motorola - big endian
 				{
-					return NULL;
+					break;
 				}
 
-				bx::readHE(&reader, magic, littleEndian, _err);
-				if (!_err->isOk()
+				bx::readHE(&reader, magic, littleEndian, &exifErr);
+				if (!exifErr.isOk()
 				||  0x2a != magic)
 				{
-					return NULL;
+					break;
 				}
 
 				uint32_t ifd0;
-				bx::readHE(&reader, ifd0, littleEndian, _err);
+				bx::readHE(&reader, ifd0, littleEndian, &exifErr);
 
-				if (!_err->isOk()
+				if (!exifErr.isOk()
 				||  8 > ifd0)
 				{
-					return NULL;
+					break;
 				}
 
 				bx::seek(&reader, ifd0-8);
 
 				uint16_t numEntries;
-				bx::readHE(&reader, numEntries, littleEndian, _err);
+				bx::readHE(&reader, numEntries, littleEndian, &exifErr);
 
-				for (uint32_t ii = 0; _err->isOk() && ii < numEntries; ++ii)
+				for (uint32_t ii = 0; exifErr.isOk() && ii < numEntries; ++ii)
 				{
 					// Reference(s):
 					// - EXIF Tags
 					//   https://web.archive.org/web/20190218005249/https://sno.phy.queensu.ca/~phil/exiftool/TagNames/EXIF.html
 					//
 					uint16_t tag;
-					bx::readHE(&reader, tag, littleEndian, _err);
+					bx::readHE(&reader, tag, littleEndian, &exifErr);
 
 					uint16_t format;
-					bx::readHE(&reader, format, littleEndian, _err);
+					bx::readHE(&reader, format, littleEndian, &exifErr);
 
 					uint32_t length;
-					bx::readHE(&reader, length, littleEndian, _err);
+					bx::readHE(&reader, length, littleEndian, &exifErr);
 
 					uint32_t data;
-					bx::readHE(&reader, data, littleEndian, _err);
+					bx::readHE(&reader, data, littleEndian, &exifErr);
 
 					switch (tag)
 					{
@@ -880,10 +881,10 @@ namespace bimg
 							bx::seek(&reader, -4);
 
 							uint16_t u16;
-							bx::readHE(&reader, u16, littleEndian, _err);
+							bx::readHE(&reader, u16, littleEndian, &exifErr);
 
 							uint16_t pad;
-							bx::read(&reader, pad, _err);
+							bx::read(&reader, pad, &exifErr);
 
 							switch (u16)
 							{
