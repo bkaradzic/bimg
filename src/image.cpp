@@ -1299,9 +1299,22 @@ namespace bimg
 					imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
 					uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
 
+					const bool needScratch = false
+						|| mip.m_width  != dstMip.m_width
+						|| mip.m_height != dstMip.m_height
+						;
+
+					const uint32_t dstBpp       = s_imageBlockInfo[_dstFormat].bitsPerPixel;
+					const uint32_t scratchPitch = mip.m_width * dstBpp / 8;
+					const uint32_t scratchSize  = scratchPitch * mip.m_height * mip.m_depth;
+					uint8_t* scratch = needScratch
+						? (uint8_t*)bx::alloc(_allocator, scratchSize)
+						: NULL
+						;
+
 					bool ok = imageConvert(
 						  _allocator
-						, dstData
+						, needScratch ? scratch : dstData
 						, _dstFormat
 						, mip.m_data
 						, mip.m_format
@@ -1309,6 +1322,29 @@ namespace bimg
 						, mip.m_height
 						, mip.m_depth
 						);
+
+					if (ok
+					&&  needScratch)
+					{
+						const uint32_t dstPitch = dstMip.m_width * dstBpp / 8;
+						for (uint32_t zz = 0; zz < dstMip.m_depth; ++zz)
+						{
+							bx::memCopy(
+								  dstData + zz*dstMip.m_height*dstPitch
+								, dstPitch
+								, scratch + zz*mip.m_height*scratchPitch
+								, scratchPitch
+								, dstPitch
+								, dstMip.m_height
+								);
+						}
+					}
+
+					if (NULL != scratch)
+					{
+						bx::free(_allocator, scratch);
+					}
+
 					BX_ASSERT(ok, "Conversion from %s to %s failed!"
 							, getName(_input.m_format)
 							, getName(output->m_format)
