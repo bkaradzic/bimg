@@ -1286,6 +1286,8 @@ namespace bimg
 			, _convertMips && 1 < _input.m_numMips
 			);
 
+		output->m_orientation = _input.m_orientation;
+
 		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
 
 		for (uint16_t side = 0; side < numSides; ++side)
