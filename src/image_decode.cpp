@@ -745,6 +745,14 @@ namespace bimg
 			return NULL;
 		}
 
+		if (0 == width
+		||  0 == height)
+		{
+			stbi_image_free(data);
+			BX_ERROR_SET(_err, BIMG_ERROR, "stb_image: Invalid image dimensions.");
+			return NULL;
+		}
+
 		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
 
 		if (isHdr)
