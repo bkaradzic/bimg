@@ -1010,6 +1010,10 @@ namespace bimg
 
 		if (NULL == input)
 		{
+			if (_err->isOk() )
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "Unrecognized image format.");
+			}
 			return NULL;
 		}
 
