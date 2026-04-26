@@ -1380,6 +1380,31 @@ namespace bimg
 			return NULL;
 		}
 
+		{
+			const ImageBlockInfo& blockInfo = getBlockInfo(imageContainer.m_format);
+			const uint64_t blockWidth  = blockInfo.blockWidth;
+			const uint64_t blockHeight = blockInfo.blockHeight;
+			const uint64_t minBlockX   = blockInfo.minBlockX;
+			const uint64_t minBlockY   = blockInfo.minBlockY;
+			const uint64_t blockSize   = blockInfo.blockSize;
+
+			const uint64_t bw = bx::max<uint64_t>(blockWidth  * minBlockX, ( (imageContainer.m_width  + blockWidth  - 1) / blockWidth )*blockWidth);
+			const uint64_t bh = bx::max<uint64_t>(blockHeight * minBlockY, ( (imageContainer.m_height + blockHeight - 1) / blockHeight)*blockHeight);
+			const uint64_t bd = bx::max<uint64_t>(1, imageContainer.m_depth);
+			const uint64_t numLayers = bx::max<uint64_t>(1, imageContainer.m_numLayers);
+			const uint64_t sides = (imageContainer.m_cubeMap ? 6 : 1) * numLayers;
+			const uint64_t firstMipSize = (bw/blockWidth) * (bh/blockHeight) * bd * blockSize * sides;
+			const uint64_t offset = imageContainer.m_offset;
+
+			if (firstMipSize > uint64_t(_size)
+			||  offset       > uint64_t(_size)
+			||  firstMipSize > uint64_t(_size) - offset)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "Image: Declared dimensions exceed file size.");
+				return NULL;
+			}
+		}
+
 		ImageContainer* output = imageAlloc(_allocator
 			, imageContainer.m_format
 			, uint16_t(imageContainer.m_width)
@@ -4854,6 +4879,14 @@ namespace bimg
 			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffff0000) );
 			break;
 
+		case TextureFormat::EACR11:
+		case TextureFormat::EACR11S:
+		case TextureFormat::EACRG11:
+		case TextureFormat::EACRG11S:
+			BX_WARN(false, "EAC decoder is not implemented.");
+			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
+			break;
+
 		case TextureFormat::PTC12:
 			BX_WARN(false, "PTC12 decoder is not implemented.");
 			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffff00ff) );
@@ -4998,9 +5031,12 @@ namespace bimg
 			{
 				const uint32_t srcBpp   = s_imageBlockInfo[_srcFormat].bitsPerPixel;
 				const uint32_t srcPitch = _width * srcBpp / 8;
-				if (!imageConvert(_allocator, _dst, TextureFormat::BGRA8, _src, _srcFormat, _width, _height, 1, srcPitch, _dstPitch) )
+				if (NULL == s_packUnpack[_srcFormat].unpack
+				||  NULL == s_packUnpack[TextureFormat::BGRA8].pack
+				||  !imageConvert(_allocator, _dst, TextureFormat::BGRA8, _src, _srcFormat, _width, _height, 1, srcPitch, _dstPitch) )
 				{
 					// Failed to convert, just make ugly red-yellow checkerboard texture.
+					BX_WARN(false, "Decoder for %s is not implemented.", getName(_srcFormat) );
 					imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xffff0000), UINT32_C(0xffffff00) );
 				}
 			}
