@@ -1043,7 +1043,7 @@ namespace bimg
 
 	void imageCopy(void* _dst, uint32_t _height, uint32_t _srcPitch, uint32_t _depth, const void* _src, uint32_t _dstPitch)
 	{
-		const uint32_t pitch = bx::uint32_min(_srcPitch, _dstPitch);
+		const uint32_t pitch = bx::min(_srcPitch, _dstPitch);
 		const uint8_t* src = (uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
@@ -5022,7 +5022,7 @@ namespace bimg
 		case TextureFormat::BGRA8:
 			{
 				const uint32_t srcPitch = _width * 4;
-				const uint32_t size = bx::uint32_min(srcPitch, _dstPitch);
+				const uint32_t size = bx::min(srcPitch, _dstPitch);
 				bx::memCopy(_dst, _dstPitch, _src, srcPitch, size, _height);
 			}
 			break;
@@ -5051,7 +5051,7 @@ namespace bimg
 		case TextureFormat::RGBA8:
 			{
 				const uint32_t srcPitch = _width * 4;
-				const uint32_t size = bx::uint32_min(srcPitch, _dstPitch);
+				const uint32_t size = bx::min(srcPitch, _dstPitch);
 				bx::memCopy(_dst, _dstPitch, _src, srcPitch, size, _height);
 			}
 			break;
