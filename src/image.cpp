@@ -6,7 +6,9 @@
 #include "bimg_p.h"
 #include <bx/hash.h>
 
+#if BIMG_CONFIG_DECODE_ASTC
 #include <astcenc.h>
+#endif
 
 #include <bx/debug.h>
 
@@ -5077,7 +5079,7 @@ namespace bimg
 		case TextureFormat::ASTC10x10:
 		case TextureFormat::ASTC12x10:
 		case TextureFormat::ASTC12x12:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_ASTC) )
+#if BIMG_CONFIG_DECODE_ASTC
 			{
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_srcFormat);
 
@@ -5148,11 +5150,12 @@ namespace bimg
 
 					astcenc_context_free(context);
 			}
-			else
+#else
 			{
 				BX_WARN(false, "ASTC decoder is disabled (BIMG_CONFIG_DECODE_ASTC).");
 				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
+#endif
 			break;
 
 		default:
