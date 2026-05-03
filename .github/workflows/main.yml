@@ -27,6 +27,7 @@ jobs:
         with:
           repository: bkaradzic/bx
           path: bx
+          ref: simd
       - name: Checkout bimg
         uses: actions/checkout@v4
         with:
@@ -62,6 +63,7 @@ jobs:
         with:
           repository: bkaradzic/bx
           path: bx
+          ref: simd
       - name: Checkout bimg
         uses: actions/checkout@v4
         with:
@@ -101,6 +103,7 @@ jobs:
         with:
           repository: bkaradzic/bx
           path: bx
+          ref: simd
       - name: Checkout bimg
         uses: actions/checkout@v4
         with:
@@ -132,6 +135,7 @@ jobs:
         with:
           repository: bkaradzic/bx
           path: bx
+          ref: simd
       - name: Checkout bimg
         uses: actions/checkout@v4
         with:
@@ -166,6 +170,7 @@ jobs:
         with:
           repository: bkaradzic/bx
           path: bx
+          ref: simd
       - name: Checkout bimg
         uses: actions/checkout@v4
         with:

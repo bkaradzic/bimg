@@ -455,16 +455,16 @@ namespace bimg
 	BX_SIMD_INLINE bx::simd128_t simd_to_linear(bx::simd128_t _a)
 	{
 		using namespace bx;
-		const simd128_t f12_92   = simd_ld(12.92f, 12.92f, 12.92f, 1.0f);
-		const simd128_t f0_055   = simd_ld(0.055f, 0.055f, 0.055f, 0.0f);
-		const simd128_t f1_055   = simd_ld(1.055f, 1.055f, 1.055f, 1.0f);
-		const simd128_t f2_4     = simd_ld(2.4f, 2.4f, 2.4f, 1.0f);
-		const simd128_t f0_04045 = simd_ld(0.04045f, 0.04045f, 0.04045f, 0.0f);
-		const simd128_t lo       = simd_div(_a, f12_92);
-		const simd128_t tmp0     = simd_add(_a, f0_055);
-		const simd128_t tmp1     = simd_div(tmp0, f1_055);
-		const simd128_t hi       = simd_pow(tmp1, f2_4);
-		const simd128_t mask     = simd_cmple(_a, f0_04045);
+		const simd128_t f12_92   = simd128_ld(12.92f, 12.92f, 12.92f, 1.0f);
+		const simd128_t f0_055   = simd128_ld(0.055f, 0.055f, 0.055f, 0.0f);
+		const simd128_t f1_055   = simd128_ld(1.055f, 1.055f, 1.055f, 1.0f);
+		const simd128_t f2_4     = simd128_ld(2.4f, 2.4f, 2.4f, 1.0f);
+		const simd128_t f0_04045 = simd128_ld(0.04045f, 0.04045f, 0.04045f, 0.0f);
+		const simd128_t lo       = simd_f32_div(_a, f12_92);
+		const simd128_t tmp0     = simd_f32_add(_a, f0_055);
+		const simd128_t tmp1     = simd_f32_div(tmp0, f1_055);
+		const simd128_t hi       = simd_f32_pow(tmp1, f2_4);
+		const simd128_t mask     = simd_f32_cmple(_a, f0_04045);
 		const simd128_t result   = simd_selb(mask, hi, lo);
 
 		return result;
@@ -473,17 +473,17 @@ namespace bimg
 	BX_SIMD_INLINE bx::simd128_t simd_to_gamma(bx::simd128_t _a)
 	{
 		using namespace bx;
-		const simd128_t f12_92     = simd_ld(12.92f, 12.92f, 12.92f, 1.0f);
-		const simd128_t f0_055     = simd_ld(0.055f, 0.055f, 0.055f, 0.0f);
-		const simd128_t f1_055     = simd_ld(1.055f, 1.055f, 1.055f, 1.0f);
-		const simd128_t f1o2_4     = simd_ld(1.0f/2.4f, 1.0f/2.4f, 1.0f/2.4f, 1.0f);
-		const simd128_t f0_0031308 = simd_ld(0.0031308f, 0.0031308f, 0.0031308f, 0.0f);
-		const simd128_t lo         = simd_mul(_a, f12_92);
-		const simd128_t absa       = simd_abs(_a);
-		const simd128_t tmp0       = simd_pow(absa, f1o2_4);
-		const simd128_t tmp1       = simd_mul(tmp0, f1_055);
-		const simd128_t hi         = simd_sub(tmp1, f0_055);
-		const simd128_t mask       = simd_cmple(_a, f0_0031308);
+		const simd128_t f12_92     = simd128_ld(12.92f, 12.92f, 12.92f, 1.0f);
+		const simd128_t f0_055     = simd128_ld(0.055f, 0.055f, 0.055f, 0.0f);
+		const simd128_t f1_055     = simd128_ld(1.055f, 1.055f, 1.055f, 1.0f);
+		const simd128_t f1o2_4     = simd128_ld(1.0f/2.4f, 1.0f/2.4f, 1.0f/2.4f, 1.0f);
+		const simd128_t f0_0031308 = simd128_ld(0.0031308f, 0.0031308f, 0.0031308f, 0.0f);
+		const simd128_t lo         = simd_f32_mul(_a, f12_92);
+		const simd128_t absa       = simd_f32_abs(_a);
+		const simd128_t tmp0       = simd_f32_pow(absa, f1o2_4);
+		const simd128_t tmp1       = simd_f32_mul(tmp0, f1_055);
+		const simd128_t hi         = simd_f32_sub(tmp1, f0_055);
+		const simd128_t mask       = simd_f32_cmple(_a, f0_0031308);
 		const simd128_t result     = simd_selb(mask, hi, lo);
 
 		return result;
@@ -503,13 +503,13 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 
 		using namespace bx;
-		const simd128_t unpack = simd_ld(1.0f, 1.0f/256.0f, 1.0f/65536.0f, 1.0f/16777216.0f);
-		const simd128_t pack   = simd_ld(1.0f, 256.0f*0.5f, 65536.0f, 16777216.0f*0.5f);
-		const simd128_t umask  = simd_ild(0xff, 0xff00, 0xff0000, 0xff000000);
-		const simd128_t pmask  = simd_ild(0xff, 0x7f80, 0xff0000, 0x7f800000);
-		const simd128_t wflip  = simd_ild(0, 0, 0, 0x80000000);
-		const simd128_t wadd   = simd_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
-		const simd128_t quater = simd_splat(0.25f);
+		const simd128_t unpack = simd128_ld(1.0f, 1.0f/256.0f, 1.0f/65536.0f, 1.0f/16777216.0f);
+		const simd128_t pack   = simd128_ld(1.0f, 256.0f*0.5f, 65536.0f, 16777216.0f*0.5f);
+		const simd128_t umask  = simd128_ld(0xffu, 0xff00u, 0xff0000u, 0xff000000u);
+		const simd128_t pmask  = simd128_ld(0xffu, 0x7f80u, 0xff0000u, 0x7f800000u);
+		const simd128_t wflip  = simd128_ld(0u, 0u, 0u, 0x80000000u);
+		const simd128_t wadd   = simd128_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
+		const simd128_t quater = simd128_splat(0.25f);
 
 		for (uint32_t zz = 0; zz < _depth; ++zz)
 		{
@@ -519,10 +519,10 @@ namespace bimg
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
-					const simd128_t abgr0  = simd_splat(rgba);
-					const simd128_t abgr1  = simd_splat(rgba+4);
-					const simd128_t abgr2  = simd_splat(rgba+_srcPitch);
-					const simd128_t abgr3  = simd_splat(rgba+_srcPitch+4);
+					const simd128_t abgr0  = simd128_splat(*(const uint32_t*)(rgba) );
+					const simd128_t abgr1  = simd128_splat(*(const uint32_t*)(rgba+4) );
+					const simd128_t abgr2  = simd128_splat(*(const uint32_t*)(rgba+_srcPitch) );
+					const simd128_t abgr3  = simd128_splat(*(const uint32_t*)(rgba+_srcPitch+4) );
 
 					const simd128_t abgr0m = simd_and(abgr0, umask);
 					const simd128_t abgr1m = simd_and(abgr1, umask);
@@ -532,40 +532,40 @@ namespace bimg
 					const simd128_t abgr1x = simd_xor(abgr1m, wflip);
 					const simd128_t abgr2x = simd_xor(abgr2m, wflip);
 					const simd128_t abgr3x = simd_xor(abgr3m, wflip);
-					const simd128_t abgr0f = simd_itof(abgr0x);
-					const simd128_t abgr1f = simd_itof(abgr1x);
-					const simd128_t abgr2f = simd_itof(abgr2x);
-					const simd128_t abgr3f = simd_itof(abgr3x);
-					const simd128_t abgr0c = simd_add(abgr0f, wadd);
-					const simd128_t abgr1c = simd_add(abgr1f, wadd);
-					const simd128_t abgr2c = simd_add(abgr2f, wadd);
-					const simd128_t abgr3c = simd_add(abgr3f, wadd);
-					const simd128_t abgr0n = simd_mul(abgr0c, unpack);
-					const simd128_t abgr1n = simd_mul(abgr1c, unpack);
-					const simd128_t abgr2n = simd_mul(abgr2c, unpack);
-					const simd128_t abgr3n = simd_mul(abgr3c, unpack);
+					const simd128_t abgr0f = simd_i32_itof(abgr0x);
+					const simd128_t abgr1f = simd_i32_itof(abgr1x);
+					const simd128_t abgr2f = simd_i32_itof(abgr2x);
+					const simd128_t abgr3f = simd_i32_itof(abgr3x);
+					const simd128_t abgr0c = simd_f32_add(abgr0f, wadd);
+					const simd128_t abgr1c = simd_f32_add(abgr1f, wadd);
+					const simd128_t abgr2c = simd_f32_add(abgr2f, wadd);
+					const simd128_t abgr3c = simd_f32_add(abgr3f, wadd);
+					const simd128_t abgr0n = simd_f32_mul(abgr0c, unpack);
+					const simd128_t abgr1n = simd_f32_mul(abgr1c, unpack);
+					const simd128_t abgr2n = simd_f32_mul(abgr2c, unpack);
+					const simd128_t abgr3n = simd_f32_mul(abgr3c, unpack);
 
 					const simd128_t abgr0l = simd_to_linear(abgr0n);
 					const simd128_t abgr1l = simd_to_linear(abgr1n);
 					const simd128_t abgr2l = simd_to_linear(abgr2n);
 					const simd128_t abgr3l = simd_to_linear(abgr3n);
 
-					const simd128_t sum0   = simd_add(abgr0l, abgr1l);
-					const simd128_t sum1   = simd_add(abgr2l, abgr3l);
-					const simd128_t sum2   = simd_add(sum0, sum1);
-					const simd128_t avg0   = simd_mul(sum2, quater);
+					const simd128_t sum0   = simd_f32_add(abgr0l, abgr1l);
+					const simd128_t sum1   = simd_f32_add(abgr2l, abgr3l);
+					const simd128_t sum2   = simd_f32_add(sum0, sum1);
+					const simd128_t avg0   = simd_f32_mul(sum2, quater);
 					const simd128_t avg1   = simd_to_gamma(avg0);
 
-					const simd128_t avg2   = simd_mul(avg1, pack);
-					const simd128_t ftoi0  = simd_ftoi(avg2);
+					const simd128_t avg2   = simd_f32_mul(avg1, pack);
+					const simd128_t ftoi0  = simd_f32_ftoi_trunc(avg2);
 					const simd128_t ftoi1  = simd_and(ftoi0, pmask);
-					const simd128_t zwxy   = simd_swiz_zwxy(ftoi1);
+					const simd128_t zwxy   = simd128_x32_swiz_zwxy(ftoi1);
 					const simd128_t tmp0   = simd_or(ftoi1, zwxy);
-					const simd128_t yyyy   = simd_swiz_yyyy(tmp0);
-					const simd128_t tmp1   = simd_iadd(yyyy, yyyy);
+					const simd128_t yyyy   = simd128_x32_swiz_yyyy(tmp0);
+					const simd128_t tmp1   = simd_i32_add(yyyy, yyyy);
 					const simd128_t result = simd_or(tmp0, tmp1);
 
-					simd_stx(dst, result);
+					simd_x32_st1(dst, result);
 				}
 			}
 		}
@@ -1015,8 +1015,8 @@ namespace bimg
 
 		using namespace bx;
 
-		const simd128_t mf0f0 = simd_isplat(0xff00ff00);
-		const simd128_t m0f0f = simd_isplat(0x00ff00ff);
+		const simd128_t mf0f0 = simd128_splat(uint32_t(0xff00ff00) );
+		const simd128_t m0f0f = simd128_splat(uint32_t(0x00ff00ff) );
 		const uint32_t  width = _width/4;
 
 		const uint8_t* srcData = (uint8_t*) _src;
@@ -1029,9 +1029,9 @@ namespace bimg
 
 			for (uint32_t xx = 0; xx < width; ++xx, src += 16, dst += 16)
 			{
-				const simd128_t tabgr = simd_ld(src);
-				const simd128_t t00ab = simd_srl(tabgr, 16);
-				const simd128_t tgr00 = simd_sll(tabgr, 16);
+				const simd128_t tabgr = simd128_ld(src);
+				const simd128_t t00ab = simd_x32_srl(tabgr, 16);
+				const simd128_t tgr00 = simd_x32_sll(tabgr, 16);
 				const simd128_t tgrab = simd_or(t00ab, tgr00);
 				const simd128_t ta0g0 = simd_and(tabgr, mf0f0);
 				const simd128_t t0r0b = simd_and(tgrab, m0f0f);
@@ -1442,17 +1442,20 @@ namespace bimg
 	static uint8_t bitRangeConvert(uint32_t _in, uint32_t _from, uint32_t _to)
 	{
 		using namespace bx;
-		uint32_t tmp0   = uint32_sll(1, _to);
-		uint32_t tmp1   = uint32_sll(1, _from);
-		uint32_t tmp2   = uint32_dec(tmp0);
-		uint32_t tmp3   = uint32_dec(tmp1);
-		uint32_t tmp4   = uint32_mul(_in, tmp2);
-		uint32_t tmp5   = uint32_add(tmp3, tmp4);
-		uint32_t tmp6   = uint32_srl(tmp5, _from);
-		uint32_t tmp7   = uint32_add(tmp5, tmp6);
-		uint32_t result = uint32_srl(tmp7, _from);
 
-		return uint8_t(result);
+		const simd32_t one    = simd32_splat(1u);
+		const simd32_t in     = simd32_splat(_in);
+		const simd32_t tmp0   = simd32_x32_sll(one, _to);
+		const simd32_t tmp1   = simd32_x32_sll(one, _from);
+		const simd32_t tmp2   = simd32_u32_sub(tmp0, one);
+		const simd32_t tmp3   = simd32_u32_sub(tmp1, one);
+		const simd32_t tmp4   = simd32_u32_mul(in, tmp2);
+		const simd32_t tmp5   = simd32_u32_add(tmp3, tmp4);
+		const simd32_t tmp6   = simd32_x32_srl(tmp5, _from);
+		const simd32_t tmp7   = simd32_u32_add(tmp5, tmp6);
+		const simd32_t result = simd32_x32_srl(tmp7, _from);
+
+		return uint8_t(result.u32);
 	}
 
 	static void decodeBlockDxt(uint8_t _dst[16*4], const uint8_t _src[8])
@@ -2690,10 +2693,7 @@ namespace bimg
 
 	static uint8_t uint8_sat(int32_t _a)
 	{
-		using namespace bx;
-		const uint32_t min    = uint32_imin(_a, 255);
-		const uint32_t result = uint32_imax(min, 0);
-		return (uint8_t)result;
+		return (uint8_t)bx::clamp(_a, 0, 255);
 	}
 
 	static uint8_t uint8_satadd(int32_t _a, int32_t _b)
@@ -3131,11 +3131,15 @@ namespace bimg
 	uint32_t morton2d(uint32_t _x, uint32_t _y)
 	{
 		using namespace bx;
-		const uint32_t tmpx   = uint32_part1by1(_x);
-		const uint32_t xbits  = uint32_sll(tmpx, 1);
-		const uint32_t ybits  = uint32_part1by1(_y);
-		const uint32_t result = uint32_or(xbits, ybits);
-		return result;
+
+		const simd32_t xx     = simd32_splat(_x);
+		const simd32_t yy     = simd32_splat(_y);
+		const simd32_t tmpx   = simd32_x32_part1by1(xx);
+		const simd32_t tmpy   = simd32_x32_part1by1(yy);
+		const simd32_t xbits  = simd32_x32_sll(tmpx, 1);
+		const simd32_t result = simd32_or(xbits, tmpy);
+
+		return result.u32;
 	}
 
 	uint32_t getColor(const uint8_t _src[8])
@@ -5207,22 +5211,22 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 
 		using namespace bx;
-		const simd128_t unpack = simd_ld(1.0f/256.0f, 1.0f/256.0f/256.0f, 1.0f/65536.0f/256.0f, 1.0f/16777216.0f/256.0f);
-		const simd128_t umask  = simd_ild(0xff, 0xff00, 0xff0000, 0xff000000);
-		const simd128_t wflip  = simd_ild(0, 0, 0, 0x80000000);
-		const simd128_t wadd   = simd_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
+		const simd128_t unpack = simd128_ld(1.0f/256.0f, 1.0f/256.0f/256.0f, 1.0f/65536.0f/256.0f, 1.0f/16777216.0f/256.0f);
+		const simd128_t umask  = simd128_ld(0xffu, 0xff00u, 0xff0000u, 0xff000000u);
+		const simd128_t wflip  = simd128_ld(0u, 0u, 0u, 0x80000000u);
+		const simd128_t wadd   = simd128_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
 
 		for (uint32_t yy = 0, ystep = _srcPitch; yy < dstHeight; ++yy, src += ystep)
 		{
 			const uint8_t* rgba = src;
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 4, dst += 4)
 			{
-				const simd128_t abgr0  = simd_splat(rgba);
+				const simd128_t abgr0  = simd128_splat(*(const uint32_t*)(rgba) );
 				const simd128_t abgr0m = simd_and(abgr0, umask);
 				const simd128_t abgr0x = simd_xor(abgr0m, wflip);
-				const simd128_t abgr0f = simd_itof(abgr0x);
-				const simd128_t abgr0c = simd_add(abgr0f, wadd);
-				const simd128_t abgr0n = simd_mul(abgr0c, unpack);
+				const simd128_t abgr0f = simd_i32_itof(abgr0x);
+				const simd128_t abgr0c = simd_f32_add(abgr0f, wadd);
+				const simd128_t abgr0n = simd_f32_mul(abgr0c, unpack);
 
 				simd_st(dst, abgr0n);
 			}
