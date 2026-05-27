@@ -12,6 +12,7 @@ BX_PRAGMA_DIAGNOSTIC_PUSH()
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-value")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wcalloc-transposed-args")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wdeprecated-declarations")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4018) // warning C4018:  '<': signed/unsigned mismatch
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // error C4100: '' : unreferenced formal parameter
@@ -57,6 +58,30 @@ void lodepng_free(void* _ptr)
 #if BIMG_CONFIG_PARSE_HEIF
 #	include <libheif/heif.h>
 #endif // BIMG_CONFIG_PARSE_HEIF
+
+#if BIMG_CONFIG_PARSE_WEBP
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-variable")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wsign-compare")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmissing-field-initializers")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wparentheses")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wimplicit-fallthrough")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wtype-limits")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // warning C4100: unreferenced formal parameter
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4127) // warning C4127: conditional expression is constant
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: conversion from 'X' to 'Y', possible loss of data
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4245) // warning C4245: conversion from 'X' to 'Y', signed/unsigned mismatch
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4267) // warning C4267: conversion from 'size_t' to 'X', possible loss of data
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: unreferenced function with internal linkage has been removed
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4701) // warning C4701: potentially uninitialized local variable used
+#define SIMPLEWEBP_IMPLEMENTATION
+#define SIMPLEWEBP_DISABLE_STDIO
+#include <simplewebp/simplewebp.h>
+BX_PRAGMA_DIAGNOSTIC_POP();
+#endif // BIMG_CONFIG_PARSE_WEBP
 
 #define BIMG_USE_STB_IMAGE 0   \
 	||  BIMG_CONFIG_PARSE_JPEG \
@@ -994,19 +1019,132 @@ namespace bimg
 #endif // BIMG_CONFIG_PARSE_HEIF
 	}
 
+#if BIMG_CONFIG_PARSE_WEBP
+	static void* simpleWebpAlloc(void* _userdata, size_t _size)
+	{
+		bx::AllocatorI* allocator = (bx::AllocatorI*)_userdata;
+		return bx::alloc(allocator, _size);
+	}
+
+	static void simpleWebpFree(void* _userdata, void* _ptr)
+	{
+		bx::AllocatorI* allocator = (bx::AllocatorI*)_userdata;
+		bx::free(allocator, _ptr);
+	}
+
+	static void errorSetSimpleWebp(simplewebp_error _result, bx::Error* _err)
+	{
+		switch (_result)
+		{
+		case SIMPLEWEBP_ALLOC_ERROR:       BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Failed to allocate memory."); break;
+		case SIMPLEWEBP_IO_ERROR:          BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Input read error.");          break;
+		case SIMPLEWEBP_NOT_WEBP_ERROR:    BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Not a WebP image.");          break;
+		case SIMPLEWEBP_CORRUPT_ERROR:     BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Image corrupt.");             break;
+		case SIMPLEWEBP_UNSUPPORTED_ERROR: BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Image unsupported.");         break;
+		case SIMPLEWEBP_IS_LOSSLESS_ERROR: BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Image is lossless.");         break;
+		default:                           BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Failed to parse image.");     break;
+		}
+	}
+#endif // BIMG_CONFIG_PARSE_WEBP
+
+	static ImageContainer* imageParseSimpleWebp(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		// WebP file format:
+		//   bytes 0-3 : "RIFF"
+		//   bytes 4-7 : file size
+		//   bytes 8-11: "WEBP"
+		static uint8_t riffMagic[] = { 0x52, 0x49, 0x46, 0x46 }; // "RIFF"
+		static uint8_t webpMagic[] = { 0x57, 0x45, 0x42, 0x50 }; // "WEBP"
+
+		if (12 > _size
+		||  0 != bx::memCmp(_data, riffMagic, sizeof(riffMagic) )
+		||  0 != bx::memCmp( (const uint8_t*)_data + 8, webpMagic, sizeof(webpMagic) ) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_WEBP
+		simplewebp_allocator allocator;
+		allocator.alloc    = simpleWebpAlloc;
+		allocator.free     = simpleWebpFree;
+		allocator.userdata = _allocator;
+
+		simplewebp* webp = NULL;
+		simplewebp_error err = simplewebp_load_from_memory( (void*)_data, _size, &allocator, &webp);
+
+		if (SIMPLEWEBP_NO_ERROR != err)
+		{
+			errorSetSimpleWebp(err, _err);
+			return NULL;
+		}
+
+		size_t width  = 0;
+		size_t height = 0;
+		simplewebp_get_dimensions(webp, &width, &height);
+
+		const uint32_t bufferSize = uint32_t(width * height * 4);
+		uint8_t* data = (uint8_t*)bx::alloc(_allocator, bufferSize);
+
+		err = simplewebp_decode(webp, data, NULL);
+		simplewebp_unload(webp);
+
+		if (SIMPLEWEBP_NO_ERROR != err)
+		{
+			bx::free(_allocator, data);
+			errorSetSimpleWebp(err, _err);
+			return NULL;
+		}
+
+		ImageContainer* output = imageAlloc(_allocator
+			, bimg::TextureFormat::RGBA8
+			, bx::narrowCast<uint16_t>(width)
+			, bx::narrowCast<uint16_t>(height)
+			, 0
+			, 1
+			, false
+			, false
+			, data
+			);
+
+		bool hasAlpha = false;
+
+		for (uint32_t ii = 0, num = uint32_t(width * height); ii < num; ++ii)
+		{
+			if (data[ii * 4 + 3] < UINT8_MAX)
+			{
+				hasAlpha = true;
+				break;
+			}
+		}
+
+		output->m_hasAlpha = hasAlpha;
+
+		bx::free(_allocator, data);
+
+		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "WebP parsing is disabled (BIMG_CONFIG_PARSE_WEBP).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_WEBP
+	}
+
 	ImageContainer* imageParse(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, TextureFormat::Enum _dstFormat, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
-		ImageContainer* input = imageParseDds     (_allocator, _data, _size, _err)        ;
-		input = NULL == input ? imageParseKtx     (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParsePvr3    (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseGnf     (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseLodePng (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseTinyExr (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseJpeg    (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseStbImage(_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseLibHeif (_allocator, _data, _size, _err) : input;
+		ImageContainer* input = imageParseDds       (_allocator, _data, _size, _err)        ;
+		input = NULL == input ? imageParseKtx       (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParsePvr3      (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseGnf       (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseLodePng   (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseTinyExr   (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseJpeg      (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseSimpleWebp(_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseStbImage  (_allocator, _data, _size, _err) : input;
+		input = NULL == input ? imageParseLibHeif   (_allocator, _data, _size, _err) : input;
 
 		if (NULL == input)
 		{
@@ -1014,6 +1152,7 @@ namespace bimg
 			{
 				BX_ERROR_SET(_err, BIMG_ERROR, "Unrecognized image format.");
 			}
+
 			return NULL;
 		}
 
