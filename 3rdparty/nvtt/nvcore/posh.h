@@ -298,8 +298,8 @@ LLVM:
 ** Determine target operating system
 ** ----------------------------------------------------------------------------
 */
-#if defined linux || defined __linux__ || defined EMSCRIPTEN
-#  define POSH_OS_LINUX 1 
+#if defined linux || defined __linux__ || defined __EMSCRIPTEN__
+#  define POSH_OS_LINUX 1
 #  define POSH_OS_STRING "Linux"
 #endif
 
@@ -548,7 +548,7 @@ LLVM:
 #  define POSH_CPU_STRING "PA-RISC"
 #endif
 
-#if defined EMSCRIPTEN
+#if defined __EMSCRIPTEN__
 #  define POSH_CPU_EMSCRIPTEN 1
 #  define POSH_CPU_STRING "EMSCRIPTEN"
 #endif
