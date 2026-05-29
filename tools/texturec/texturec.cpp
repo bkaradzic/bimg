@@ -46,6 +46,7 @@ struct Options
 			"\t equirect: %s\n"
 			"\t    strip: %s\n"
 			"\t   linear: %s\n"
+			"\tastcSwizzle: %d%d%d%d\n"
 			, maxSize
 			, mipSkip
 			, edge
@@ -59,6 +60,10 @@ struct Options
 			, equirect  ? "true" : "false"
 			, strip     ? "true" : "false"
 			, linear    ? "true" : "false"
+			, astcSwizzle[0]
+			, astcSwizzle[1]
+			, astcSwizzle[2]
+			, astcSwizzle[3]
 			);
 	}
 
@@ -77,7 +82,67 @@ struct Options
 	bool sdf       = false;
 	bool alphaTest = false;
 	bool linear    = false;
+	bimg::AstcSwizzle::Enum astcSwizzle[4] =
+	{
+		bimg::AstcSwizzle::R,
+		bimg::AstcSwizzle::G,
+		bimg::AstcSwizzle::B,
+		bimg::AstcSwizzle::A,
+	};
 };
+
+static bool isAstcFormat(bimg::TextureFormat::Enum _format)
+{
+	switch (_format)
+	{
+	case bimg::TextureFormat::ASTC4x4:
+	case bimg::TextureFormat::ASTC5x4:
+	case bimg::TextureFormat::ASTC5x5:
+	case bimg::TextureFormat::ASTC6x5:
+	case bimg::TextureFormat::ASTC6x6:
+	case bimg::TextureFormat::ASTC8x5:
+	case bimg::TextureFormat::ASTC8x6:
+	case bimg::TextureFormat::ASTC8x8:
+	case bimg::TextureFormat::ASTC10x5:
+	case bimg::TextureFormat::ASTC10x6:
+	case bimg::TextureFormat::ASTC10x8:
+	case bimg::TextureFormat::ASTC10x10:
+	case bimg::TextureFormat::ASTC12x10:
+	case bimg::TextureFormat::ASTC12x12:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool parseAstcSwizzle(bimg::AstcSwizzle::Enum* _dst, const char* _swizzle)
+{
+	if (NULL == _swizzle
+	||  '\0' == _swizzle[0]
+	||  '\0' == _swizzle[1]
+	||  '\0' == _swizzle[2]
+	||  '\0' == _swizzle[3]
+	||  '\0' != _swizzle[4])
+	{
+		return false;
+	}
+
+	for (uint32_t ii = 0; ii < 4; ++ii)
+	{
+		switch (bx::toLower(_swizzle[ii]))
+		{
+		case 'r': _dst[ii] = bimg::AstcSwizzle::R;    break;
+		case 'g': _dst[ii] = bimg::AstcSwizzle::G;    break;
+		case 'b': _dst[ii] = bimg::AstcSwizzle::B;    break;
+		case 'a': _dst[ii] = bimg::AstcSwizzle::A;    break;
+		case '0': _dst[ii] = bimg::AstcSwizzle::Zero; break;
+		case '1': _dst[ii] = bimg::AstcSwizzle::One;  break;
+		default:  return false;
+		}
+	}
+
+	return true;
+}
 
 void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
 {
@@ -140,6 +205,11 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 	if (NULL != input)
 	{
+		bimg::EncodeOptions encodeOptions;
+		encodeOptions.astcSwizzle[0] = _options.astcSwizzle[0];
+		encodeOptions.astcSwizzle[1] = _options.astcSwizzle[1];
+		encodeOptions.astcSwizzle[2] = _options.astcSwizzle[2];
+		encodeOptions.astcSwizzle[3] = _options.astcSwizzle[3];
 		bimg::TextureFormat::Enum inputFormat  = input->m_format;
 		bimg::TextureFormat::Enum outputFormat = input->m_format;
 
@@ -305,7 +375,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			if (inputFormat != outputFormat
 			&&  bimg::isCompressed(outputFormat) )
 			{
-				output = bimg::imageEncode(_allocator, outputFormat, _options.quality, *input);
+				output = bimg::imageEncode(_allocator, outputFormat, _options.quality, *input, &encodeOptions);
 			}
 			else
 			{
@@ -355,7 +425,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			if (bimg::TextureFormat::RGBA32F != outputFormat)
 			{
-				bimg::ImageContainer* temp = bimg::imageEncode(_allocator, outputFormat, _options.quality, *output);
+				bimg::ImageContainer* temp = bimg::imageEncode(_allocator, outputFormat, _options.quality, *output, &encodeOptions);
 				bimg::imageFree(output);
 
 				output = temp;
@@ -461,6 +531,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, outputFormat
 						, nmapQuality
 						, _err
+						, &encodeOptions
 						);
 
 					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
@@ -496,6 +567,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, outputFormat
 							, nmapQuality
 							, _err
+							, &encodeOptions
 							);
 					}
 
@@ -553,6 +625,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, outputFormat
 						, _options.quality
 						, _err
+						, &encodeOptions
 						);
 
 					if (1 < numMips
@@ -610,6 +683,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 								, outputFormat
 								, _options.quality
 								, _err
+								, &encodeOptions
 								);
 						}
 					}
@@ -728,6 +802,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 								, bimg::TextureFormat::A8
 								, _options.quality
 								, _err
+								, &encodeOptions
 							);
 						}
 
@@ -803,6 +878,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, outputFormat
 						, _options.quality
 						, _err
+						, &encodeOptions
 						);
 
 					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
@@ -852,6 +928,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, outputFormat
 							, _options.quality
 							, _err
+							, &encodeOptions
 							);
 					}
 
@@ -954,6 +1031,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "      --iqa                Image Quality Assessment\n"
 		  "      --pma                Premultiply alpha into RGB channel.\n"
 		  "      --linear             Input and output texture is linear color space (gamma correction won't be applied).\n"
+		  "      --swizzle <rgba>      ASTC input channel swizzle. Four chars from R,G,B,A,0,1.\n"
 		  "      --max <max size>     Maximum width/height (image will be scaled down and\n"
 		  "                           aspect ratio will be preserved)\n"
 		  "      --radiance <model>   Radiance cubemap filter. (Lighting model: Phong, PhongBrdf, Blinn, BlinnBrdf, GGX)\n"
@@ -1099,6 +1177,28 @@ int main(int _argc, const char* _argv[])
 	options.iqa       = cmdLine.hasArg("iqa");
 	options.pma       = cmdLine.hasArg("pma");
 	options.linear    = cmdLine.hasArg("linear");
+
+	const char* astcSwizzle = cmdLine.findOption("swizzle");
+	if (NULL != astcSwizzle)
+	{
+		if (!isAstcFormat(options.format) )
+		{
+			help("`--swizzle` requires an explicit ASTC output format.");
+			return bx::kExitFailure;
+		}
+
+		if (options.normalMap)
+		{
+			help("`--swizzle` cannot be used with `--normalmap`; ASTC normal maps use RRRG.");
+			return bx::kExitFailure;
+		}
+
+		if (!parseAstcSwizzle(options.astcSwizzle, astcSwizzle) )
+		{
+			help("Parsing `--swizzle` failed. Use exactly four characters from R,G,B,A,0,1.");
+			return bx::kExitFailure;
+		}
+	}
 
 	if (options.equirect
 	&&  options.strip)
