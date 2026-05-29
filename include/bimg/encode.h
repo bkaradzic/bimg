@@ -26,6 +26,11 @@ namespace bimg
 		};
 	};
 
+	struct EncodeOptions
+	{
+		bool alphaWeight = false;
+	};
+
 	///
 	void imageEncodeFromRgba8(
 		  bx::AllocatorI* _allocator
@@ -37,6 +42,7 @@ namespace bimg
 		, TextureFormat::Enum _format
 		, Quality::Enum _quality
 		, bx::Error* _err = NULL
+		, const EncodeOptions* _options = NULL
 		);
 
 	///
@@ -50,6 +56,7 @@ namespace bimg
 		, TextureFormat::Enum _format
 		, Quality::Enum _quality
 		, bx::Error* _err = NULL
+		, const EncodeOptions* _options = NULL
 		);
 
 	///
@@ -64,6 +71,7 @@ namespace bimg
 		, TextureFormat::Enum _dstFormat
 		, Quality::Enum _quality
 		, bx::Error* _err
+		, const EncodeOptions* _options = NULL
 		);
 
 	///
@@ -72,6 +80,7 @@ namespace bimg
 		, TextureFormat::Enum _dstFormat
 		, Quality::Enum _quality
 		, const ImageContainer& _input
+		, const EncodeOptions* _options = NULL
 		);
 
 	///

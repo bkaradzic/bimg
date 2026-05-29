@@ -46,6 +46,7 @@ struct Options
 			"\t equirect: %s\n"
 			"\t    strip: %s\n"
 			"\t   linear: %s\n"
+			"\talphaWeight: %s\n"
 			, maxSize
 			, mipSkip
 			, edge
@@ -59,6 +60,7 @@ struct Options
 			, equirect  ? "true" : "false"
 			, strip     ? "true" : "false"
 			, linear    ? "true" : "false"
+			, alphaWeight ? "true" : "false"
 			);
 	}
 
@@ -77,6 +79,7 @@ struct Options
 	bool sdf       = false;
 	bool alphaTest = false;
 	bool linear    = false;
+	bool alphaWeight = false;
 };
 
 void imageRgba32fNormalize(void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
@@ -140,6 +143,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 	if (NULL != input)
 	{
+		const bimg::EncodeOptions encodeOptions = { _options.alphaWeight };
 		bimg::TextureFormat::Enum inputFormat  = input->m_format;
 		bimg::TextureFormat::Enum outputFormat = input->m_format;
 
@@ -305,7 +309,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			if (inputFormat != outputFormat
 			&&  bimg::isCompressed(outputFormat) )
 			{
-				output = bimg::imageEncode(_allocator, outputFormat, _options.quality, *input);
+				output = bimg::imageEncode(_allocator, outputFormat, _options.quality, *input, &encodeOptions);
 			}
 			else
 			{
@@ -355,7 +359,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			if (bimg::TextureFormat::RGBA32F != outputFormat)
 			{
-				bimg::ImageContainer* temp = bimg::imageEncode(_allocator, outputFormat, _options.quality, *output);
+				bimg::ImageContainer* temp = bimg::imageEncode(_allocator, outputFormat, _options.quality, *output, &encodeOptions);
 				bimg::imageFree(output);
 
 				output = temp;
@@ -461,6 +465,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, outputFormat
 						, nmapQuality
 						, _err
+						, &encodeOptions
 						);
 
 					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
@@ -496,6 +501,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, outputFormat
 							, nmapQuality
 							, _err
+							, &encodeOptions
 							);
 					}
 
@@ -553,6 +559,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, outputFormat
 						, _options.quality
 						, _err
+						, &encodeOptions
 						);
 
 					if (1 < numMips
@@ -610,6 +617,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 								, outputFormat
 								, _options.quality
 								, _err
+								, &encodeOptions
 								);
 						}
 					}
@@ -728,6 +736,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 								, bimg::TextureFormat::A8
 								, _options.quality
 								, _err
+								, &encodeOptions
 							);
 						}
 
@@ -803,6 +812,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, outputFormat
 						, _options.quality
 						, _err
+						, &encodeOptions
 						);
 
 					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
@@ -852,6 +862,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, outputFormat
 							, _options.quality
 							, _err
+							, &encodeOptions
 							);
 					}
 
@@ -954,6 +965,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "      --iqa                Image Quality Assessment\n"
 		  "      --pma                Premultiply alpha into RGB channel.\n"
 		  "      --linear             Input and output texture is linear color space (gamma correction won't be applied).\n"
+		  "      --alpha-weight <0|1>  Enable alpha weighting.\n"
 		  "      --max <max size>     Maximum width/height (image will be scaled down and\n"
 		  "                           aspect ratio will be preserved)\n"
 		  "      --radiance <model>   Radiance cubemap filter. (Lighting model: Phong, PhongBrdf, Blinn, BlinnBrdf, GGX)\n"
@@ -1099,6 +1111,19 @@ int main(int _argc, const char* _argv[])
 	options.iqa       = cmdLine.hasArg("iqa");
 	options.pma       = cmdLine.hasArg("pma");
 	options.linear    = cmdLine.hasArg("linear");
+
+	const char* alphaWeight = cmdLine.findOption("alpha-weight");
+	if (NULL != alphaWeight)
+	{
+		uint32_t alphaWeightValue = 0;
+		if (!bx::fromString(&alphaWeightValue, alphaWeight) )
+		{
+			help("Parsing `--alpha-weight` failed.");
+			return bx::kExitFailure;
+		}
+
+		options.alphaWeight = alphaWeightValue != 0;
+	}
 
 	if (options.equirect
 	&&  options.strip)

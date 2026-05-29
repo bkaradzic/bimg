@@ -54,7 +54,7 @@ namespace bimg
 	};
 	static_assert(Quality::Count == BX_COUNTOF(s_astcQuality) );
 
-	void imageEncodeFromRgba8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
+	void imageEncodeFromRgba8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err, const EncodeOptions* _options)
 	{
 		const uint8_t* src = (const uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
@@ -157,6 +157,7 @@ namespace bimg
 			case TextureFormat::ASTC12x12:
 				{
 					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
+					const bool alphaWeight = NULL != _options && _options->alphaWeight;
 
 					astcenc_config config{};
 
@@ -165,6 +166,10 @@ namespace bimg
 					if (Quality::NormalMapDefault <= _quality)
 					{
 						astcFlags |= ASTCENC_FLG_MAP_NORMAL;
+					}
+					else if (alphaWeight)
+					{
+						astcFlags |= ASTCENC_FLG_USE_ALPHA_WEIGHT;
 					}
 
 					astcenc_error status = astcenc_config_init(
@@ -182,6 +187,11 @@ namespace bimg
 						BX_TRACE("astc error in config init %s", astcenc_get_error_string(status) );
 						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to initialize astc config!");
 						break;
+					}
+
+					if (alphaWeight)
+					{
+						config.a_scale_radius = 1;
 					}
 
 					astcenc_context* context;
@@ -260,7 +270,7 @@ namespace bimg
 		}
 	}
 
-	void imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _dstFormat, Quality::Enum _quality, bx::Error* _err)
+	void imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _dstFormat, Quality::Enum _quality, bx::Error* _err, const EncodeOptions* _options)
 	{
 		BX_ERROR_SCOPE(_err);
 
@@ -303,7 +313,7 @@ namespace bimg
 						}
 					}
 
-					imageEncodeFromRgba8(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+					imageEncodeFromRgba8(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err, _options);
 				}
 				else
 				{
@@ -316,7 +326,7 @@ namespace bimg
 		}
 	}
 
-	void imageEncode(bx::AllocatorI* _allocator, void* _dst, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _dstFormat, Quality::Enum _quality, bx::Error* _err)
+	void imageEncode(bx::AllocatorI* _allocator, void* _dst, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _dstFormat, Quality::Enum _quality, bx::Error* _err, const EncodeOptions* _options)
 	{
 		switch (_dstFormat)
 		{
@@ -346,7 +356,7 @@ namespace bimg
 				{
 					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*4);
 					imageDecodeToRgba8(_allocator, temp, _src, _width, _height, _width*4, _srcFormat);
-					imageEncodeFromRgba8(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+					imageEncodeFromRgba8(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err, _options);
 					bx::free(_allocator, temp);
 				}
 				break;
@@ -356,7 +366,7 @@ namespace bimg
 				{
 					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*16);
 					imageDecodeToRgba32f(_allocator, temp, _src, _width, _height, _depth, _width*16, _srcFormat);
-					imageEncodeFromRgba32f(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+					imageEncodeFromRgba32f(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err, _options);
 					bx::free(_allocator, temp);
 				}
 				break;
@@ -370,7 +380,7 @@ namespace bimg
 		}
 	}
 
-	ImageContainer* imageEncode(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, Quality::Enum _quality, const ImageContainer& _input)
+	ImageContainer* imageEncode(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, Quality::Enum _quality, const ImageContainer& _input, const EncodeOptions* _options)
 	{
 		ImageContainer* output = imageAlloc(_allocator
 			, _dstFormat
@@ -408,6 +418,7 @@ namespace bimg
 						, _dstFormat
 						, _quality
 						, &err
+						, _options
 						);
 				}
 			}
