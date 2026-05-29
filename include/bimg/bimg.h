@@ -209,7 +209,7 @@ namespace bimg
 		bool     m_hasAlpha;
 		bool     m_cubeMap;
 		bool     m_ktx;
-		bool     m_ktxLE;
+		bool     m_ktx2;
 		bool     m_pvr3;
 		bool     m_srgb;
 	};
@@ -572,6 +572,30 @@ namespace bimg
 		);
 
 	///
+	int32_t imageWriteKtx2(
+		  bx::WriterI* _writer
+		, TextureFormat::Enum _format
+		, bool _cubeMap
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _depth
+		, uint8_t _numMips
+		, uint32_t _numLayers
+		, bool _srgb
+		, const void* _src
+		, bx::Error* _err = NULL
+		);
+
+	///
+	int32_t imageWriteKtx2(
+		  bx::WriterI* _writer
+		, ImageContainer& _imageContainer
+		, const void* _data
+		, uint32_t _size
+		, bx::Error* _err = NULL
+		);
+
+	///
 	bool imageParse(
 		  ImageContainer& _imageContainer
 		, bx::ReaderSeekerI* _reader
@@ -596,6 +620,14 @@ namespace bimg
 
 	///
 	ImageContainer* imageParseKtx(
+		  bx::AllocatorI* _allocator
+		, const void* _src
+		, uint32_t _size
+		, bx::Error* _err
+		);
+
+	///
+	ImageContainer* imageParseKtx2(
 		  bx::AllocatorI* _allocator
 		, const void* _src
 		, uint32_t _size

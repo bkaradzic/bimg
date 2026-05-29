@@ -930,6 +930,7 @@ void help(const char* _error = NULL, bool _showHelp = true)
 		  "    *.jpg (input)          JPEG Interchange Format.\n"
 		  "    *.hdr (input, output)  Radiance RGBE.\n"
 		  "    *.ktx (input, output)  Khronos Texture.\n"
+		  "    *.ktx2 (input, output) Khronos Texture 2.\n"
 		  "    *.png (input, output)  Portable Network Graphics.\n"
 		  "    *.psd (input)          Photoshop Document.\n"
 		  "    *.pvr (input)          PowerVR.\n"
@@ -1066,6 +1067,7 @@ int main(int _argc, const char* _argv[])
 	}
 
 	bx::StringView saveAs = cmdLine.findOption("as");
+	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".ktx2") : saveAs;
 	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".ktx") : saveAs;
 	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".dds") : saveAs;
 	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".png") : saveAs;
@@ -1240,7 +1242,11 @@ int main(int _argc, const char* _argv[])
 		bx::FileWriter writer;
 		if (bx::open(&writer, outputFileName, false, &err) )
 		{
-			if (!bx::strFindI(saveAs, "ktx").isEmpty() )
+			if (!bx::strFindI(saveAs, "ktx2").isEmpty() )
+			{
+				bimg::imageWriteKtx2(&writer, *output, output->m_data, output->m_size, &err);
+			}
+			else if (!bx::strFindI(saveAs, "ktx").isEmpty() )
 			{
 				bimg::imageWriteKtx(&writer, *output, output->m_data, output->m_size, &err);
 			}

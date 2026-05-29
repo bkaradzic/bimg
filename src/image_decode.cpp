@@ -1135,16 +1135,38 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
-		ImageContainer* input = imageParseDds       (_allocator, _data, _size, _err)        ;
-		input = NULL == input ? imageParseKtx       (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParsePvr3      (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseGnf       (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseLodePng   (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseTinyExr   (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseJpeg      (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseSimpleWebp(_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseStbImage  (_allocator, _data, _size, _err) : input;
-		input = NULL == input ? imageParseLibHeif   (_allocator, _data, _size, _err) : input;
+		typedef ImageContainer* (*ImageParseFn)(bx::AllocatorI*, const void*, uint32_t, bx::Error*);
+		static const ImageParseFn parsers[] =
+		{
+			imageParseDds,
+			imageParseKtx2,
+			imageParseKtx,
+			imageParsePvr3,
+			imageParseGnf,
+			imageParseLodePng,
+			imageParseTinyExr,
+			imageParseJpeg,
+			imageParseSimpleWebp,
+			imageParseStbImage,
+			imageParseLibHeif,
+		};
+
+		ImageContainer* input = NULL;
+		for (uint32_t ii = 0; ii < BX_COUNTOF(parsers); ++ii)
+		{
+			input = parsers[ii](_allocator, _data, _size, _err);
+			if (NULL != input)
+			{
+				break;
+			}
+
+			// If a parser recognized the format but failed, surface its specific
+			// error instead of letting the next parser overwrite it.
+			if (!_err->isOk() )
+			{
+				return NULL;
+			}
+		}
 
 		if (NULL == input)
 		{
