@@ -19,7 +19,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // warning C4100: 'alloc_context': unref
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4702) // warning C4702: unreachable code
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter") // warning: unused parameter ‘alloc_context’ [-Wunused-parameter]
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include <stb/stb_image_resize.h>
+#include <stb/stb_image_resize2.h>
 BX_PRAGMA_DIAGNOSTIC_POP();
 
 extern "C" {
@@ -564,18 +564,15 @@ namespace bimg
 				const uint32_t srcDataStep = uint32_t(bx::floor(zz * _src->m_depth / float(_dst->m_depth) ) );
 				const uint8_t* srcData = &srcMip.m_data[srcDataStep*srcSlice];
 
-				int result = stbir_resize_float_generic(
+				void* result = stbir_resize(
 					  (const float*)srcData, _src->m_width, _src->m_height, srcPitch
 					, (      float*)dstData, _dst->m_width, _dst->m_height, dstPitch
-					, 4, 3
-					, STBIR_FLAG_ALPHA_PREMULTIPLIED
+					, STBIR_RGBA_PM, STBIR_TYPE_FLOAT
 					, STBIR_EDGE_CLAMP
 					, STBIR_FILTER_BOX
-					, STBIR_COLORSPACE_LINEAR
-					, NULL
 					);
 
-				if (1 != result)
+				if (NULL == result)
 				{
 					return false;
 				}
