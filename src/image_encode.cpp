@@ -374,13 +374,18 @@ namespace bimg
 	{
 		ImageContainer* output = imageAlloc(_allocator
 			, _dstFormat
-			, uint16_t(_input.m_width)
-			, uint16_t(_input.m_height)
-			, uint16_t(_input.m_depth)
+			, _input.m_width
+			, _input.m_height
+			, _input.m_depth
 			, _input.m_numLayers
 			, _input.m_cubeMap
 			, 1 < _input.m_numMips
 			);
+
+		if (NULL == output)
+		{
+			return NULL;
+		}
 
 		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
 

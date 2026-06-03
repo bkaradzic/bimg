@@ -309,24 +309,24 @@ namespace bimg
 		return TextureFormat::Unknown;
 	}
 
-	uint8_t imageGetNumMips(TextureFormat::Enum _format, uint16_t _width, uint16_t _height, uint16_t _depth)
+	uint8_t imageGetNumMips(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _depth)
 	{
 		const ImageBlockInfo& blockInfo = getBlockInfo(_format);
-		const uint16_t blockWidth  = blockInfo.blockWidth;
-		const uint16_t blockHeight = blockInfo.blockHeight;
-		const uint16_t minBlockX   = blockInfo.minBlockX;
-		const uint16_t minBlockY   = blockInfo.minBlockY;
+		const uint32_t blockWidth  = blockInfo.blockWidth;
+		const uint32_t blockHeight = blockInfo.blockHeight;
+		const uint32_t minBlockX   = blockInfo.minBlockX;
+		const uint32_t minBlockY   = blockInfo.minBlockY;
 
-		_width  = bx::max<uint16_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth )*blockWidth);
-		_height = bx::max<uint16_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
-		_depth  = bx::max<uint16_t>(1, _depth);
+		_width  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth )*blockWidth);
+		_height = bx::max<uint32_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
+		_depth  = bx::max<uint32_t>(1, _depth);
 
 		uint8_t numMips = calcNumMips(true, _width, _height, _depth);
 
 		return numMips;
 	}
 
-	uint32_t imageGetSize(TextureInfo* _info, uint16_t _width, uint16_t _height, uint16_t _depth, bool _cubeMap, bool _hasMips, uint16_t _numLayers, TextureFormat::Enum _format)
+	uint64_t imageGetSize(TextureInfo* _info, uint32_t _width, uint32_t _height, uint32_t _depth, bool _cubeMap, bool _hasMips, uint16_t _numLayers, TextureFormat::Enum _format)
 	{
 		const ImageBlockInfo& blockInfo = getBlockInfo(_format);
 		const uint8_t  bpp         = blockInfo.bitsPerPixel;
@@ -336,16 +336,16 @@ namespace bimg
 		const uint16_t minBlockY   = blockInfo.minBlockY;
 		const uint8_t  blockSize   = blockInfo.blockSize;
 
-		_width  = bx::max<uint16_t>(1, _width);
-		_height  = bx::max<uint16_t>(1, _height);
-		_depth  = bx::max<uint16_t>(1, _depth);
+		_width  = bx::max<uint32_t>(1, _width);
+		_height  = bx::max<uint32_t>(1, _height);
+		_depth  = bx::max<uint32_t>(1, _depth);
 		const uint8_t  numMips = calcNumMips(_hasMips, _width, _height, _depth);
 		const uint32_t sides   = _cubeMap ? 6 : 1;
 
 		uint32_t width  = _width;
 		uint32_t height = _height;
 		uint32_t depth  = _depth;
-		uint32_t size   = 0;
+		uint64_t size   = 0;
 
 		for (uint32_t lod = 0; lod < numMips; ++lod)
 		{
@@ -353,7 +353,7 @@ namespace bimg
 			uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 			depth  = bx::max<uint32_t>(1, depth);
 
-			size += uint32_t(uint64_t(mipMidth/blockWidth * mipHeight/blockHeight * depth)*blockSize * sides);
+			size += uint64_t(mipMidth/blockWidth * mipHeight/blockHeight * depth)*blockSize * sides;
 
 			width  >>= 1;
 			height >>= 1;
@@ -365,13 +365,13 @@ namespace bimg
 		if (NULL != _info)
 		{
 			_info->format  = _format;
-			_info->width   = _width;
-			_info->height  = _height;
-			_info->depth   = _depth;
+			_info->width   = uint16_t(_width);
+			_info->height  = uint16_t(_height);
+			_info->depth   = uint16_t(_depth);
 			_info->numMips = numMips;
 			_info->numLayers = _numLayers;
 			_info->cubeMap   = _cubeMap;
-			_info->storageSize  = size;
+			_info->storageSize  = uint32_t(size);
 			_info->bitsPerPixel = bpp;
 		}
 
@@ -1280,13 +1280,18 @@ namespace bimg
 	{
 		ImageContainer* output = imageAlloc(_allocator
 			, _dstFormat
-			, uint16_t(_input.m_width)
-			, uint16_t(_input.m_height)
-			, uint16_t(_input.m_depth)
+			, _input.m_width
+			, _input.m_height
+			, _input.m_depth
 			, _input.m_numLayers
 			, _input.m_cubeMap
 			, _convertMips && 1 < _input.m_numMips
 			);
+
+		if (NULL == output)
+		{
+			return NULL;
+		}
 
 		output->m_orientation = _input.m_orientation;
 
@@ -1409,13 +1414,20 @@ namespace bimg
 
 		ImageContainer* output = imageAlloc(_allocator
 			, imageContainer.m_format
-			, uint16_t(imageContainer.m_width)
-			, uint16_t(imageContainer.m_height)
-			, uint16_t(imageContainer.m_depth)
+			, imageContainer.m_width
+			, imageContainer.m_height
+			, imageContainer.m_depth
 			, imageContainer.m_numLayers
 			, imageContainer.m_cubeMap
 			, 1 < imageContainer.m_numMips
 			);
+
+		if (NULL == output)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Image: Unsupported dimensions.");
+			return NULL;
+		}
+
 		output->m_srgb = imageContainer.m_srgb;
 		output->m_hasAlpha = imageContainer.m_hasAlpha;
 
@@ -1432,7 +1444,7 @@ namespace bimg
 					if (imageGetRawData(imageContainer, side, lod, _src, _size, mip) )
 					{
 						uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
-						bx::memCopy(dstData, mip.m_data, mip.m_size);
+						bx::memCopy(dstData, mip.m_data, bx::min(mip.m_size, dstMip.m_size) );
 					}
 				}
 			}
@@ -3368,21 +3380,41 @@ namespace bimg
 		}
 	}
 
-	ImageContainer* imageAlloc(bx::AllocatorI* _allocator, TextureFormat::Enum _format, uint16_t _width, uint16_t _height, uint16_t _depth, uint16_t _numLayers, bool _cubeMap, bool _hasMips, const void* _data)
+	ImageContainer* imageAlloc(bx::AllocatorI* _allocator, TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _numLayers, bool _cubeMap, bool _hasMips, const void* _data)
 	{
 		const ImageBlockInfo& blockInfo = getBlockInfo(_format);
-		const uint16_t blockWidth  = blockInfo.blockWidth;
-		const uint16_t blockHeight = blockInfo.blockHeight;
-		const uint16_t minBlockX   = blockInfo.minBlockX;
-		const uint16_t minBlockY   = blockInfo.minBlockY;
+		const uint32_t blockWidth  = blockInfo.blockWidth;
+		const uint32_t blockHeight = blockInfo.blockHeight;
+		const uint32_t minBlockX   = blockInfo.minBlockX;
+		const uint32_t minBlockY   = blockInfo.minBlockY;
 
-		_width     = bx::max<uint16_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth)*blockWidth);
-		_height    = bx::max<uint16_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
-		_depth     = bx::max<uint16_t>(1, _depth);
-		_numLayers = bx::max<uint16_t>(1, _numLayers);
+		_width     = bx::max<uint32_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth)*blockWidth);
+		_height    = bx::max<uint32_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
+		_depth     = bx::max<uint32_t>(1, _depth);
+		_numLayers = bx::max<uint32_t>(1, _numLayers);
+
+		// Reject dimensions that don't fit in 16 bits. No GPU supports textures
+		// larger than 65535 in any dimension, and the image format/size helpers
+		// (and ImageContainer::m_numLayers) are 16-bit; allowing larger values
+		// would truncate and under-allocate, leading to heap overflow writes when
+		// pixel data is copied in.
+		if (_width     > UINT16_MAX
+		||  _height    > UINT16_MAX
+		||  _depth     > UINT16_MAX
+		||  _numLayers > UINT16_MAX)
+		{
+			return NULL;
+		}
 
 		const uint8_t numMips = _hasMips ? imageGetNumMips(_format, _width, _height, _depth) : 1;
-		uint32_t size = imageGetSize(NULL, _width, _height, _depth, _cubeMap, _hasMips, _numLayers, _format);
+		uint64_t size = imageGetSize(NULL, _width, _height, _depth, _cubeMap, _hasMips, uint16_t(_numLayers), _format);
+
+		// ImageContainer::m_size/m_offset are 32-bit, so reject anything that
+		// can't be addressed within that range to avoid truncated allocations.
+		if (size > UINT32_MAX)
+		{
+			return NULL;
+		}
 
 		ImageContainer* imageContainer = (ImageContainer*)bx::alignedAlloc(_allocator, size + bx::alignUp(sizeof(ImageContainer), 16), 16);
 
@@ -3390,12 +3422,12 @@ namespace bimg
 		imageContainer->m_data        = bx::alignPtr(imageContainer + 1, 0, 16);
 		imageContainer->m_format      = _format;
 		imageContainer->m_orientation = Orientation::R0;
-		imageContainer->m_size        = size;
+		imageContainer->m_size        = uint32_t(size);
 		imageContainer->m_offset      = 0;
 		imageContainer->m_width       = _width;
 		imageContainer->m_height      = _height;
 		imageContainer->m_depth       = _depth;
-		imageContainer->m_numLayers   = _numLayers;
+		imageContainer->m_numLayers   = uint16_t(_numLayers);
 		imageContainer->m_numMips     = numMips;
 		imageContainer->m_hasAlpha    = false;
 		imageContainer->m_cubeMap     = _cubeMap;
@@ -4885,9 +4917,9 @@ namespace bimg
 
 		ImageContainer* output = imageAlloc(_allocator
 			, imageContainer.m_format
-			, uint16_t(imageContainer.m_width)
-			, uint16_t(imageContainer.m_height)
-			, uint16_t(imageContainer.m_depth)
+			, imageContainer.m_width
+			, imageContainer.m_height
+			, imageContainer.m_depth
 			, imageContainer.m_numLayers
 			, imageContainer.m_cubeMap
 			, 1 < imageContainer.m_numMips
@@ -4914,7 +4946,7 @@ namespace bimg
 					if (imageGetRawData(imageContainer, side, lod, _src, _size, mip) )
 					{
 						uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
-						bx::memCopy(dstData, mip.m_data, mip.m_size);
+						bx::memCopy(dstData, mip.m_data, bx::min(mip.m_size, dstMip.m_size) );
 					}
 				}
 			}
@@ -5684,7 +5716,7 @@ namespace bimg
 		{
 			if (isCompressed(_srcFormat))
 			{
-				uint32_t size = imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, TextureFormat::RGBA8);
+				uint64_t size = imageGetSize(NULL, _width, _height, 0, false, false, 1, TextureFormat::RGBA8);
 				void* temp = bx::alloc(_allocator, size);
 				imageDecodeToRgba8(_allocator, temp, _src, _width, _height, _width*4, _srcFormat);
 				imageConvert(_allocator, dst, TextureFormat::R8, temp, TextureFormat::RGBA8, _width, _height, 1, _width*4, _dstPitch);
@@ -5858,16 +5890,19 @@ namespace bimg
 			{
 				ImageContainer* rgba32f = imageAlloc(_allocator
 					, TextureFormat::RGBA32F
-					, uint16_t(_width)
-					, uint16_t(_height)
-					, uint16_t(1)
+					, _width
+					, _height
+					, 1
 					, 1
 					, false
 					, false
 					);
-				imageDecodeToRgba32f(_allocator, rgba32f->m_data, _src, _width, _height, 1, _width*16, _srcFormat);
-				imageConvert(_allocator, _dst, TextureFormat::BGRA8, rgba32f->m_data, TextureFormat::RGBA32F, _width, _height, 1, _width*16, _dstPitch);
-				imageFree(rgba32f);
+				if (NULL != rgba32f)
+				{
+					imageDecodeToRgba32f(_allocator, rgba32f->m_data, _src, _width, _height, 1, _width*16, _srcFormat);
+					imageConvert(_allocator, _dst, TextureFormat::BGRA8, rgba32f->m_data, TextureFormat::RGBA32F, _width, _height, 1, _width*16, _dstPitch);
+					imageFree(rgba32f);
+				}
 			}
 			else
 			{
@@ -6198,7 +6233,7 @@ namespace bimg
 					image.data_type = ASTCENC_TYPE_U8;
 					image.data      = &_dst;
 
-					const uint32_t size = imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, _srcFormat);
+					const uint64_t size = imageGetSize(NULL, _width, _height, 0, false, false, 1, _srcFormat);
 
 					static const astcenc_swizzle swizzle
 					{   //0123/rgba swizzle corresponds to ASTC_RGBA
@@ -6389,7 +6424,7 @@ namespace bimg
 			default:
 				if (isCompressed(_srcFormat) )
 				{
-					uint32_t size = imageGetSize(NULL, uint16_t(_width), uint16_t(_height), 0, false, false, 1, TextureFormat::RGBA8);
+					uint64_t size = imageGetSize(NULL, _width, _height, 0, false, false, 1, TextureFormat::RGBA8);
 					void* temp = bx::alloc(_allocator, size);
 					imageDecodeToRgba8(_allocator, temp, src, _width, _height, _width*4, _srcFormat);
 					imageRgba8ToRgba32f(dst, _width, _height, _width*4, temp);
@@ -6406,7 +6441,7 @@ namespace bimg
 
 	bool imageGetRawData(const ImageContainer& _imageContainer, uint16_t _side, uint8_t _lod, const void* _data, uint32_t _size, ImageMip& _mip)
 	{
-		uint32_t offset = _imageContainer.m_offset;
+		uint64_t offset = _imageContainer.m_offset;
 		TextureFormat::Enum format = TextureFormat::Enum(_imageContainer.m_format);
 		bool hasAlpha = _imageContainer.m_hasAlpha;
 
@@ -6459,7 +6494,7 @@ namespace bimg
 
 				for (uint16_t side = 0; side < numSides; ++side)
 				{
-					BX_ASSERT(offset <= _size, "Reading past size of data buffer! (offset %d, size %d)", offset, _size);
+					BX_ASSERT(offset <= _size, "Reading past size of data buffer! (offset %lld, size %d)", offset, _size);
 
 					if (side == _side
 					&&  lod  == _lod)
@@ -6514,7 +6549,7 @@ namespace bimg
 			{
 				const uint32_t mipSize = mipSizes[lod];
 
-				BX_ASSERT(offset <= _size, "Reading past size of data buffer! (offset %d, size %d)", offset, _size);
+				BX_ASSERT(offset <= _size, "Reading past size of data buffer! (offset %lld, size %d)", offset, _size);
 
 				if (uint8_t(lod) == _lod)
 				{
@@ -6530,7 +6565,7 @@ namespace bimg
 					return true;
 				}
 
-				offset += mipSize * numSides;
+				offset += uint64_t(mipSize) * numSides;
 				offset = ktx2AlignUp(offset, mipAlign);
 			}
 		}
@@ -6544,7 +6579,7 @@ namespace bimg
 
 				for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num; ++lod)
 				{
-					BX_ASSERT(offset <= _size, "Reading past size of data buffer! (offset %d, size %d)", offset, _size);
+					BX_ASSERT(offset <= _size, "Reading past size of data buffer! (offset %lld, size %d)", offset, _size);
 
 					uint32_t mipWidth  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
 					uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);

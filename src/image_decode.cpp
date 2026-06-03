@@ -18,6 +18,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // error C4100: '' : unreferenced formal
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4245) // warning C4245: 'return': conversion from 'int' to 'size_t', signed/unsigned mismatch
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4389) // warning C4389 : '==' : signed / unsigned mismatch
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: 'tinyexr::miniz::def_realloc_func': unreferenced local function has been removed
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4702) // warning C4702: unreachable code
 #define MINIZ_NO_ARCHIVE_APIS
 #define MINIZ_NO_ARCHIVE_WRITING_APIS
 #define MINIZ_NO_STDIO
@@ -317,8 +318,8 @@ namespace bimg
 
 				output = imageAlloc(_allocator
 					, dstFormat
-					, uint16_t(width)
-					, uint16_t(height)
+					, width
+					, height
 					, 0
 					, 1
 					, false
@@ -326,6 +327,12 @@ namespace bimg
 					, copyData
 					);
 
+				if (NULL == output)
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "PNG: Unsupported dimensions.");
+				}
+				else
+				{
 				if (palette)
 				{
 					if (1 == state.info_raw.bitdepth)
@@ -504,6 +511,7 @@ namespace bimg
 
 					case LCT_MAX_OCTET_VALUE:
 						break;
+				}
 				}
 			}
 			else
@@ -727,8 +735,8 @@ namespace bimg
 		{
 			output = imageAlloc(_allocator
 				, format
-				, uint16_t(width)
-				, uint16_t(height)
+				, width
+				, height
 				, 0
 				, 1
 				, false
@@ -736,6 +744,13 @@ namespace bimg
 				, data
 				);
 			bx::free(_allocator, data);
+
+			if (NULL == output)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Unsupported dimensions.");
+				return NULL;
+			}
+
 			output->m_hasAlpha = hasAlpha;
 		}
 
@@ -799,8 +814,8 @@ namespace bimg
 
 		ImageContainer* output = imageAlloc(_allocator
 			, format
-			, bx::narrowCast<uint16_t>(width)
-			, bx::narrowCast<uint16_t>(height)
+			, width
+			, height
 			, 0
 			, 1
 			, false
@@ -808,6 +823,12 @@ namespace bimg
 			, data
 			);
 		stbi_image_free(data);
+
+		if (NULL == output)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "stb_image: Unsupported dimensions.");
+			return NULL;
+		}
 
 		return output;
 #else
@@ -995,8 +1016,8 @@ namespace bimg
 
 			output = imageAlloc(_allocator
 				, format
-				, bx::narrowCast<uint16_t>(width)
-				, bx::narrowCast<uint16_t>(height)
+				, width
+				, height
 				, 0
 				, 1
 				, false
@@ -1004,7 +1025,10 @@ namespace bimg
 				, NULL
 				);
 
-			bx::memCopy(output->m_data, dstStride, data, srcStride, dstStride, height);
+			if (NULL != output)
+			{
+				bx::memCopy(output->m_data, dstStride, data, srcStride, dstStride, height);
+			}
 		}
 
 		heif_image_release(image);
@@ -1101,14 +1125,21 @@ namespace bimg
 
 		ImageContainer* output = imageAlloc(_allocator
 			, bimg::TextureFormat::RGBA8
-			, bx::narrowCast<uint16_t>(width)
-			, bx::narrowCast<uint16_t>(height)
+			, uint32_t(width)
+			, uint32_t(height)
 			, 0
 			, 1
 			, false
 			, false
 			, data
 			);
+
+		if (NULL == output)
+		{
+			bx::free(_allocator, data);
+			BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Unsupported dimensions.");
+			return NULL;
+		}
 
 		bool hasAlpha = false;
 
