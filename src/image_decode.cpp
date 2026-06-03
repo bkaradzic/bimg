@@ -12,14 +12,15 @@ BX_PRAGMA_DIAGNOSTIC_PUSH()
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-value")
-BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wcalloc-transposed-args")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wdeprecated-declarations")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4018) // warning C4018:  '<': signed/unsigned mismatch
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // error C4100: '' : unreferenced formal parameter
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4389) // warning C4389 : '==' : signed / unsigned mismatch
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: 'tinyexr::miniz::def_realloc_func': unreferenced local function has been removed
 #define MINIZ_NO_ARCHIVE_APIS
+#define MINIZ_NO_ARCHIVE_WRITING_APIS
 #define MINIZ_NO_STDIO
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #define TINYEXR_IMPLEMENTATION
 #include <miniz/miniz.c>
 #include <tinyexr/tinyexr.h>
@@ -537,7 +538,7 @@ namespace bimg
 		case TINYEXR_ERROR_INVALID_HEADER:       BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid header.");       break;
 		case TINYEXR_ERROR_UNSUPPORTED_FEATURE:  BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Unsupported feature.");  break;
 		case TINYEXR_ERROR_CANT_WRITE_FILE:      BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Can't write file.");     break;
-		case TINYEXR_ERROR_SERIALZATION_FAILED:  BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Serialization failed."); break;
+		case TINYEXR_ERROR_SERIALIZATION_FAILED: BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Serialization failed."); break;
 		default:                                 BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image.");                       break;
 		}
 	}
