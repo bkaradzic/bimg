@@ -215,13 +215,19 @@ namespace bimg
 
 		ImageContainer* output = imageAlloc(_allocator
 			, _input.m_format
-			, uint16_t(dstWidth)
-			, uint16_t(dstWidth)
-			, uint16_t(1)
+			, dstWidth
+			, dstWidth
+			, 1
 			, 1
 			, true
 			, false
 			);
+
+		if (NULL == output)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unsupported dimensions.");
+			return NULL;
+		}
 
 		const uint8_t* srcData = (const uint8_t*)_input.m_data;
 
@@ -350,13 +356,19 @@ namespace bimg
 
 		ImageContainer* output = imageAlloc(_allocator
 			, _input.m_format
-			, uint16_t(dstWidth)
-			, uint16_t(dstWidth)
-			, uint16_t(1)
+			, dstWidth
+			, dstWidth
+			, 1
 			, 1
 			, true
 			, false
 			);
+
+		if (NULL == output)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unsupported dimensions.");
+			return NULL;
+		}
 
 		const uint8_t* srcData = (const uint8_t*)_input.m_data;
 
@@ -401,7 +413,12 @@ namespace bimg
 		const uint32_t dstPitch = dstWidth*16;
 		const float texelSize   = 1.0f / float(dstWidth);
 
-		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, uint16_t(dstWidth), uint16_t(dstWidth), 1, 1, true, false);
+		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, dstWidth, dstWidth, 1, 1, true, false);
+
+		if (NULL == output)
+		{
+			return NULL;
+		}
 
 		for (uint8_t side = 0; side < 6; ++side)
 		{
@@ -1033,7 +1050,12 @@ namespace bimg
 			return NULL;
 		}
 
-		ImageContainer* output = imageAlloc(_allocator, _image.m_format, uint16_t(_image.m_width), uint16_t(_image.m_height), uint16_t(_image.m_depth), _image.m_numLayers, _image.m_cubeMap, true);
+		ImageContainer* output = imageAlloc(_allocator, _image.m_format, _image.m_width, _image.m_height, _image.m_depth, _image.m_numLayers, _image.m_cubeMap, true);
+
+		if (NULL == output)
+		{
+			return NULL;
+		}
 
 		const uint32_t numMips   = output->m_numMips;
 		const uint32_t numLayers = output->m_numLayers;
@@ -1136,14 +1158,33 @@ namespace bimg
 
 		ImageContainer* input = imageConvert(_allocator, TextureFormat::RGBA32F, _image, true);
 
+		if (NULL == input)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unsupported dimensions.");
+			return NULL;
+		}
+
 		if (1 >= input->m_numMips)
 		{
 			ImageContainer* temp = imageGenerateMips(_allocator, *input);
 			imageFree(input);
 			input = temp;
+
+			if (NULL == input)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "Unsupported dimensions.");
+				return NULL;
+			}
 		}
 
-		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, uint16_t(input->m_width), uint16_t(input->m_width), 1, 1, true, true);
+		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, input->m_width, input->m_width, 1, 1, true, true);
+
+		if (NULL == output)
+		{
+			imageFree(input);
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unsupported dimensions.");
+			return NULL;
+		}
 
 		for (uint8_t side = 0; side < 6; ++side)
 		{
@@ -1155,7 +1196,7 @@ namespace bimg
 
 			uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
 
-			bx::memCopy(dstData, srcMip.m_data, srcMip.m_size);
+			bx::memCopy(dstData, srcMip.m_data, bx::min(srcMip.m_size, dstMip.m_size) );
 		}
 
 		const float glossScale = 10.0f;

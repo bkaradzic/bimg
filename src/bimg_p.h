@@ -80,7 +80,7 @@ namespace bimg
 		const Memory* m_mem;
 	};
 
-	inline uint8_t calcNumMips(bool _hasMips, uint16_t _width, uint16_t _height, uint16_t _depth = 1)
+	inline uint8_t calcNumMips(bool _hasMips, uint32_t _width, uint32_t _height, uint32_t _depth = 1)
 	{
 		if (_hasMips)
 		{

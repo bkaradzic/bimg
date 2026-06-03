@@ -393,7 +393,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				// Normal map.
 				if (_options.normalMap)
 				{
-					uint32_t size = bimg::imageGetSize(
+					uint32_t size = (uint32_t)bimg::imageGetSize(
 						  NULL
 						, uint16_t(dstMip.m_width)
 						, uint16_t(dstMip.m_height)
@@ -507,7 +507,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					 || outputFormat == bimg::TextureFormat::BC7
 						)
 				{
-					uint32_t size = bimg::imageGetSize(
+					uint32_t size = (uint32_t)bimg::imageGetSize(
 						  NULL
 						, uint16_t(dstMip.m_width)
 						, uint16_t(dstMip.m_height)
@@ -619,7 +619,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				// SDF
 				else if (_options.sdf)
 				{
-					uint32_t size = bimg::imageGetSize(
+					uint32_t size = (uint32_t)bimg::imageGetSize(
 						  NULL
 						, uint16_t(dstMip.m_width)
 						, uint16_t(dstMip.m_height)
@@ -665,7 +665,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							, alphaRef
 							);
 
-						size = bimg::imageGetSize(
+						size = (uint32_t)bimg::imageGetSize(
 							NULL
 							, uint16_t(dstMip.m_width)
 							, uint16_t(dstMip.m_height)
@@ -737,7 +737,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				// RGBA8
 				else
 				{
-					uint32_t size = bimg::imageGetSize(
+					uint32_t size = (uint32_t)bimg::imageGetSize(
 						  NULL
 						, uint16_t(dstMip.m_width)
 						, uint16_t(dstMip.m_height)

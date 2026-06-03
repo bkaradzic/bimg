@@ -274,17 +274,17 @@ namespace bimg
 	/// Returns number of mip-maps required for complete mip-map chain.
 	uint8_t imageGetNumMips(
 		  TextureFormat::Enum _format
-		, uint16_t _width
-		, uint16_t _height
-		, uint16_t _depth = 0
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _depth = 0
 		);
 
 	/// Returns image size.
-	uint32_t imageGetSize(
+	uint64_t imageGetSize(
 		  TextureInfo* _info
-		, uint16_t _width
-		, uint16_t _height
-		, uint16_t _depth
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _depth
 		, bool _cubeMap
 		, bool _hasMips
 		, uint16_t _numLayers
@@ -476,10 +476,10 @@ namespace bimg
 	ImageContainer* imageAlloc(
 		  bx::AllocatorI* _allocator
 		, TextureFormat::Enum _format
-		, uint16_t _width
-		, uint16_t _height
-		, uint16_t _depth
-		, uint16_t _numLayers
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _depth
+		, uint32_t _numLayers
 		, bool _cubeMap
 		, bool _hasMips
 		, const void* _data = NULL
