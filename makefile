@@ -195,7 +195,11 @@ texturev: .build/projects/$(BUILD_PROJECT_DIR) ## Build texturev tool.
 	$(SILENT) $(MAKE) -C .build/projects/$(BUILD_PROJECT_DIR) texturev config=$(BUILD_TOOLS_CONFIG)
 	$(SILENT) cp .build/$(BUILD_OUTPUT_DIR)/bin/texturev$(BUILD_TOOLS_SUFFIX)$(EXE) tools/bin/$(OS)/texturev$(EXE)
 
-tools: texturec texturev ## Build tools.
+meta: .build/projects/$(BUILD_PROJECT_DIR) ## Build meta tool.
+	$(SILENT) $(MAKE) -C .build/projects/$(BUILD_PROJECT_DIR) meta config=$(BUILD_TOOLS_CONFIG)
+	$(SILENT) cp .build/$(BUILD_OUTPUT_DIR)/bin/meta$(BUILD_TOOLS_SUFFIX)$(EXE) tools/bin/$(OS)/meta$(EXE)
+
+tools: texturec texturev meta ## Build tools.
 
 clean-tools: ## Clean tools projects.
 	-$(SILENT) rm -r .build/projects/$(BUILD_PROJECT_DIR)

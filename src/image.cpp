@@ -309,6 +309,39 @@ namespace bimg
 		return TextureFormat::Unknown;
 	}
 
+	static const char* s_imageParserName[] =
+	{
+		"AVIF", // Avif
+		"BMP",  // Bmp
+		"DDS",  // Dds
+		"EXR",  // Exr
+		"GIF",  // Gif
+		"GNF",  // Gnf
+		"HDR",  // Hdr
+		"HEIF", // Heif
+		"JPEG", // Jpeg
+		"KTX",  // Ktx
+		"KTX2", // Ktx2
+		"PIC",  // Pic
+		"PNG",  // Png
+		"PNM",  // Pnm
+		"PSD",  // Psd
+		"PVR3", // Pvr3
+		"TGA",  // Tga
+		"WebP", // Webp
+	};
+	static_assert(ImageParser::Count == BX_COUNTOF(s_imageParserName) );
+
+	const char* getName(ImageParser::Enum _parser)
+	{
+		if (_parser >= ImageParser::Count)
+		{
+			return "Unknown?!";
+		}
+
+		return s_imageParserName[_parser];
+	}
+
 	uint8_t imageGetNumMips(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _depth)
 	{
 		const ImageBlockInfo& blockInfo = getBlockInfo(_format);
@@ -1294,6 +1327,7 @@ namespace bimg
 		}
 
 		output->m_orientation = _input.m_orientation;
+		output->m_parser      = _input.m_parser;
 
 		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
 
@@ -1430,6 +1464,7 @@ namespace bimg
 
 		output->m_srgb = imageContainer.m_srgb;
 		output->m_hasAlpha = imageContainer.m_hasAlpha;
+		output->m_parser = imageContainer.m_parser;
 
 		const uint16_t numSides = imageContainer.m_numLayers * (imageContainer.m_cubeMap ? 6 : 1);
 
@@ -3422,6 +3457,7 @@ namespace bimg
 		imageContainer->m_data        = bx::alignPtr(imageContainer + 1, 0, 16);
 		imageContainer->m_format      = _format;
 		imageContainer->m_orientation = Orientation::R0;
+		imageContainer->m_parser      = ImageParser::Count;
 		imageContainer->m_size        = uint32_t(size);
 		imageContainer->m_offset      = 0;
 		imageContainer->m_width       = _width;
@@ -3981,6 +4017,7 @@ namespace bimg
 		_imageContainer.m_ktx2        = false;
 		_imageContainer.m_pvr3        = false;
 		_imageContainer.m_srgb        = srgb;
+		_imageContainer.m_parser      = ImageParser::Dds;
 
 		return true;
 	}
@@ -4380,6 +4417,7 @@ namespace bimg
 		_imageContainer.m_ktx2        = false;
 		_imageContainer.m_pvr3        = false;
 		_imageContainer.m_srgb        = srgb;
+		_imageContainer.m_parser      = ImageParser::Ktx;
 
 		if (TextureFormat::Unknown == format)
 		{
@@ -4687,7 +4725,7 @@ namespace bimg
 		return ( (_value + _align - 1) / _align) * _align;
 	}
 
-	static bool imageParseKtx2(ImageContainer& _imageContainer, const void* _src, uint32_t _size, bx::Error* _err)
+	bool imageParseKtx2(ImageContainer& _imageContainer, const void* _src, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
@@ -4900,6 +4938,7 @@ namespace bimg
 		_imageContainer.m_ktx2        = true;
 		_imageContainer.m_pvr3        = false;
 		_imageContainer.m_srgb        = srgb;
+		_imageContainer.m_parser      = ImageParser::Ktx2;
 
 		return true;
 	}
@@ -4932,6 +4971,7 @@ namespace bimg
 		}
 
 		output->m_srgb = imageContainer.m_srgb;
+		output->m_parser = imageContainer.m_parser;
 
 		const uint16_t numSides = imageContainer.m_numLayers * (imageContainer.m_cubeMap ? 6 : 1);
 
@@ -5624,6 +5664,7 @@ namespace bimg
 		_imageContainer.m_ktx2        = false;
 		_imageContainer.m_pvr3        = true;
 		_imageContainer.m_srgb        = colorSpace > 0;
+		_imageContainer.m_parser      = ImageParser::Pvr3;
 
 		return TextureFormat::Unknown != format;
 	}
@@ -5686,6 +5727,7 @@ namespace bimg
 			_imageContainer.m_ktx2      = false;
 			_imageContainer.m_pvr3      = false;
 			_imageContainer.m_srgb      = false;
+			_imageContainer.m_parser    = ImageParser::Count;
 
 			return _err->isOk();
 		}

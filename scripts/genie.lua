@@ -76,4 +76,5 @@ dofile "bimg_encode.lua"
 if _OPTIONS["with-tools"] then
 	group "tools"
 	dofile "texturec.lua"
+	dofile "meta.lua"
 end
