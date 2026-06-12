@@ -1535,7 +1535,7 @@ static bool CompressZip(unsigned char *dst,
 
   memcpy(dst, ret, outSize);
   free(ret);
-
+  
   compressedSize = outSize;
 #else
   uLong outSize = compressBound(static_cast<uLong>(src_size));
@@ -5722,47 +5722,23 @@ static bool DecodeTiledPixelData(
     const EXRChannelInfo *channels,
     const std::vector<size_t> &channel_offset_list) {
   // Here, data_width and data_height are the dimensions of the current (sub)level.
-  //
-  if (tile_size_x <= 0 || tile_size_y <= 0 || tile_offset_x < 0 ||
-      tile_offset_y < 0 || data_width < 0 || data_height < 0) {
-    return false;
-  }
-
-  const int64_t tile_origin_x =
-      static_cast<int64_t>(tile_offset_x) * static_cast<int64_t>(tile_size_x);
-  const int64_t tile_origin_y =
-      static_cast<int64_t>(tile_offset_y) * static_cast<int64_t>(tile_size_y);
-  if (tile_origin_x > static_cast<int64_t>(data_width) ||
-      tile_origin_y > static_cast<int64_t>(data_height)) {
+  if (tile_size_x * tile_offset_x > data_width ||
+      tile_size_y * tile_offset_y > data_height) {
     return false;
   }
 
   // Compute actual image size in a tile.
-  int64_t actual_width;
-  if ((static_cast<int64_t>(tile_offset_x) + 1) *
-          static_cast<int64_t>(tile_size_x) >=
-      static_cast<int64_t>(data_width)) {
-    actual_width = static_cast<int64_t>(data_width) - tile_origin_x;
+  if ((tile_offset_x + 1) * tile_size_x >= data_width) {
+    (*width) = data_width - (tile_offset_x * tile_size_x);
   } else {
-    actual_width = static_cast<int64_t>(tile_size_x);
+    (*width) = tile_size_x;
   }
 
-  int64_t actual_height;
-  if ((static_cast<int64_t>(tile_offset_y) + 1) *
-          static_cast<int64_t>(tile_size_y) >=
-      static_cast<int64_t>(data_height)) {
-    actual_height = static_cast<int64_t>(data_height) - tile_origin_y;
+  if ((tile_offset_y + 1) * tile_size_y >= data_height) {
+    (*height) = data_height - (tile_offset_y * tile_size_y);
   } else {
-    actual_height = static_cast<int64_t>(tile_size_y);
+    (*height) = tile_size_y;
   }
-
-  if (actual_width <= 0 || actual_width > static_cast<int64_t>(tile_size_x) ||
-      actual_height <= 0 || actual_height > static_cast<int64_t>(tile_size_y)) {
-    return false;
-  }
-
-  (*width) = static_cast<int>(actual_width);
-  (*height) = static_cast<int>(actual_height);
 
   // Image size = tile size.
   // Line order within tiles is always increasing.
@@ -7401,7 +7377,7 @@ static bool ReconstructTileOffsets(OffsetData& offset_data,
         if (size_t(tileX) >= offset_data.offsets[size_t(level_idx)][size_t(tileY)].size()) {
           return false;
         }
-
+        
         offset_data.offsets[size_t(level_idx)][size_t(tileY)][size_t(tileX)] = tileOffset;
       }
     }
@@ -8411,7 +8387,7 @@ struct MemoryMappedFile {
     if (read_bytes != size) {
       // TODO: Try to read data until reading `size` bytes.
       fclose(fp);
-      size = 0;
+      size = 0; 
       data = nullptr;
       return;
     }
@@ -9331,7 +9307,7 @@ static size_t SaveEXRNPartImageToMemory(const EXRImage* exr_images,
           SetErrorMessage("Failed to compute Tile offsets",
                           err);
           return TINYEXR_ERROR_INVALID_DATA;
-
+          
         }
         total_chunk_count += chunk_count[i];
       }
