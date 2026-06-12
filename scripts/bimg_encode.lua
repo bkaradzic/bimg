@@ -58,7 +58,6 @@ project "bimg_encode"
 		}
 
 		buildoptions_cpp {
-			"-Wno-class-memaccess",
 			"-Wno-deprecated-copy",
 		}
 
