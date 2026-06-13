@@ -14,7 +14,6 @@ project "bimg"
 	files {
 		path.join(BIMG_DIR, "include/**"),
 		path.join(BIMG_DIR, "src/image.*"),
-		path.join(BIMG_DIR, "src/image_gnf.cpp"),
 
 		path.join(BIMG_DIR, "3rdparty/astc-encoder/source/**.cpp"),
 		path.join(BIMG_DIR, "3rdparty/astc-encoder/source/**.h"),

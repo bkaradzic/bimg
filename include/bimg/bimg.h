@@ -186,7 +186,6 @@ namespace bimg
 			Dds,   //!< DirectDraw Surface.
 			Exr,   //!< OpenEXR.
 			Gif,   //!< Graphics Interchange Format.
-			Gnf,   //!< GNF (PlayStation).
 			Hdr,   //!< Radiance RGBE.
 			Heif,  //!< High Efficiency Image File Format.
 			Jpeg,  //!< JPEG.
@@ -670,14 +669,6 @@ namespace bimg
 
 	///
 	ImageContainer* imageParsePvr3(
-		  bx::AllocatorI* _allocator
-		, const void* _src
-		, uint32_t _size
-		, bx::Error* _err
-		);
-
-	///
-	ImageContainer* imageParseGnf(
 		  bx::AllocatorI* _allocator
 		, const void* _src
 		, uint32_t _size

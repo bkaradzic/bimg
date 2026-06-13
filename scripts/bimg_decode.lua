@@ -33,7 +33,36 @@ project "bimg_decode"
 		}
 	end
 
+	defines {
+		"AVIF_CODEC_DAV1D",
+	}
+
+	includedirs {
+		path.join(BIMG_DIR, "3rdparty/libavif"),
+		path.join(BIMG_DIR, "3rdparty/libavif/include"),
+		path.join(BIMG_DIR, "3rdparty/libavif/third_party/libyuv/include"),
+		path.join(BIMG_DIR, "3rdparty/dav1d"),
+		path.join(BIMG_DIR, "3rdparty/dav1d/include"),
+	}
+
+	files {
+		path.join(BIMG_DIR, "3rdparty/dav1d/dav1d-amalgamated.c"),
+		path.join(BIMG_DIR, "3rdparty/dav1d/dav1d-bitdepth-8.c"),
+		path.join(BIMG_DIR, "3rdparty/dav1d/dav1d-bitdepth-16.c"),
+		path.join(BIMG_DIR, "3rdparty/libavif/libavif-amalgamated.c"),
+	}
+
 	using_bx()
+
+	configuration { "vs*" }
+		includedirs {
+			path.join(BIMG_DIR, "3rdparty/dav1d/include/compat/msvc"),
+		}
+
+	configuration { "gmake or xcode*" }
+		buildoptions_c {
+			"-std=c11",
+		}
 
 	configuration { "linux-*" }
 		buildoptions {
