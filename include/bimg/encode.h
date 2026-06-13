@@ -72,6 +72,7 @@ namespace bimg
 		, TextureFormat::Enum _dstFormat
 		, Quality::Enum _quality
 		, const ImageContainer& _input
+		, bx::Error* _err = NULL
 		);
 
 	///

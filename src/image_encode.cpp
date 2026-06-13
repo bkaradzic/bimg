@@ -89,6 +89,11 @@ namespace bimg
 				BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
 				break;
 
+			case TextureFormat::ETC2A:
+			case TextureFormat::ETC2A1:
+				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A/ETC2A1 is not supported.");
+				break;
+
 			case TextureFormat::ETC1:
 				etc1_encode_image(src, _width, _height, 4, _width*4, dst);
 				break;
@@ -361,6 +366,11 @@ namespace bimg
 				}
 				break;
 
+			case bimg::TextureFormat::ETC2A:
+			case bimg::TextureFormat::ETC2A1:
+				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A/ETC2A1 is not supported.");
+				break;
+
 			default:
 				if (!imageConvert(_allocator, _dst, _dstFormat, _src, _srcFormat, _width, _height, 1) )
 				{
@@ -370,8 +380,10 @@ namespace bimg
 		}
 	}
 
-	ImageContainer* imageEncode(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, Quality::Enum _quality, const ImageContainer& _input)
+	ImageContainer* imageEncode(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, Quality::Enum _quality, const ImageContainer& _input, bx::Error* _err)
 	{
+		BX_ERROR_USE_TEMP_WHEN_NULL(_err);
+
 		ImageContainer* output = imageAlloc(_allocator
 			, _dstFormat
 			, _input.m_width
@@ -384,16 +396,15 @@ namespace bimg
 
 		if (NULL == output)
 		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Failed to allocate output image.");
 			return NULL;
 		}
 
 		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
 
-		bx::Error err;
-
-		for (uint16_t side = 0; side < numSides && err.isOk(); ++side)
+		for (uint16_t side = 0; side < numSides && _err->isOk(); ++side)
 		{
-			for (uint8_t lod = 0, num = _input.m_numMips; lod < num && err.isOk(); ++lod)
+			for (uint8_t lod = 0, num = _input.m_numMips; lod < num && _err->isOk(); ++lod)
 			{
 				ImageMip mip;
 				if (imageGetRawData(_input, side, lod, _input.m_data, _input.m_size, mip) )
@@ -412,13 +423,13 @@ namespace bimg
 						, mip.m_depth
 						, _dstFormat
 						, _quality
-						, &err
+						, _err
 						);
 				}
 			}
 		}
 
-		if (err.isOk() )
+		if (_err->isOk() )
 		{
 			return output;
 		}
