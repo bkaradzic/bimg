@@ -123,6 +123,14 @@ namespace bimg
 		, bx::Error* _err
 		);
 
+	///
+	bool imageParseKtx2(
+		  ImageContainer& _imageContainer
+		, const void* _src
+		, uint32_t _size
+		, bx::Error* _err
+		);
+
 } // namespace bimg
 
 #endif // BIMG_P_H_HEADER_GUARD

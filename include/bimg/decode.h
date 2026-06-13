@@ -19,6 +19,15 @@ namespace bimg
 		, bx::Error* _err = NULL
 		);
 
+	///
+	bool imageParseInfo(
+		  bx::AllocatorI* _allocator
+		, ImageContainer& _imageContainer
+		, const void* _data
+		, uint32_t _size
+		, bx::Error* _err = NULL
+		);
+
 } // namespace bimg
 
 #endif // BIMG_DECODE_H_HEADER_GUARD

@@ -174,6 +174,36 @@ namespace bimg
 		};
 	};
 
+	/// Source image format an `ImageContainer` was parsed from.
+	///
+	struct ImageParser
+	{
+		/// Image formats:
+		enum Enum
+		{
+			Avif,  //!< AV1 Image File Format.
+			Bmp,   //!< Windows Bitmap.
+			Dds,   //!< DirectDraw Surface.
+			Exr,   //!< OpenEXR.
+			Gif,   //!< Graphics Interchange Format.
+			Gnf,   //!< GNF (PlayStation).
+			Hdr,   //!< Radiance RGBE.
+			Heif,  //!< High Efficiency Image File Format.
+			Jpeg,  //!< JPEG.
+			Ktx,   //!< Khronos Texture.
+			Ktx2,  //!< Khronos Texture 2.
+			Pic,   //!< Softimage PIC.
+			Png,   //!< Portable Network Graphics.
+			Pnm,   //!< Portable AnyMap (PBM/PGM/PPM).
+			Psd,   //!< Photoshop Document.
+			Pvr3,  //!< PVR (v3).
+			Tga,   //!< Truevision TGA.
+			Webp,  //!< WebP.
+
+			Count  //!< Unknown / not parsed.
+		};
+	};
+
 	/// Texture info.
 	///
 	/// @attention C99 equivalent is `bgfx_texture_info_t`.
@@ -198,6 +228,7 @@ namespace bimg
 
 		TextureFormat::Enum m_format;
 		Orientation::Enum m_orientation;
+		ImageParser::Enum m_parser;
 
 		uint32_t m_size;
 		uint32_t m_offset;
@@ -270,6 +301,9 @@ namespace bimg
 
 	/// Converts string to format.
 	TextureFormat::Enum getFormat(const char* _name);
+
+	/// Converts image source format to string.
+	const char* getName(ImageParser::Enum _parser);
 
 	/// Returns number of mip-maps required for complete mip-map chain.
 	uint8_t imageGetNumMips(
