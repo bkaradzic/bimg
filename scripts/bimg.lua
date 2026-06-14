@@ -6,6 +6,11 @@
 project "bimg"
 	kind "StaticLib"
 
+	defines {
+		"ASTCENC_F16C=0",
+		"ASTCENC_NEON=0",
+	}
+
 	includedirs {
 		path.join(BIMG_DIR, "include"),
 		path.join(BIMG_DIR, "3rdparty/astc-encoder/include"),
