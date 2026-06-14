@@ -316,7 +316,6 @@ namespace bimg
 		"DDS",  // Dds
 		"EXR",  // Exr
 		"GIF",  // Gif
-		"GNF",  // Gnf
 		"HDR",  // Hdr
 		"HEIF", // Heif
 		"JPEG", // Jpeg
@@ -5692,10 +5691,6 @@ namespace bimg
 		else if (PVR3_MAGIC == magic)
 		{
 			return imageParsePvr3(_imageContainer, _reader, _err);
-		}
-		else if (BIMG_CHUNK_MAGIC_GNF == magic)
-		{
-			return imageParseGnf(_imageContainer, _reader, _err);
 		}
 		else if (BIMG_CHUNK_MAGIC_TEX == magic)
 		{

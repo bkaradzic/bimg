@@ -62,6 +62,10 @@ void lodepng_free(void* _ptr)
 #	include <libheif/heif.h>
 #endif // BIMG_CONFIG_PARSE_HEIF
 
+#if BIMG_CONFIG_PARSE_AVIF
+#	include <avif/avif.h>
+#endif // BIMG_CONFIG_PARSE_AVIF
+
 #if BIMG_CONFIG_PARSE_WEBP
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function")
@@ -1040,8 +1044,7 @@ namespace bimg
 #endif // BIMG_CONFIG_PARSE_JPEG
 	}
 
-#if BIMG_CONFIG_PARSE_HEIF
-	static ImageParser::Enum imageHeifFormat(const void* _data, uint32_t _size)
+	static bool imageIsAvifBrand(const void* _data, uint32_t _size)
 	{
 		const uint8_t* data = (const uint8_t*)_data;
 
@@ -1059,13 +1062,12 @@ namespace bimg
 			if (0 == bx::memCmp(data + offset, "avif", 4)
 			||  0 == bx::memCmp(data + offset, "avis", 4) )
 			{
-				return ImageParser::Avif;
+				return true;
 			}
 		}
 
-		return ImageParser::Heif;
+		return false;
 	}
-#endif // BIMG_CONFIG_PARSE_HEIF
 
 	static ImageContainer* imageParseLibHeif(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
@@ -1075,6 +1077,11 @@ namespace bimg
 
 		if (12 > _size
 		||  0 != bx::memCmp( (const uint8_t*)_data + 4, heifMagic, sizeof(heifMagic) ) )
+		{
+			return NULL;
+		}
+
+		if (imageIsAvifBrand(_data, _size) )
 		{
 			return NULL;
 		}
@@ -1115,7 +1122,7 @@ namespace bimg
 			if (NULL != output)
 			{
 				bx::memCopy(output->m_data, dstStride, data, srcStride, dstStride, height);
-				output->m_parser = imageHeifFormat(_data, _size);
+				output->m_parser = ImageParser::Heif;
 			}
 		}
 
@@ -1131,6 +1138,99 @@ namespace bimg
 		BX_ERROR_SET(_err, BIMG_ERROR, "HEIF parsing is disabled (BIMG_CONFIG_PARSE_HEIF).");
 		return NULL;
 #endif // BIMG_CONFIG_PARSE_HEIF
+	}
+
+	static ImageContainer* imageParseLibAvif(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		static uint8_t ftypMagic[] = { 0x66, 0x74, 0x79, 0x70 }; // "ftyp" at offset 4
+
+		if (12 > _size
+		||  0 != bx::memCmp( (const uint8_t*)_data + 4, ftypMagic, sizeof(ftypMagic) ) )
+		{
+			return NULL;
+		}
+
+		if (!imageIsAvifBrand(_data, _size) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_AVIF
+		avifDecoder* decoder = avifDecoderCreate();
+		if (NULL == decoder)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to create decoder.");
+			return NULL;
+		}
+
+		avifResult result = avifDecoderSetIOMemory(decoder, (const uint8_t*)_data, _size);
+		if (AVIF_RESULT_OK == result)
+		{
+			result = avifDecoderParse(decoder);
+		}
+		if (AVIF_RESULT_OK == result)
+		{
+			result = avifDecoderNextImage(decoder);
+		}
+
+		if (AVIF_RESULT_OK != result)
+		{
+			avifDecoderDestroy(decoder);
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to decode image.");
+			return NULL;
+		}
+
+		const uint32_t width    = decoder->image->width;
+		const uint32_t height   = decoder->image->height;
+		const bool     hasAlpha = 0 != decoder->alphaPresent;
+
+		ImageContainer* output = imageAlloc(_allocator
+			, bimg::TextureFormat::RGBA8
+			, width
+			, height
+			, 0
+			, 1
+			, false
+			, false
+			, NULL
+			);
+
+		if (NULL == output)
+		{
+			avifDecoderDestroy(decoder);
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Unsupported dimensions.");
+			return NULL;
+		}
+
+		avifRGBImage rgb;
+		avifRGBImageSetDefaults(&rgb, decoder->image);
+		rgb.format   = AVIF_RGB_FORMAT_RGBA;
+		rgb.depth    = 8;
+		rgb.pixels   = (uint8_t*)output->m_data;
+		rgb.rowBytes = width*4;
+
+		result = avifImageYUVToRGB(decoder->image, &rgb);
+
+		avifDecoderDestroy(decoder);
+
+		if (AVIF_RESULT_OK != result)
+		{
+			imageFree(output);
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to convert to RGBA.");
+			return NULL;
+		}
+
+		output->m_hasAlpha = hasAlpha;
+		output->m_parser   = ImageParser::Avif;
+
+		return output;
+#else
+		BX_UNUSED(_allocator);
+		BX_ERROR_SET(_err, BIMG_ERROR, "AVIF parsing is disabled (BIMG_CONFIG_PARSE_AVIF).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_AVIF
 	}
 
 #if BIMG_CONFIG_PARSE_WEBP
@@ -1720,6 +1820,11 @@ namespace bimg
 			return false;
 		}
 
+		if (imageIsAvifBrand(_data, _size) )
+		{
+			return false;
+		}
+
 #if BIMG_CONFIG_PARSE_HEIF
 		heif_context* ctx = heif_context_alloc();
 
@@ -1747,12 +1852,69 @@ namespace bimg
 			return false;
 		}
 
-		return imageInfoFinalize(_imageContainer, imageHeifFormat(_data, _size), bimg::TextureFormat::RGBA8, uint32_t(width), uint32_t(height), _err);
+		return imageInfoFinalize(_imageContainer, ImageParser::Heif, bimg::TextureFormat::RGBA8, uint32_t(width), uint32_t(height), _err);
 #else
 		BX_UNUSED(_imageContainer, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "HEIF parsing is disabled (BIMG_CONFIG_PARSE_HEIF).");
 		return false;
 #endif // BIMG_CONFIG_PARSE_HEIF
+	}
+
+	static bool imageParseInfoLibAvif(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+		static uint8_t ftypMagic[] = { 0x66, 0x74, 0x79, 0x70 }; // "ftyp" at offset 4
+
+		if (_size < 12
+		||  0 != bx::memCmp( (const uint8_t*)_data + 4, ftypMagic, sizeof(ftypMagic) ) )
+		{
+			return false;
+		}
+
+		if (!imageIsAvifBrand(_data, _size) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_AVIF
+		avifDecoder* decoder = avifDecoderCreate();
+		if (NULL == decoder)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to create decoder.");
+			return false;
+		}
+
+		avifResult result = avifDecoderSetIOMemory(decoder, (const uint8_t*)_data, _size);
+		if (AVIF_RESULT_OK == result)
+		{
+			result = avifDecoderParse(decoder);
+		}
+
+		const uint32_t width    = AVIF_RESULT_OK == result ? decoder->image->width  : 0;
+		const uint32_t height   = AVIF_RESULT_OK == result ? decoder->image->height : 0;
+		const bool     hasAlpha = AVIF_RESULT_OK == result && 0 != decoder->alphaPresent;
+
+		avifDecoderDestroy(decoder);
+
+		if (AVIF_RESULT_OK != result)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to read primary image.");
+			return false;
+		}
+
+		if (!imageInfoFinalize(_imageContainer, ImageParser::Avif, bimg::TextureFormat::RGBA8, width, height, _err) )
+		{
+			return false;
+		}
+
+		_imageContainer.m_hasAlpha = hasAlpha;
+		return true;
+#else
+		BX_UNUSED(_imageContainer, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "AVIF parsing is disabled (BIMG_CONFIG_PARSE_AVIF).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_AVIF
 	}
 
 	bool imageParseInfo(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
@@ -1782,7 +1944,7 @@ namespace bimg
 			return false;
 		}
 
-		// Container formats (DDS/KTX/PVR3/GNF/TEX) are parsed header-only.
+		// Container formats (DDS/KTX/PVR3/TEX) are parsed header-only.
 		{
 			bx::Error containerErr;
 			if (imageParse(_imageContainer, _data, _size, &containerErr) )
@@ -1803,6 +1965,7 @@ namespace bimg
 			imageParseInfoJpeg,
 			imageParseInfoSimpleWebp,
 			imageParseInfoStbImage,
+			imageParseInfoLibAvif,
 			imageParseInfoLibHeif,
 		};
 
@@ -1835,12 +1998,12 @@ namespace bimg
 			imageParseKtx2,
 			imageParseKtx,
 			imageParsePvr3,
-			imageParseGnf,
 			imageParseLodePng,
 			imageParseTinyExr,
 			imageParseJpeg,
 			imageParseSimpleWebp,
 			imageParseStbImage,
+			imageParseLibAvif,
 			imageParseLibHeif,
 		};
 
@@ -1885,6 +2048,73 @@ namespace bimg
 		imageFree(input);
 
 		return output;
+	}
+
+	static const char* const s_supportedExt[] =
+	{
+#if BIMG_CONFIG_PARSE_AVIF
+		"avif",
+#endif // BIMG_CONFIG_PARSE_AVIF
+
+#if BIMG_CONFIG_PARSE_BMP
+		"bmp",
+#endif // BIMG_CONFIG_PARSE_BMP
+
+		"dds",
+#if BIMG_CONFIG_PARSE_EXR
+		"exr",
+#endif // BIMG_CONFIG_PARSE_EXR
+#if BIMG_CONFIG_PARSE_GIF
+		"gif",
+#endif // BIMG_CONFIG_PARSE_GIF
+#if BIMG_CONFIG_PARSE_HDR
+		"hdr",
+#endif // BIMG_CONFIG_PARSE_HDR
+
+#if BIMG_CONFIG_PARSE_HEIF
+		"heic",
+#endif // BIMG_CONFIG_PARSE_HEIF
+
+#if BIMG_CONFIG_PARSE_JPEG
+		"jpeg",
+		"jpg",
+#endif // BIMG_CONFIG_PARSE_JPEG
+
+		"ktx",
+		"ktx2",
+
+#if BIMG_CONFIG_PARSE_PNM
+		"pgm",
+#endif // BIMG_CONFIG_PARSE_PNM
+
+#if BIMG_CONFIG_PARSE_PNG
+		"png",
+#endif // BIMG_CONFIG_PARSE_PNG
+
+#if BIMG_CONFIG_PARSE_PNM
+		"ppm",
+#endif // BIMG_CONFIG_PARSE_PNM
+
+#if BIMG_CONFIG_PARSE_PSD
+		"psd",
+#endif // BIMG_CONFIG_PARSE_PSD
+
+		"pvr",
+
+#if BIMG_CONFIG_PARSE_TGA
+		"tga",
+#endif // BIMG_CONFIG_PARSE_TGA
+
+#if BIMG_CONFIG_PARSE_WEBP
+		"webp",
+#endif // BIMG_CONFIG_PARSE_WEBP
+
+		NULL,
+	};
+
+	const char* const* getSupportedExt()
+	{
+		return s_supportedExt;
 	}
 
 } // namespace bimg
