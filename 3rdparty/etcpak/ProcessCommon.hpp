@@ -3,8 +3,7 @@
 
 #include <assert.h>
 #include <stddef.h>
-
-#include "Types.hpp"
+#include <stdint.h>
 
 template<class T>
 static size_t GetLeastError( const T* err, size_t num )
@@ -20,7 +19,7 @@ static size_t GetLeastError( const T* err, size_t num )
     return idx;
 }
 
-static uint64 FixByteOrder( uint64 d )
+static uint64_t FixByteOrder( uint64_t d )
 {
     return ( ( d & 0x00000000FFFFFFFF ) ) |
            ( ( d & 0xFF00000000000000 ) >> 24 ) |
@@ -30,7 +29,7 @@ static uint64 FixByteOrder( uint64 d )
 }
 
 template<class T, class S>
-static uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8], const uint32* id )
+static uint64_t EncodeSelectors( uint64_t d, const T terr[2][8], const S tsel[16][8], const uint32_t* id )
 {
     size_t tidx[2];
     tidx[0] = GetLeastError( terr[0], 8 );
@@ -40,7 +39,7 @@ static uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8]
     d |= tidx[1] << 29;
     for( int i=0; i<16; i++ )
     {
-        uint64 t = tsel[i][tidx[id[i]%2]];
+        uint64_t t = tsel[i][tidx[id[i]%2]];
         d |= ( t & 0x1 ) << ( i + 32 );
         d |= ( t & 0x2 ) << ( i + 47 );
     }
