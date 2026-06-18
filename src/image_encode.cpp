@@ -8,7 +8,7 @@
 
 #include <libsquish/squish.h>
 #include <etc1/etc1.h>
-#include <etc2/ProcessRGB.hpp>
+#include <etcpak/ProcessRGB.hpp>
 #include <nvtt/nvtt.h>
 #include <pvrtc/PvrTcEncoder.h>
 #include <edtaa3/edtaa3func.h>
@@ -54,6 +54,48 @@ namespace bimg
 	};
 	static_assert(Quality::Count == BX_COUNTOF(s_astcQuality) );
 
+	static uint32_t* etcpakAllocBgraBlocks(
+		  bx::AllocatorI* _allocator
+		, const uint8_t* _src
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t& _outNumBlocks
+		, uint32_t& _outPaddedWidth
+		)
+	{
+		const uint32_t blockWidth   = (_width  + 3)/4;
+		const uint32_t blockHeight  = (_height + 3)/4;
+		const uint32_t paddedWidth  = blockWidth *4;
+		const uint32_t paddedHeight = blockHeight*4;
+		const uint32_t srcPitch     = _width*4;
+
+		uint32_t* bgra = (uint32_t*)bx::alloc(_allocator, paddedWidth*paddedHeight*sizeof(uint32_t) );
+
+		for (uint32_t yy = 0; yy < paddedHeight; ++yy)
+		{
+			const uint32_t sy = bx::min(yy, _height-1);
+			const uint8_t* srcRow = &_src[sy*srcPitch];
+			uint32_t* dstRow = &bgra[yy*paddedWidth];
+
+			for (uint32_t xx = 0; xx < paddedWidth; ++xx)
+			{
+				const uint32_t sx = bx::min(xx, _width-1);
+				const uint8_t* px = &srcRow[sx*4];
+				dstRow[xx] = 0
+					| (uint32_t(px[3])<<24) // A
+					| (uint32_t(px[0])<<16) // R
+					| (uint32_t(px[1])<< 8) // G
+					| (uint32_t(px[2])    ) // B
+					;
+			}
+		}
+
+		_outNumBlocks   = blockWidth*blockHeight;
+		_outPaddedWidth = paddedWidth;
+
+		return bgra;
+	}
+
 	void imageEncodeFromRgba8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
 	{
 		const uint8_t* src = (const uint8_t*)_src;
@@ -89,9 +131,8 @@ namespace bimg
 				BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
 				break;
 
-			case TextureFormat::ETC2A:
 			case TextureFormat::ETC2A1:
-				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A/ETC2A1 is not supported.");
+				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A1 is not supported.");
 				break;
 
 			case TextureFormat::ETC1:
@@ -100,25 +141,37 @@ namespace bimg
 
 			case TextureFormat::ETC2:
 				{
-					const uint32_t blockWidth  = (_width +3)/4;
-					const uint32_t blockHeight = (_height+3)/4;
-					uint64_t* dstBlock = (uint64_t*)dst;
-					for (uint32_t yy = 0; yy < blockHeight; ++yy)
-					{
-						for (uint32_t xx = 0; xx < blockWidth; ++xx)
-						{
-							uint8_t block[4*4*4];
-							const uint8_t* ptr = &src[(yy*srcPitch+xx*4)*4];
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEtc2Rgb(bgra, (uint64_t*)dst, numBlocks, paddedWidth, true);
+					bx::free(_allocator, bgra);
+				}
+				break;
 
-							for (uint32_t ii = 0; ii < 16; ++ii)
-							{ // BGRx
-								bx::memCopy(&block[ii*4], &ptr[(ii%4)*srcPitch + (ii&~3)], 4);
-								bx::swap(block[ii*4+0], block[ii*4+2]);
-							}
+			case TextureFormat::ETC2A:
+				{
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEtc2Rgba(bgra, (uint64_t*)dst, numBlocks, paddedWidth, true);
+					bx::free(_allocator, bgra);
+				}
+				break;
 
-							*dstBlock++ = ProcessRGB_ETC2(block);
-						}
-					}
+			case TextureFormat::EACR11:
+				{
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEacR(bgra, (uint64_t*)dst, numBlocks, paddedWidth);
+					bx::free(_allocator, bgra);
+				}
+				break;
+
+			case TextureFormat::EACRG11:
+				{
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEacRg(bgra, (uint64_t*)dst, numBlocks, paddedWidth);
+					bx::free(_allocator, bgra);
 				}
 				break;
 
@@ -332,6 +385,9 @@ namespace bimg
 			case TextureFormat::BC5:
 			case TextureFormat::ETC1:
 			case TextureFormat::ETC2:
+			case TextureFormat::ETC2A:
+			case TextureFormat::EACR11:
+			case TextureFormat::EACRG11:
 			case TextureFormat::PTC14:
 			case TextureFormat::PTC14A:
 			case TextureFormat::ASTC4x4:
@@ -366,9 +422,8 @@ namespace bimg
 				}
 				break;
 
-			case bimg::TextureFormat::ETC2A:
 			case bimg::TextureFormat::ETC2A1:
-				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A/ETC2A1 is not supported.");
+				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A1 is not supported.");
 				break;
 
 			default:

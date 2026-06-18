@@ -4,9 +4,9 @@
 #include <assert.h>
 #include <algorithm>
 #include <math.h>
+#include <stdint.h>
 
 #include "Math.hpp"
-#include "Types.hpp"
 
 template<class T>
 struct Vector2
@@ -65,7 +65,7 @@ Vector2<T> operator/( const Vector2<T>& lhs, const T& rhs )
 }
 
 
-typedef Vector2<int32> v2i;
+typedef Vector2<int32_t> v2i;
 typedef Vector2<float> v2f;
 
 
@@ -89,8 +89,8 @@ struct Vector3
     bool operator==( const Vector3<T>& rhs ) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
     bool operator!=( const Vector2<T>& rhs ) const { return !( *this == rhs ); }
 
-    T& operator[]( uint idx ) { assert( idx < 3 ); return ((T*)this)[idx]; }
-    const T& operator[]( uint idx ) const { assert( idx < 3 ); return ((T*)this)[idx]; }
+    T& operator[]( unsigned int idx ) { assert( idx < 3 ); return ((T*)this)[idx]; }
+    const T& operator[]( unsigned int idx ) const { assert( idx < 3 ); return ((T*)this)[idx]; }
 
     Vector3<T> operator+=( const Vector3<T>& rhs )
     {
@@ -156,14 +156,14 @@ bool operator<( const Vector3<T>& lhs, const Vector3<T>& rhs )
     return lhs.Luminance() < rhs.Luminance();
 }
 
-typedef Vector3<int32> v3i;
+typedef Vector3<int32_t> v3i;
 typedef Vector3<float> v3f;
-typedef Vector3<uint8> v3b;
+typedef Vector3<uint8_t> v3b;
 
 
 static inline v3b v3f_to_v3b( const v3f& v )
 {
-    return v3b( uint8( std::min( 1.f, v.x ) * 255 ), uint8( std::min( 1.f, v.y ) * 255 ), uint8( std::min( 1.f, v.z ) * 255 ) );
+    return v3b( uint8_t( std::min( 1.f, v.x ) * 255 ), uint8_t( std::min( 1.f, v.y ) * 255 ), uint8_t( std::min( 1.f, v.z ) * 255 ) );
 }
 
 template<class T>
