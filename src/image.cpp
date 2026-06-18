@@ -3094,6 +3094,148 @@ namespace bimg
 		}
 	}
 
+	static const int32_t s_etc2a1Mod[8][4] =
+	{
+		{ 0,   8, 0,   -8 },
+		{ 0,  17, 0,  -17 },
+		{ 0,  29, 0,  -29 },
+		{ 0,  42, 0,  -42 },
+		{ 0,  60, 0,  -60 },
+		{ 0,  80, 0,  -80 },
+		{ 0, 106, 0, -106 },
+		{ 0, 183, 0, -183 },
+	};
+
+	static void decodeBlockEtc2PunchThrough(uint8_t _dst[16*4], const uint8_t _src[8])
+	{
+		uint32_t indexMsb = (_src[4]<<8) | _src[5];
+		uint32_t indexLsb = (_src[6]<<8) | _src[7];
+
+		for (uint32_t ii = 0; ii < 16; ++ii)
+		{
+			const uint32_t idx        = (ii&0xc) | ( (ii & 0x3)<<4);
+			const uint32_t pixelIndex = (indexLsb & 1) | ( (indexMsb & 1)<<1);
+
+			if (2 == pixelIndex)
+			{
+				_dst[idx + 0] = 0;
+				_dst[idx + 1] = 0;
+				_dst[idx + 2] = 0;
+				_dst[idx + 3] = 0;
+			}
+
+			indexLsb >>= 1;
+			indexMsb >>= 1;
+		}
+	}
+
+	static void decodeBlockEtc2Rgb8A1(uint8_t _dst[16*4], const uint8_t _src[8])
+	{
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+		{
+			return;
+		}
+
+		const bool flipBit = 0 != (_src[3] & 0x1);
+		const bool opaque  = 0 != (_src[3] & 0x2);
+
+		uint8_t rgb[8];
+		rgb[0] = _src[0] >> 3;
+		rgb[1] = _src[1] >> 3;
+		rgb[2] = _src[2] >> 3;
+
+		int8_t diff[3];
+		diff[0] = int8_t( (_src[0] & 0x7)<<5)>>5;
+		diff[1] = int8_t( (_src[1] & 0x7)<<5)>>5;
+		diff[2] = int8_t( (_src[2] & 0x7)<<5)>>5;
+
+		const int8_t rr = rgb[0] + diff[0];
+		const int8_t gg = rgb[1] + diff[1];
+		const int8_t bb = rgb[2] + diff[2];
+
+		if (0  > rr
+		||  31 < rr)
+		{
+			decodeBlockEtc2ModeT(_dst, _src);
+
+			if (!opaque)
+			{
+				decodeBlockEtc2PunchThrough(_dst, _src);
+			}
+
+			return;
+		}
+
+		if (0  > gg
+		||  31 < gg)
+		{
+			decodeBlockEtc2ModeH(_dst, _src);
+
+			if (!opaque)
+			{
+				decodeBlockEtc2PunchThrough(_dst, _src);
+			}
+
+			return;
+		}
+
+		if (0  > bb
+		||  31 < bb)
+		{
+			decodeBlockEtc2ModePlanar(_dst, _src);
+			return;
+		}
+
+		rgb[0] = bitRangeConvert(rgb[0], 5, 8);
+		rgb[1] = bitRangeConvert(rgb[1], 5, 8);
+		rgb[2] = bitRangeConvert(rgb[2], 5, 8);
+		rgb[4] = bitRangeConvert(rr,     5, 8);
+		rgb[5] = bitRangeConvert(gg,     5, 8);
+		rgb[6] = bitRangeConvert(bb,     5, 8);
+
+		uint32_t table[2];
+		table[0] = (_src[3] >> 5) & 0x7;
+		table[1] = (_src[3] >> 2) & 0x7;
+
+		uint32_t indexMsb = (_src[4]<<8) | _src[5];
+		uint32_t indexLsb = (_src[6]<<8) | _src[7];
+
+		for (uint32_t ii = 0; ii < 16; ++ii)
+		{
+			const uint32_t block = flipBit
+				? (ii>>1)&1
+				:  ii>>3
+				;
+			const uint32_t color      = block<<2;
+			const uint32_t idx        = (ii&0xc) | ( (ii & 0x3)<<4);
+			const uint32_t pixelIndex = (indexLsb & 1) | ( (indexMsb & 1)<<1);
+
+			if (!opaque
+			&&  2 == pixelIndex)
+			{
+				_dst[idx + 0] = 0;
+				_dst[idx + 1] = 0;
+				_dst[idx + 2] = 0;
+				_dst[idx + 3] = 0;
+			}
+			else
+			{
+				const int32_t mod = opaque
+					? s_etc1Mod  [table[block] ][pixelIndex]
+					: s_etc2a1Mod[table[block] ][pixelIndex]
+					;
+
+				_dst[idx + 0] = uint8_satadd(rgb[color+2], mod);
+				_dst[idx + 1] = uint8_satadd(rgb[color+1], mod);
+				_dst[idx + 2] = uint8_satadd(rgb[color+0], mod);
+				_dst[idx + 3] = 255;
+			}
+
+			indexLsb >>= 1;
+			indexMsb >>= 1;
+		}
+	}
+
 	static const int8_t s_etc2aMod[16][8] =
 	{
 		{ -3, -6,  -9, -15, 2, 5, 8, 14 },
@@ -3131,11 +3273,54 @@ namespace bimg
 			| ((uint64_t)_src[6] << 8)
 			| _src[7];
 
-		for (int ii = 0; ii < 16; ii++) {
+		for (int ii = 0; ii < 16; ii++)
+		{
 			const uint32_t idx = (ii & 0xc) | ((ii & 0x3) << 4);
 			const  int32_t mod = modTable[(indices >> (45 - ii * 3)) & 0x7];
 
 			_dst[idx + 3] = uint8_satadd(bc, mod*mult);
+		}
+	}
+
+	template<bool SignedT>
+	static void decodeBlockEac(uint8_t _dst[16*4], const uint8_t _src[8], uint32_t _byteOffset)
+	{
+		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+		{
+			return;
+		}
+
+		const int32_t  base     = SignedT
+			? int32_t(int8_t(_src[0]) )
+			: int32_t(_src[0])
+			;
+		const int8_t*  modTable = s_etc2aMod[_src[1] & 0x0f];
+		const int32_t  mult     = (_src[1] & 0xf0) >> 4;
+		const uint64_t indices  = ( (uint64_t)_src[2] << 40)
+			| ( (uint64_t)_src[3] << 32)
+			| ( (uint64_t)_src[4] << 24)
+			| ( (uint64_t)_src[5] << 16)
+			| ( (uint64_t)_src[6] <<  8)
+			|             _src[7]
+			;
+
+		for (int32_t ii = 0; ii < 16; ++ii)
+		{
+			const uint32_t idx = (ii & 0xc) | ( (ii & 0x3) << 4);
+			const  int32_t mod = modTable[(indices >> (45 - ii*3) ) & 0x7];
+
+			if (SignedT)
+			{
+				const int32_t b     = (base < -127 ? -127 : base) * 8;
+				const int32_t value = bx::clamp(0 != mult ? b + mod*mult*8 : b + mod, -1023, 1023);
+				_dst[idx + _byteOffset] = uint8_t( (value + 1023)*255/2046);
+			}
+			else
+			{
+				const int32_t b     = base*8 + 4;
+				const int32_t value = bx::clamp(0 != mult ? b + mod*mult*8 : b + mod, 0, 2047);
+				_dst[idx + _byteOffset] = uint8_t(value >> 3);
+			}
 		}
 	}
 
@@ -6027,16 +6212,118 @@ namespace bimg
 			break;
 
 		case TextureFormat::ETC2A1:
-			BX_WARN(false, "ETC2A1 decoder is not implemented.");
-			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffff0000) );
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+			{
+				for (uint32_t yy = 0; yy < height; ++yy)
+				{
+					for (uint32_t xx = 0; xx < width; ++xx)
+					{
+						decodeBlockEtc2Rgb8A1(temp, src);
+						src += 8;
+
+						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
+						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
+						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
+						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
+						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					}
+				}
+			}
+			else
+			{
+				BX_WARN(false, "ETC2A1 decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
+				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffff0000) );
+			}
 			break;
 
 		case TextureFormat::EACR11:
 		case TextureFormat::EACR11S:
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+			{
+				const bool sign = TextureFormat::EACR11S == _srcFormat;
+
+				for (uint32_t yy = 0; yy < height; ++yy)
+				{
+					for (uint32_t xx = 0; xx < width; ++xx)
+					{
+						for (uint32_t ii = 0; ii < 16; ++ii)
+						{
+							temp[ii*4+0] = 0;
+							temp[ii*4+1] = 0;
+							temp[ii*4+2] = 0;
+							temp[ii*4+3] = 255;
+						}
+
+						if (sign)
+						{
+							decodeBlockEac<true >(temp, src, 2);
+						}
+						else
+						{
+							decodeBlockEac<false>(temp, src, 2);
+						}
+
+						src += 8;
+
+						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
+						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
+						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
+						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
+						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					}
+				}
+			}
+			else
+			{
+				BX_WARN(false, "EAC decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
+				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
+			}
+			break;
+
 		case TextureFormat::EACRG11:
 		case TextureFormat::EACRG11S:
-			BX_WARN(false, "EAC decoder is not implemented.");
-			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
+			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+			{
+				const bool sign = TextureFormat::EACRG11S == _srcFormat;
+
+				for (uint32_t yy = 0; yy < height; ++yy)
+				{
+					for (uint32_t xx = 0; xx < width; ++xx)
+					{
+						for (uint32_t ii = 0; ii < 16; ++ii)
+						{
+							temp[ii*4+0] = 0;
+							temp[ii*4+1] = 0;
+							temp[ii*4+2] = 0;
+							temp[ii*4+3] = 255;
+						}
+
+						if (sign)
+						{
+							decodeBlockEac<true >(temp, src,     2);
+							decodeBlockEac<true >(temp, src + 8, 1);
+						}
+						else
+						{
+							decodeBlockEac<false>(temp, src,     2);
+							decodeBlockEac<false>(temp, src + 8, 1);
+						}
+
+						src += 16;
+
+						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
+						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
+						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
+						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
+						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					}
+				}
+			}
+			else
+			{
+				BX_WARN(false, "EAC decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
+				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
+			}
 			break;
 
 		case TextureFormat::PTC12:
