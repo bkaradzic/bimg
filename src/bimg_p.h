@@ -123,6 +123,14 @@ namespace bimg
 		, bx::Error* _err
 		);
 
+	///
+	ImageContainer* imageParseWic(
+		  bx::AllocatorI* _allocator
+		, const void* _data
+		, uint32_t _size
+		, bx::Error* _err
+		);
+
 } // namespace bimg
 
 #endif // BIMG_P_H_HEADER_GUARD

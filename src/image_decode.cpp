@@ -1998,6 +1998,7 @@ namespace bimg
 			imageParseKtx2,
 			imageParseKtx,
 			imageParsePvr3,
+			imageParseWic,
 			imageParseLodePng,
 			imageParseTinyExr,
 			imageParseJpeg,
