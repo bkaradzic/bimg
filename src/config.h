@@ -147,11 +147,11 @@
 /// WIC (Windows Imaging Component) - Windows-only backup decoder for common raster formats (PNG, JPEG, BMP, GIF).
 ///
 #ifndef BIMG_CONFIG_PARSE_WIC
-#	define BIMG_CONFIG_PARSE_WIC (BX_PLATFORM_WINDOWS && (0 \
-		|| 0 == BIMG_CONFIG_PARSE_PNG                       \
-		|| 0 == BIMG_CONFIG_PARSE_JPEG                      \
-		|| 0 == BIMG_CONFIG_PARSE_BMP                       \
-		|| 0 == BIMG_CONFIG_PARSE_GIF                       \
+#	define BIMG_CONFIG_PARSE_WIC (BIMG_CONFIG_PARSE_ENABLE && BX_PLATFORM_WINDOWS && (0 \
+		|| 0 == BIMG_CONFIG_PARSE_PNG                                                   \
+		|| 0 == BIMG_CONFIG_PARSE_JPEG                                                  \
+		|| 0 == BIMG_CONFIG_PARSE_BMP                                                   \
+		|| 0 == BIMG_CONFIG_PARSE_GIF                                                   \
 		) )
 #endif // BIMG_CONFIG_PARSE_WIC
 
