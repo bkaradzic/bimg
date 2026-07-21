@@ -385,7 +385,7 @@ namespace bimg
 			uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
 			depth  = bx::max<uint32_t>(1, depth);
 
-			size += uint64_t(mipMidth/blockWidth * mipHeight/blockHeight * depth)*blockSize * sides;
+			size += uint64_t(mipMidth/blockWidth) * (mipHeight/blockHeight) * depth * blockSize * sides;
 
 			width  >>= 1;
 			height >>= 1;
@@ -6808,6 +6808,11 @@ namespace bimg
 
 				if (_imageContainer.m_ktx)
 				{
+					if (offset + sizeof(uint32_t) > uint64_t(_size) )
+					{
+						return false;
+					}
+
 					const uint32_t size = _imageContainer.m_numLayers == 1 && _imageContainer.m_cubeMap ? mipSize : mipSize * numSides;
 					uint32_t imageSize  = *(const uint32_t*)&data[offset];
 					BX_ASSERT(size == imageSize, "KTX: Image size mismatch %d (expected %d).", size, imageSize);
@@ -6823,6 +6828,11 @@ namespace bimg
 					if (side == _side
 					&&  lod  == _lod)
 					{
+						if (offset + mipSize > uint64_t(_size) )
+						{
+							return false;
+						}
+
 						_mip.m_width     = mipWidth;
 						_mip.m_height    = mipHeight;
 						_mip.m_depth     = depth;
@@ -6877,12 +6887,18 @@ namespace bimg
 
 				if (uint8_t(lod) == _lod)
 				{
+					const uint64_t mipOffset = offset + uint64_t(_side) * mipSize;
+					if (mipOffset + mipSize > uint64_t(_size) )
+					{
+						return false;
+					}
+
 					_mip.m_width     = mipWidths [lod];
 					_mip.m_height    = mipHeights[lod];
 					_mip.m_depth     = mipDepths [lod];
 					_mip.m_blockSize = blockSize;
 					_mip.m_size      = mipSize;
-					_mip.m_data      = &data[offset + _side * mipSize];
+					_mip.m_data      = &data[mipOffset];
 					_mip.m_bpp       = bpp;
 					_mip.m_format    = format;
 					_mip.m_hasAlpha  = hasAlpha;
@@ -6914,6 +6930,11 @@ namespace bimg
 					if (side == _side
 					&&  lod  == _lod)
 					{
+						if (offset + mipSize > uint64_t(_size) )
+						{
+							return false;
+						}
+
 						_mip.m_width     = mipWidth;
 						_mip.m_height    = mipHeight;
 						_mip.m_depth     = depth;
