@@ -31,8 +31,11 @@ namespace bimg
 		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC2
 		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC3
 		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC4
+		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // BC4S
 		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC5
+		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // BC5S
 		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // BC6H
+		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // BC6HU
 		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC7
 		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC1
 		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2
@@ -117,6 +120,7 @@ namespace bimg
 		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  5,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // BGR5A1
 		{  16,  1, 1,  2, 1, 1,  0, 0,  5,  5,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // RGB5A1
 		{  32,  1, 1,  4, 1, 1,  0, 0, 10, 10, 10,  2, uint8_t(bx::EncodingType::Unorm) }, // RGB10A2
+		{  32,  1, 1,  4, 1, 1,  0, 0, 10, 10, 10,  2, uint8_t(bx::EncodingType::Uint)  }, // RGB10A2U
 		{  32,  1, 1,  4, 1, 1,  0, 0, 11, 11, 10,  0, uint8_t(bx::EncodingType::Unorm) }, // RG11B10F
 		{   0,  0, 0,  0, 0, 0,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Count) }, // UnknownDepth
 		{  16,  1, 1,  2, 1, 1, 16, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // D16
@@ -126,6 +130,7 @@ namespace bimg
 		{  16,  1, 1,  2, 1, 1, 16, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // D16F
 		{  24,  1, 1,  3, 1, 1, 24, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // D24F
 		{  32,  1, 1,  4, 1, 1, 32, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // D32F
+		{  64,  1, 1,  8, 1, 1, 32, 8,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // D32FS8
 		{   8,  1, 1,  1, 1, 1,  0, 8,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // D0S8
 	};
 	static_assert(TextureFormat::Count == BX_COUNTOF(s_imageBlockInfo) );
@@ -136,8 +141,11 @@ namespace bimg
 		"BC2",        // BC2
 		"BC3",        // BC3
 		"BC4",        // BC4
+		"BC4S",       // BC4S
 		"BC5",        // BC5
+		"BC5S",       // BC5S
 		"BC6H",       // BC6H
+		"BC6HU",      // BC6HU
 		"BC7",        // BC7
 		"ETC1",       // ETC1
 		"ETC2",       // ETC2
@@ -222,6 +230,7 @@ namespace bimg
 		"BGR5A1",     // BGR5A1
 		"RGB5A1",     // RGB5A1
 		"RGB10A2",    // RGB10A2
+		"RGB10A2U",   // RGB10A2U
 		"RG11B10F",   // RG11B10F
 		"<unknown>",  // UnknownDepth
 		"D16",        // D16
@@ -231,6 +240,7 @@ namespace bimg
 		"D16F",       // D16F
 		"D24F",       // D24F
 		"D32F",       // D32F
+		"D32FS8",     // D32FS8
 		"D0S8",       // D0S8
 	};
 	static_assert(TextureFormat::Count == BX_COUNTOF(s_textureFormatName) );
@@ -1105,8 +1115,11 @@ namespace bimg
 		{ NULL,               NULL                 }, // BC2
 		{ NULL,               NULL                 }, // BC3
 		{ NULL,               NULL                 }, // BC4
+		{ NULL,               NULL                 }, // BC4S
 		{ NULL,               NULL                 }, // BC5
+		{ NULL,               NULL                 }, // BC5S
 		{ NULL,               NULL                 }, // BC6H
+		{ NULL,               NULL                 }, // BC6HU
 		{ NULL,               NULL                 }, // BC7
 		{ NULL,               NULL                 }, // ETC1
 		{ NULL,               NULL                 }, // ETC2
@@ -1191,6 +1204,7 @@ namespace bimg
 		{ bx::packBgr5a1,     bx::unpackBgr5a1     }, // BGR5A1
 		{ bx::packRgb5a1,     bx::unpackRgb5a1     }, // RGB5A1
 		{ bx::packRgb10A2,    bx::unpackRgb10A2    }, // RGB10A2
+		{ NULL,               NULL                 }, // RGB10A2U
 		{ bx::packRG11B10F,   bx::unpackRG11B10F   }, // RG11B10F
 		{ NULL,               NULL                 }, // UnknownDepth
 		{ bx::packR16,        bx::unpackR16        }, // D16
@@ -1200,6 +1214,7 @@ namespace bimg
 		{ bx::packR16F,       bx::unpackR16F       }, // D16F
 		{ NULL,               NULL                 }, // D24F
 		{ bx::packR32F,       bx::unpackR32F       }, // D32F
+		{ NULL,               NULL                 }, // D32FS8
 		{ bx::packR8,         bx::unpackR8         }, // D0S8
 	};
 	static_assert(TextureFormat::Count == BX_COUNTOF(s_packUnpack) );
@@ -3681,8 +3696,10 @@ namespace bimg
 #define DDS_DXT5 BX_MAKEFOURCC('D', 'X', 'T', '5')
 #define DDS_ATI1 BX_MAKEFOURCC('A', 'T', 'I', '1')
 #define DDS_BC4U BX_MAKEFOURCC('B', 'C', '4', 'U')
+#define DDS_BC4S BX_MAKEFOURCC('B', 'C', '4', 'S')
 #define DDS_ATI2 BX_MAKEFOURCC('A', 'T', 'I', '2')
 #define DDS_BC5U BX_MAKEFOURCC('B', 'C', '5', 'U')
+#define DDS_BC5S BX_MAKEFOURCC('B', 'C', '5', 'S')
 #define DDS_RXGB BX_MAKEFOURCC('R', 'X', 'G', 'B')
 #define DDS_DX10 BX_MAKEFOURCC('D', 'X', '1', '0')
 
@@ -3734,6 +3751,7 @@ namespace bimg
 #define DDS_FORMAT_R32G32_FLOAT           16
 #define DDS_FORMAT_R32G32_UINT            17
 #define DDS_FORMAT_R10G10B10A2_UNORM      24
+#define DDS_FORMAT_R10G10B10A2_UINT       25
 #define DDS_FORMAT_R11G11B10_FLOAT        26
 #define DDS_FORMAT_R8G8B8A8_UNORM         28
 #define DDS_FORMAT_R8G8B8A8_UNORM_SRGB    29
@@ -3754,7 +3772,9 @@ namespace bimg
 #define DDS_FORMAT_BC3_UNORM              77
 #define DDS_FORMAT_BC3_UNORM_SRGB         78
 #define DDS_FORMAT_BC4_UNORM              80
+#define DDS_FORMAT_BC4_SNORM              81
 #define DDS_FORMAT_BC5_UNORM              83
+#define DDS_FORMAT_BC5_SNORM              84
 #define DDS_FORMAT_B5G6R5_UNORM           85
 #define DDS_FORMAT_B5G5R5A1_UNORM         86
 #define DDS_FORMAT_B8G8R8A8_UNORM         87
@@ -3854,8 +3874,10 @@ namespace bimg
 		{ DDS_DXT5,                  TextureFormat::BC3,       false },
 		{ DDS_ATI1,                  TextureFormat::BC4,       false },
 		{ DDS_BC4U,                  TextureFormat::BC4,       false },
+		{ DDS_BC4S,                  TextureFormat::BC4S,      false },
 		{ DDS_ATI2,                  TextureFormat::BC5,       false },
 		{ DDS_BC5U,                  TextureFormat::BC5,       false },
+		{ DDS_BC5S,                  TextureFormat::BC5S,      false },
 		{ DDS_RXGB,                  TextureFormat::BC5,       false },
 
 		{ DDS_ETC1,                  TextureFormat::ETC1,      false },
@@ -3917,8 +3939,10 @@ namespace bimg
 		{ DDS_FORMAT_BC3_UNORM,             TextureFormat::BC3,       false },
 		{ DDS_FORMAT_BC3_UNORM_SRGB,        TextureFormat::BC3,       true  },
 		{ DDS_FORMAT_BC4_UNORM,             TextureFormat::BC4,       false },
+		{ DDS_FORMAT_BC4_SNORM,             TextureFormat::BC4S,      false },
 		{ DDS_FORMAT_BC5_UNORM,             TextureFormat::BC5,       false },
-		{ DDS_FORMAT_BC6H_UF16,             TextureFormat::BC6H,      false },
+		{ DDS_FORMAT_BC5_SNORM,             TextureFormat::BC5S,      false },
+		{ DDS_FORMAT_BC6H_UF16,             TextureFormat::BC6HU,     false },
 		{ DDS_FORMAT_BC6H_SF16,             TextureFormat::BC6H,      false },
 		{ DDS_FORMAT_BC7_UNORM,             TextureFormat::BC7,       false },
 		{ DDS_FORMAT_BC7_UNORM_SRGB,        TextureFormat::BC7,       true  },
@@ -3977,6 +4001,7 @@ namespace bimg
 		{ DDS_FORMAT_B5G5R5A1_UNORM,        TextureFormat::BGR5A1,    false },
 		{ DDS_FORMAT_B5G5R5A1_UNORM,        TextureFormat::RGB5A1,    false },
 		{ DDS_FORMAT_R10G10B10A2_UNORM,     TextureFormat::RGB10A2,   false },
+		{ DDS_FORMAT_R10G10B10A2_UINT,      TextureFormat::RGB10A2U,  false },
 		{ DDS_FORMAT_R11G11B10_FLOAT,       TextureFormat::RG11B10F,  false },
 	};
 
@@ -4215,152 +4240,155 @@ namespace bimg
 #define KTX_MAGIC       BX_MAKEFOURCC(0xAB, 'K', 'T', 'X')
 #define KTX_HEADER_SIZE 64
 
-#define KTX_ETC1_RGB8_OES                             0x8D64
-#define KTX_COMPRESSED_R11_EAC                        0x9270
-#define KTX_COMPRESSED_SIGNED_R11_EAC                 0x9271
-#define KTX_COMPRESSED_RG11_EAC                       0x9272
-#define KTX_COMPRESSED_SIGNED_RG11_EAC                0x9273
-#define KTX_COMPRESSED_RGB8_ETC2                      0x9274
-#define KTX_COMPRESSED_SRGB8_ETC2                     0x9275
-#define KTX_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2  0x9276
-#define KTX_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 0x9277
-#define KTX_COMPRESSED_RGBA8_ETC2_EAC                 0x9278
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC          0x9279
-#define KTX_COMPRESSED_RGB_PVRTC_4BPPV1_IMG           0x8C00
-#define KTX_COMPRESSED_RGB_PVRTC_2BPPV1_IMG           0x8C01
-#define KTX_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG          0x8C02
-#define KTX_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG          0x8C03
-#define KTX_COMPRESSED_RGBA_PVRTC_2BPPV2_IMG          0x9137
-#define KTX_COMPRESSED_RGBA_PVRTC_4BPPV2_IMG          0x9138
-#define KTX_COMPRESSED_RGB_S3TC_DXT1_EXT              0x83F0
-#define KTX_COMPRESSED_RGBA_S3TC_DXT1_EXT             0x83F1
-#define KTX_COMPRESSED_RGBA_S3TC_DXT3_EXT             0x83F2
-#define KTX_COMPRESSED_RGBA_S3TC_DXT5_EXT             0x83F3
-#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT       0x8C4D
-#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT       0x8C4E
-#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT       0x8C4F
-#define KTX_COMPRESSED_LUMINANCE_LATC1_EXT            0x8C70
-#define KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT      0x8C72
-#define KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB            0x8E8C
-#define KTX_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB      0x8E8D
-#define KTX_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB      0x8E8E
-#define KTX_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB    0x8E8F
-#define KTX_COMPRESSED_SRGB_PVRTC_2BPPV1_EXT          0x8A54
-#define KTX_COMPRESSED_SRGB_PVRTC_4BPPV1_EXT          0x8A55
-#define KTX_COMPRESSED_SRGB_ALPHA_PVRTC_2BPPV1_EXT    0x8A56
-#define KTX_COMPRESSED_SRGB_ALPHA_PVRTC_4BPPV1_EXT    0x8A57
-#define KTX_ATC_RGB_AMD                               0x8C92
-#define KTX_ATC_RGBA_EXPLICIT_ALPHA_AMD               0x8C93
-#define KTX_ATC_RGBA_INTERPOLATED_ALPHA_AMD           0x87EE
-#define KTX_COMPRESSED_RGBA_ASTC_4x4_KHR              0x93B0
-#define KTX_COMPRESSED_RGBA_ASTC_5x4_KHR              0x93B1
-#define KTX_COMPRESSED_RGBA_ASTC_5x5_KHR              0x93B2
-#define KTX_COMPRESSED_RGBA_ASTC_6x5_KHR              0x93B3
-#define KTX_COMPRESSED_RGBA_ASTC_6x6_KHR              0x93B4
-#define KTX_COMPRESSED_RGBA_ASTC_8x5_KHR              0x93B5
-#define KTX_COMPRESSED_RGBA_ASTC_8x6_KHR              0x93B6
-#define KTX_COMPRESSED_RGBA_ASTC_8x8_KHR              0x93B7
-#define KTX_COMPRESSED_RGBA_ASTC_10x5_KHR             0x93B8
-#define KTX_COMPRESSED_RGBA_ASTC_10x6_KHR             0x93B9
-#define KTX_COMPRESSED_RGBA_ASTC_10x8_KHR             0x93BA
-#define KTX_COMPRESSED_RGBA_ASTC_10x10_KHR            0x93BB
-#define KTX_COMPRESSED_RGBA_ASTC_12x10_KHR            0x93BC
-#define KTX_COMPRESSED_RGBA_ASTC_12x12_KHR            0x93BD
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR      0x93D0
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR      0x93D1
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR      0x93D2
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR      0x93D3
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR      0x93D4
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR      0x93D5
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR      0x93D6
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR      0x93D7
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR     0x93D8
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR     0x93D9
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR     0x93DA
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR    0x93DB
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR    0x93DC
-#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR    0x93DD
+#define KTX_ETC1_RGB8_OES                               0x8D64
+#define KTX_COMPRESSED_R11_EAC                          0x9270
+#define KTX_COMPRESSED_SIGNED_R11_EAC                   0x9271
+#define KTX_COMPRESSED_RG11_EAC                         0x9272
+#define KTX_COMPRESSED_SIGNED_RG11_EAC                  0x9273
+#define KTX_COMPRESSED_RGB8_ETC2                        0x9274
+#define KTX_COMPRESSED_SRGB8_ETC2                       0x9275
+#define KTX_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2    0x9276
+#define KTX_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2   0x9277
+#define KTX_COMPRESSED_RGBA8_ETC2_EAC                   0x9278
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC            0x9279
+#define KTX_COMPRESSED_RGB_PVRTC_4BPPV1_IMG             0x8C00
+#define KTX_COMPRESSED_RGB_PVRTC_2BPPV1_IMG             0x8C01
+#define KTX_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG            0x8C02
+#define KTX_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG            0x8C03
+#define KTX_COMPRESSED_RGBA_PVRTC_2BPPV2_IMG            0x9137
+#define KTX_COMPRESSED_RGBA_PVRTC_4BPPV2_IMG            0x9138
+#define KTX_COMPRESSED_RGB_S3TC_DXT1_EXT                0x83F0
+#define KTX_COMPRESSED_RGBA_S3TC_DXT1_EXT               0x83F1
+#define KTX_COMPRESSED_RGBA_S3TC_DXT3_EXT               0x83F2
+#define KTX_COMPRESSED_RGBA_S3TC_DXT5_EXT               0x83F3
+#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT         0x8C4D
+#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT         0x8C4E
+#define KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT         0x8C4F
+#define KTX_COMPRESSED_LUMINANCE_LATC1_EXT              0x8C70
+#define KTX_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT       0x8C71
+#define KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT        0x8C72
+#define KTX_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT 0x8C73
+#define KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB              0x8E8C
+#define KTX_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB        0x8E8D
+#define KTX_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB        0x8E8E
+#define KTX_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB      0x8E8F
+#define KTX_COMPRESSED_SRGB_PVRTC_2BPPV1_EXT            0x8A54
+#define KTX_COMPRESSED_SRGB_PVRTC_4BPPV1_EXT            0x8A55
+#define KTX_COMPRESSED_SRGB_ALPHA_PVRTC_2BPPV1_EXT      0x8A56
+#define KTX_COMPRESSED_SRGB_ALPHA_PVRTC_4BPPV1_EXT      0x8A57
+#define KTX_ATC_RGB_AMD                                 0x8C92
+#define KTX_ATC_RGBA_EXPLICIT_ALPHA_AMD                 0x8C93
+#define KTX_ATC_RGBA_INTERPOLATED_ALPHA_AMD             0x87EE
+#define KTX_COMPRESSED_RGBA_ASTC_4x4_KHR                0x93B0
+#define KTX_COMPRESSED_RGBA_ASTC_5x4_KHR                0x93B1
+#define KTX_COMPRESSED_RGBA_ASTC_5x5_KHR                0x93B2
+#define KTX_COMPRESSED_RGBA_ASTC_6x5_KHR                0x93B3
+#define KTX_COMPRESSED_RGBA_ASTC_6x6_KHR                0x93B4
+#define KTX_COMPRESSED_RGBA_ASTC_8x5_KHR                0x93B5
+#define KTX_COMPRESSED_RGBA_ASTC_8x6_KHR                0x93B6
+#define KTX_COMPRESSED_RGBA_ASTC_8x8_KHR                0x93B7
+#define KTX_COMPRESSED_RGBA_ASTC_10x5_KHR               0x93B8
+#define KTX_COMPRESSED_RGBA_ASTC_10x6_KHR               0x93B9
+#define KTX_COMPRESSED_RGBA_ASTC_10x8_KHR               0x93BA
+#define KTX_COMPRESSED_RGBA_ASTC_10x10_KHR              0x93BB
+#define KTX_COMPRESSED_RGBA_ASTC_12x10_KHR              0x93BC
+#define KTX_COMPRESSED_RGBA_ASTC_12x12_KHR              0x93BD
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR        0x93D0
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR        0x93D1
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR        0x93D2
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR        0x93D3
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR        0x93D4
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR        0x93D5
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR        0x93D6
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR        0x93D7
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR       0x93D8
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR       0x93D9
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR       0x93DA
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR      0x93DB
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR      0x93DC
+#define KTX_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR      0x93DD
 
-#define KTX_A8                                        0x803C
-#define KTX_R8                                        0x8229
-#define KTX_R16                                       0x822A
-#define KTX_RG8                                       0x822B
-#define KTX_RG16                                      0x822C
-#define KTX_R16F                                      0x822D
-#define KTX_R32F                                      0x822E
-#define KTX_RG16F                                     0x822F
-#define KTX_RG32F                                     0x8230
-#define KTX_RGBA8                                     0x8058
-#define KTX_RGBA16                                    0x805B
-#define KTX_RGBA16F                                   0x881A
-#define KTX_R32UI                                     0x8236
-#define KTX_RG32UI                                    0x823C
-#define KTX_RGBA32UI                                  0x8D70
-#define KTX_RGBA32F                                   0x8814
-#define KTX_RGB565                                    0x8D62
-#define KTX_RGBA4                                     0x8056
-#define KTX_RGB5_A1                                   0x8057
-#define KTX_RGB10_A2                                  0x8059
-#define KTX_R8I                                       0x8231
-#define KTX_R8UI                                      0x8232
-#define KTX_R16I                                      0x8233
-#define KTX_R16UI                                     0x8234
-#define KTX_R32I                                      0x8235
-#define KTX_R32UI                                     0x8236
-#define KTX_RG8I                                      0x8237
-#define KTX_RG8UI                                     0x8238
-#define KTX_RG16I                                     0x8239
-#define KTX_RG16UI                                    0x823A
-#define KTX_RG32I                                     0x823B
-#define KTX_RG32UI                                    0x823C
-#define KTX_R8_SNORM                                  0x8F94
-#define KTX_RG8_SNORM                                 0x8F95
-#define KTX_RGB8_SNORM                                0x8F96
-#define KTX_RGBA8_SNORM                               0x8F97
-#define KTX_R16_SNORM                                 0x8F98
-#define KTX_RG16_SNORM                                0x8F99
-#define KTX_RGB16_SNORM                               0x8F9A
-#define KTX_RGBA16_SNORM                              0x8F9B
-#define KTX_SRGB8                                     0x8C41
-#define KTX_SRGB8_ALPHA8                              0x8C43
-#define KTX_RGBA32UI                                  0x8D70
-#define KTX_RGB32UI                                   0x8D71
-#define KTX_RGBA16UI                                  0x8D76
-#define KTX_RGB16UI                                   0x8D77
-#define KTX_RGBA8UI                                   0x8D7C
-#define KTX_RGB8UI                                    0x8D7D
-#define KTX_RGBA32I                                   0x8D82
-#define KTX_RGB32I                                    0x8D83
-#define KTX_RGBA16I                                   0x8D88
-#define KTX_RGB16I                                    0x8D89
-#define KTX_RGBA8I                                    0x8D8E
-#define KTX_RGB8                                      0x8051
-#define KTX_RGB8I                                     0x8D8F
-#define KTX_RGB9_E5                                   0x8C3D
-#define KTX_R11F_G11F_B10F                            0x8C3A
+#define KTX_A8                                          0x803C
+#define KTX_R8                                          0x8229
+#define KTX_R16                                         0x822A
+#define KTX_RG8                                         0x822B
+#define KTX_RG16                                        0x822C
+#define KTX_R16F                                        0x822D
+#define KTX_R32F                                        0x822E
+#define KTX_RG16F                                       0x822F
+#define KTX_RG32F                                       0x8230
+#define KTX_RGBA8                                       0x8058
+#define KTX_RGBA16                                      0x805B
+#define KTX_RGBA16F                                     0x881A
+#define KTX_R32UI                                       0x8236
+#define KTX_RG32UI                                      0x823C
+#define KTX_RGBA32UI                                    0x8D70
+#define KTX_RGBA32F                                     0x8814
+#define KTX_RGB565                                      0x8D62
+#define KTX_RGBA4                                       0x8056
+#define KTX_RGB5_A1                                     0x8057
+#define KTX_RGB10_A2                                    0x8059
+#define KTX_RGB10_A2UI                                  0x906F
+#define KTX_R8I                                         0x8231
+#define KTX_R8UI                                        0x8232
+#define KTX_R16I                                        0x8233
+#define KTX_R16UI                                       0x8234
+#define KTX_R32I                                        0x8235
+#define KTX_R32UI                                       0x8236
+#define KTX_RG8I                                        0x8237
+#define KTX_RG8UI                                       0x8238
+#define KTX_RG16I                                       0x8239
+#define KTX_RG16UI                                      0x823A
+#define KTX_RG32I                                       0x823B
+#define KTX_RG32UI                                      0x823C
+#define KTX_R8_SNORM                                    0x8F94
+#define KTX_RG8_SNORM                                   0x8F95
+#define KTX_RGB8_SNORM                                  0x8F96
+#define KTX_RGBA8_SNORM                                 0x8F97
+#define KTX_R16_SNORM                                   0x8F98
+#define KTX_RG16_SNORM                                  0x8F99
+#define KTX_RGB16_SNORM                                 0x8F9A
+#define KTX_RGBA16_SNORM                                0x8F9B
+#define KTX_SRGB8                                       0x8C41
+#define KTX_SRGB8_ALPHA8                                0x8C43
+#define KTX_RGBA32UI                                    0x8D70
+#define KTX_RGB32UI                                     0x8D71
+#define KTX_RGBA16UI                                    0x8D76
+#define KTX_RGB16UI                                     0x8D77
+#define KTX_RGBA8UI                                     0x8D7C
+#define KTX_RGB8UI                                      0x8D7D
+#define KTX_RGBA32I                                     0x8D82
+#define KTX_RGB32I                                      0x8D83
+#define KTX_RGBA16I                                     0x8D88
+#define KTX_RGB16I                                      0x8D89
+#define KTX_RGBA8I                                      0x8D8E
+#define KTX_RGB8                                        0x8051
+#define KTX_RGB8I                                       0x8D8F
+#define KTX_RGB9_E5                                     0x8C3D
+#define KTX_R11F_G11F_B10F                              0x8C3A
 
-#define KTX_ZERO                                      0
-#define KTX_RED                                       0x1903
-#define KTX_ALPHA                                     0x1906
-#define KTX_RGB                                       0x1907
-#define KTX_RGBA                                      0x1908
-#define KTX_BGRA                                      0x80E1
-#define KTX_RG                                        0x8227
+#define KTX_ZERO                                        0
+#define KTX_RED                                         0x1903
+#define KTX_ALPHA                                       0x1906
+#define KTX_RGB                                         0x1907
+#define KTX_RGBA                                        0x1908
+#define KTX_BGRA                                        0x80E1
+#define KTX_RG                                          0x8227
 
-#define KTX_BYTE                                      0x1400
-#define KTX_UNSIGNED_BYTE                             0x1401
-#define KTX_SHORT                                     0x1402
-#define KTX_UNSIGNED_SHORT                            0x1403
-#define KTX_INT                                       0x1404
-#define KTX_UNSIGNED_INT                              0x1405
-#define KTX_FLOAT                                     0x1406
-#define KTX_HALF_FLOAT                                0x140B
-#define KTX_UNSIGNED_INT_5_9_9_9_REV                  0x8C3E
-#define KTX_UNSIGNED_SHORT_5_6_5                      0x8363
-#define KTX_UNSIGNED_SHORT_4_4_4_4                    0x8033
-#define KTX_UNSIGNED_SHORT_5_5_5_1                    0x8034
-#define KTX_UNSIGNED_INT_2_10_10_10_REV               0x8368
-#define KTX_UNSIGNED_INT_10F_11F_11F_REV              0x8C3B
+#define KTX_BYTE                                        0x1400
+#define KTX_UNSIGNED_BYTE                               0x1401
+#define KTX_SHORT                                       0x1402
+#define KTX_UNSIGNED_SHORT                              0x1403
+#define KTX_INT                                         0x1404
+#define KTX_UNSIGNED_INT                                0x1405
+#define KTX_FLOAT                                       0x1406
+#define KTX_HALF_FLOAT                                  0x140B
+#define KTX_UNSIGNED_INT_5_9_9_9_REV                    0x8C3E
+#define KTX_UNSIGNED_SHORT_5_6_5                        0x8363
+#define KTX_UNSIGNED_SHORT_4_4_4_4                      0x8033
+#define KTX_UNSIGNED_SHORT_5_5_5_1                      0x8034
+#define KTX_UNSIGNED_INT_2_10_10_10_REV                 0x8368
+#define KTX_UNSIGNED_INT_10F_11F_11F_REV                0x8C3B
 
 	struct KtxFormatInfo
 	{
@@ -4376,8 +4404,11 @@ namespace bimg
 		{ KTX_COMPRESSED_RGBA_S3TC_DXT3_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,       KTX_RGBA,  KTX_ZERO,                         }, // BC2
 		{ KTX_COMPRESSED_RGBA_S3TC_DXT5_EXT,            KTX_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT,       KTX_RGBA,  KTX_ZERO,                         }, // BC3
 		{ KTX_COMPRESSED_LUMINANCE_LATC1_EXT,           KTX_ZERO,                                      KTX_RED,   KTX_ZERO,                         }, // BC4
+		{ KTX_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,    KTX_ZERO,                                      KTX_RED,   KTX_ZERO,                         }, // BC4S
 		{ KTX_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT,     KTX_ZERO,                                      KTX_RG,    KTX_ZERO,                         }, // BC5
+		{ KTX_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT, KTX_ZERO,                                   KTX_RG,    KTX_ZERO,                         }, // BC5S
 		{ KTX_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB,     KTX_ZERO,                                      KTX_RGB,   KTX_ZERO,                         }, // BC6H
+		{ KTX_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB,   KTX_ZERO,                                      KTX_RGB,   KTX_ZERO,                         }, // BC6HU
 		{ KTX_COMPRESSED_RGBA_BPTC_UNORM_ARB,           KTX_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB,      KTX_RGBA,  KTX_ZERO,                         }, // BC7
 		{ KTX_ETC1_RGB8_OES,                            KTX_ZERO,                                      KTX_RGB,   KTX_ZERO,                         }, // ETC1
 		{ KTX_COMPRESSED_RGB8_ETC2,                     KTX_COMPRESSED_SRGB8_ETC2,                     KTX_RGB,   KTX_ZERO,                         }, // ETC2
@@ -4462,6 +4493,7 @@ namespace bimg
 		{ KTX_RGB5_A1,                                  KTX_ZERO,                                      KTX_BGRA,  KTX_UNSIGNED_SHORT_5_5_5_1,       }, // BGR5A1
 		{ KTX_RGB5_A1,                                  KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_SHORT_5_5_5_1,       }, // RGB5A1
 		{ KTX_RGB10_A2,                                 KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2
+		{ KTX_RGB10_A2UI,                               KTX_ZERO,                                      KTX_RGBA,  KTX_UNSIGNED_INT_2_10_10_10_REV,  }, // RGB10A2U
 		{ KTX_R11F_G11F_B10F,                           KTX_ZERO,                                      KTX_RGB,   KTX_UNSIGNED_INT_10F_11F_11F_REV, }, // RG11B10F
 	};
 	static_assert(TextureFormat::UnknownDepth == BX_COUNTOF(s_translateKtxFormat) );
@@ -4650,6 +4682,7 @@ namespace bimg
 #define KTX2_FORMAT_B8G8R8A8_UNORM                 44
 #define KTX2_FORMAT_B8G8R8A8_SRGB                  50
 #define KTX2_FORMAT_A2B10G10R10_UNORM_PACK32       64
+#define KTX2_FORMAT_A2B10G10R10_UINT_PACK32        68
 #define KTX2_FORMAT_R16_UNORM                      70
 #define KTX2_FORMAT_R16_SNORM                      71
 #define KTX2_FORMAT_R16_UINT                       74
@@ -4781,8 +4814,11 @@ namespace bimg
 		{ KTX2_FORMAT_BC2_UNORM_BLOCK,             KTX2_FORMAT_BC2_SRGB_BLOCK             }, // BC2
 		{ KTX2_FORMAT_BC3_UNORM_BLOCK,             KTX2_FORMAT_BC3_SRGB_BLOCK             }, // BC3
 		{ KTX2_FORMAT_BC4_UNORM_BLOCK,             KTX2_FORMAT_UNDEFINED                  }, // BC4
+		{ KTX2_FORMAT_BC4_SNORM_BLOCK,             KTX2_FORMAT_UNDEFINED                  }, // BC4S
 		{ KTX2_FORMAT_BC5_UNORM_BLOCK,             KTX2_FORMAT_UNDEFINED                  }, // BC5
+		{ KTX2_FORMAT_BC5_SNORM_BLOCK,             KTX2_FORMAT_UNDEFINED                  }, // BC5S
 		{ KTX2_FORMAT_BC6H_SFLOAT_BLOCK,           KTX2_FORMAT_UNDEFINED                  }, // BC6H
+		{ KTX2_FORMAT_BC6H_UFLOAT_BLOCK,           KTX2_FORMAT_UNDEFINED                  }, // BC6HU
 		{ KTX2_FORMAT_BC7_UNORM_BLOCK,             KTX2_FORMAT_BC7_SRGB_BLOCK             }, // BC7
 		{ KTX2_FORMAT_ETC2_R8G8B8_UNORM_BLOCK,     KTX2_FORMAT_ETC2_R8G8B8_SRGB_BLOCK     }, // ETC1 (no Vulkan ETC1, use ETC2 RGB)
 		{ KTX2_FORMAT_ETC2_R8G8B8_UNORM_BLOCK,     KTX2_FORMAT_ETC2_R8G8B8_SRGB_BLOCK     }, // ETC2
@@ -4867,6 +4903,7 @@ namespace bimg
 		{ KTX2_FORMAT_B5G5R5A1_UNORM_PACK16,       KTX2_FORMAT_UNDEFINED                  }, // BGR5A1
 		{ KTX2_FORMAT_R5G5B5A1_UNORM_PACK16,       KTX2_FORMAT_UNDEFINED                  }, // RGB5A1
 		{ KTX2_FORMAT_A2B10G10R10_UNORM_PACK32,    KTX2_FORMAT_UNDEFINED                  }, // RGB10A2
+		{ KTX2_FORMAT_A2B10G10R10_UINT_PACK32,     KTX2_FORMAT_UNDEFINED                  }, // RGB10A2U
 		{ KTX2_FORMAT_B10G11R11_UFLOAT_PACK32,     KTX2_FORMAT_UNDEFINED                  }, // RG11B10F
 	};
 	static_assert(TextureFormat::UnknownDepth == BX_COUNTOF(s_translateKtx2Format) );
@@ -5210,9 +5247,12 @@ namespace bimg
 			case TextureFormat::BC1:    dfd.m_colorModel = KTX2_DF_MODEL_BC1A;  break;
 			case TextureFormat::BC2:    dfd.m_colorModel = KTX2_DF_MODEL_BC2;   break;
 			case TextureFormat::BC3:    dfd.m_colorModel = KTX2_DF_MODEL_BC3;   break;
-			case TextureFormat::BC4:    dfd.m_colorModel = KTX2_DF_MODEL_BC4;   break;
-			case TextureFormat::BC5:    dfd.m_colorModel = KTX2_DF_MODEL_BC5;   break;
-			case TextureFormat::BC6H:   dfd.m_colorModel = KTX2_DF_MODEL_BC6H;  break;
+			case TextureFormat::BC4:
+			case TextureFormat::BC4S:   dfd.m_colorModel = KTX2_DF_MODEL_BC4;   break;
+			case TextureFormat::BC5:
+			case TextureFormat::BC5S:   dfd.m_colorModel = KTX2_DF_MODEL_BC5;   break;
+			case TextureFormat::BC6H:
+			case TextureFormat::BC6HU:  dfd.m_colorModel = KTX2_DF_MODEL_BC6H;  break;
 			case TextureFormat::BC7:    dfd.m_colorModel = KTX2_DF_MODEL_BC7;   break;
 			case TextureFormat::ETC1:   dfd.m_colorModel = KTX2_DF_MODEL_ETC1;  break;
 			case TextureFormat::ETC2:
@@ -6043,6 +6083,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::BC4:
+		case TextureFormat::BC4S:
 			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC4) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
@@ -6075,6 +6116,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::BC5:
+		case TextureFormat::BC5S:
 			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC5) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
@@ -6108,6 +6150,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::BC6H:
+		case TextureFormat::BC6HU:
 			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
 			{
 				ImageContainer* rgba32f = imageAlloc(_allocator
@@ -6682,6 +6725,7 @@ namespace bimg
 			switch (_srcFormat)
 			{
 			case TextureFormat::BC5:
+			case TextureFormat::BC5S:
 				{
 					uint32_t width  = _width/4;
 					uint32_t height = _height/4;
@@ -6717,6 +6761,7 @@ namespace bimg
 				break;
 
 			case TextureFormat::BC6H:
+			case TextureFormat::BC6HU:
 				{
 					uint32_t width  = _width/4;
 					uint32_t height = _height/4;
