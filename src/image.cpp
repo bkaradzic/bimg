@@ -651,10 +651,9 @@ namespace bimg
 			const uint32_t pitch = _imageContainer->m_width*16;
 			const uint32_t slice = _imageContainer->m_height*pitch;
 
-			for (uint32_t zz = 0, depth = _imageContainer->m_depth; zz < depth; ++zz)
+			for (uint32_t zz = 0, depth = mip.m_depth; zz < depth; ++zz)
 			{
-				const uint32_t srcDataStep = uint32_t(bx::floor(zz * _imageContainer->m_depth / float(depth) ) );
-				const uint8_t* srcData = &mip.m_data[srcDataStep*slice];
+				const uint8_t* srcData = &mip.m_data[zz*slice];
 
 				imageRgba32fToLinear(const_cast<uint8_t*>(srcData), mip.m_width, mip.m_height, 1, pitch, srcData);
 			}
@@ -697,10 +696,9 @@ namespace bimg
 			const uint32_t pitch = _imageContainer->m_width*16;
 			const uint32_t slice = _imageContainer->m_height*pitch;
 
-			for (uint32_t zz = 0, depth = _imageContainer->m_depth; zz < depth; ++zz)
+			for (uint32_t zz = 0, depth = mip.m_depth; zz < depth; ++zz)
 			{
-				const uint32_t srcDataStep = uint32_t(bx::floor(zz * _imageContainer->m_depth / float(depth) ) );
-				const uint8_t* srcData = &mip.m_data[srcDataStep*slice];
+				const uint8_t* srcData = &mip.m_data[zz*slice];
 
 				imageRgba32fToGamma(const_cast<uint8_t*>(srcData), mip.m_width, mip.m_height, 1, pitch, srcData);
 			}
@@ -3624,14 +3622,10 @@ namespace bimg
 
 		_width     = bx::max<uint32_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth)*blockWidth);
 		_height    = bx::max<uint32_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
-		_depth     = bx::max<uint32_t>(1, _depth);
 		_numLayers = bx::max<uint32_t>(1, _numLayers);
 
-		// Reject dimensions that don't fit in 16 bits. No GPU supports textures
-		// larger than 65535 in any dimension, and the image format/size helpers
-		// (and ImageContainer::m_numLayers) are 16-bit; allowing larger values
-		// would truncate and under-allocate, leading to heap overflow writes when
-		// pixel data is copied in.
+		const uint32_t numSlices = bx::max<uint32_t>(1, _depth);
+
 		if (_width     > UINT16_MAX
 		||  _height    > UINT16_MAX
 		||  _depth     > UINT16_MAX
@@ -3640,11 +3634,9 @@ namespace bimg
 			return NULL;
 		}
 
-		const uint8_t numMips = _hasMips ? imageGetNumMips(_format, _width, _height, _depth) : 1;
-		uint64_t size = imageGetSize(NULL, _width, _height, _depth, _cubeMap, _hasMips, uint16_t(_numLayers), _format);
+		const uint8_t numMips = _hasMips ? imageGetNumMips(_format, _width, _height, numSlices) : 1;
+		uint64_t size = imageGetSize(NULL, _width, _height, numSlices, _cubeMap, _hasMips, uint16_t(_numLayers), _format);
 
-		// ImageContainer::m_size/m_offset are 32-bit, so reject anything that
-		// can't be addressed within that range to avoid truncated allocations.
 		if (size > UINT32_MAX)
 		{
 			return NULL;
@@ -4114,6 +4106,7 @@ namespace bimg
 
 		uint32_t dxgiFormat = 0;
 		uint32_t arraySize  = 1;
+		bool     volume     = 0 != (caps[1] & DDSCAPS2_VOLUME);
 		if (DDPF_FOURCC == (pixelFlags & DDPF_FOURCC)
 		&&  DDS_DX10    == fourcc)
 		{
@@ -4129,7 +4122,11 @@ namespace bimg
 
 			uint32_t miscFlags2;
 			total += bx::read(_reader, miscFlags2, _err);
+
+			volume = DDS_DX10_DIMENSION_TEXTURE3D == dims;
 		}
+
+		depth = volume ? bx::max<uint32_t>(1, depth) : 0;
 
 		BX_UNUSED(total);
 
@@ -4622,7 +4619,7 @@ namespace bimg
 		_imageContainer.m_offset      = (uint32_t)offset;
 		_imageContainer.m_width       = width;
 		_imageContainer.m_height      = height;
-		_imageContainer.m_depth       = bx::max<uint32_t>(depth, 1);
+		_imageContainer.m_depth       = depth;
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
 		_imageContainer.m_numLayers   = uint16_t(bx::max<uint32_t>(numberOfArrayElements, 1) );
@@ -5027,11 +5024,11 @@ namespace bimg
 		const uint32_t numFaces  = bx::max<uint32_t>(faceCount,  1);
 		const uint32_t width     = bx::max<uint32_t>(pixelWidth, 1);
 		const uint32_t height    = bx::max<uint32_t>(pixelHeight, 1);
-		const uint32_t depth     = bx::max<uint32_t>(pixelDepth, 1);
+		const uint32_t depth     = pixelDepth;
 		const bool     cubeMap   = (6 == faceCount);
 
 		if (16 < numMips
-		|| (cubeMap && 1 != depth) )
+		|| (cubeMap && 0 != depth) )
 		{
 			BX_ERROR_SET(_err, BIMG_ERROR, "KTX2: Invalid header values.");
 			return false;
@@ -5529,7 +5526,7 @@ namespace bimg
 		total += bx::write(_writer, typeSize, _err);
 		total += bx::write(_writer, _width, _err);
 		total += bx::write(_writer, _height, _err);
-		total += bx::write(_writer, _depth > 1 ? _depth : uint32_t(0), _err); // pixelDepth = 0 for 2D/cube
+		total += bx::write(_writer, _depth, _err); // pixelDepth = 0 for 2D/cube
 		total += bx::write(_writer, _numLayers > 1 ? _numLayers : uint32_t(0), _err); // layerCount = 0 for non-array
 		total += bx::write(_writer, uint32_t(_cubeMap ? 6 : 1), _err); // faceCount
 		total += bx::write(_writer, numMips, _err); // levelCount
@@ -5679,7 +5676,7 @@ namespace bimg
 		total += bx::write(_writer, typeSize,                                          _err);
 		total += bx::write(_writer, _imageContainer.m_width,                           _err);
 		total += bx::write(_writer, _imageContainer.m_height,                          _err);
-		total += bx::write(_writer, _imageContainer.m_depth > 1 ? _imageContainer.m_depth : uint32_t(0),         _err);
+		total += bx::write(_writer, _imageContainer.m_depth,                           _err);
 		total += bx::write(_writer, _imageContainer.m_numLayers > 1 ? uint32_t(_imageContainer.m_numLayers) : uint32_t(0), _err);
 		total += bx::write(_writer, uint32_t(_imageContainer.m_cubeMap ? 6 : 1),       _err);
 		total += bx::write(_writer, numMips,                                           _err);
@@ -5877,7 +5874,7 @@ namespace bimg
 		_imageContainer.m_offset      = (uint32_t)offset;
 		_imageContainer.m_width       = width;
 		_imageContainer.m_height      = height;
-		_imageContainer.m_depth       = depth;
+		_imageContainer.m_depth       = 1 < depth ? depth : 0;
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
 		_imageContainer.m_numLayers   = 1;
@@ -7415,7 +7412,7 @@ namespace bimg
 			| DDSD_WIDTH
 			| DDSD_PIXELFORMAT
 			| DDSD_CAPS
-			| (1 < _depth            ? DDSD_DEPTH       : 0)
+			| (0 != _depth           ? DDSD_DEPTH       : 0)
 			| (1 < _numMips          ? DDSD_MIPMAPCOUNT : 0)
 			| (isCompressed(_format) ? DDSD_LINEARSIZE  : DDSD_PITCH)
 			)
@@ -7464,7 +7461,7 @@ namespace bimg
 		uint32_t caps[4] =
 		{
 			uint32_t(DDSCAPS_TEXTURE | (1 < _numMips ? DDSCAPS_COMPLEX|DDSCAPS_MIPMAP : 0) ),
-			uint32_t(_cubeMap ? DDSCAPS2_CUBEMAP|DSCAPS2_CUBEMAP_ALLSIDES : 0),
+			uint32_t(_cubeMap ? DDSCAPS2_CUBEMAP|DSCAPS2_CUBEMAP_ALLSIDES : (0 != _depth ? DDSCAPS2_VOLUME : 0) ),
 			0,
 			0,
 		};
@@ -7482,7 +7479,7 @@ namespace bimg
 		if (UINT32_MAX != dxgiFormat)
 		{
 			total += bx::write(_writer, dxgiFormat, _err);
-			total += bx::write(_writer, uint32_t(1 < _depth ? DDS_DX10_DIMENSION_TEXTURE3D : DDS_DX10_DIMENSION_TEXTURE2D), _err); // dims
+			total += bx::write(_writer, uint32_t(0 != _depth ? DDS_DX10_DIMENSION_TEXTURE3D : DDS_DX10_DIMENSION_TEXTURE2D), _err); // dims
 			total += bx::write(_writer, uint32_t(_cubeMap   ? DDS_DX10_MISC_TEXTURECUBE    : 0), _err); // miscFlags
 			total += bx::write(_writer, uint32_t(_numLayers), _err); // arraySize
 			total += bx::write(_writer, uint32_t(0), _err); // miscFlags2
@@ -7555,7 +7552,7 @@ namespace bimg
 		total += bx::write(_writer, tfi.m_fmt, _err); // glBaseInternalFormat
 		total += bx::write(_writer, _width, _err);
 		total += bx::write(_writer, _height, _err);
-		total += bx::write(_writer, _depth > 1 ? _depth : uint32_t(0), _err); //  For 2D and cube textures pixelDepth must be 0.
+		total += bx::write(_writer, _depth, _err); //  For 2D and cube textures pixelDepth must be 0.
 		total += bx::write(_writer, _numLayers > 1 ? _numLayers : uint32_t(0), _err); // numberOfArrayElements; If the texture is not an array texture, numberOfArrayElements must equal 0.
 		total += bx::write(_writer, _cubeMap ? uint32_t(6) : uint32_t(1), _err); // numberOfFaces; For cubemaps and cubemap arrays this should be 6. For non cubemaps this should be 1
 		total += bx::write(_writer, uint32_t(_numMips), _err);

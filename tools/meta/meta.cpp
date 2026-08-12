@@ -128,7 +128,7 @@ static bool processFile(bx::AllocatorI* _allocator, const char* _filePath)
 		, info.m_height
 		);
 
-	if (info.m_depth > 1)
+	if (0 != info.m_depth)
 	{
 		bx::printf(" x %u", info.m_depth);
 	}

@@ -170,13 +170,13 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			{
 				outputWidth  = bx::max(blockWidth  * minBlockX, ( ( (outputWidth>>1)  + blockWidth  - 1) / blockWidth )*blockWidth);
 				outputHeight = bx::max(blockHeight * minBlockY, ( ( (outputHeight>>1) + blockHeight - 1) / blockHeight)*blockHeight);
-				outputDepth  = bx::max(outputDepth>>1, 1u);
+				outputDepth  = 0 != outputDepth ? bx::max(outputDepth>>1, 1u) : 0;
 			}
 		}
 
 		if (_options.equirect)
 		{
-			if (outputDepth   == 1
+			if (outputDepth   == 0
 			&&  outputWidth/2 == outputHeight)
 			{
 				if (outputWidth/2 > _options.maxSize)
@@ -195,7 +195,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 		}
 		else if (_options.strip)
 		{
-			if (outputDepth == 1
+			if (outputDepth == 0
 			&& ( (outputWidth == outputHeight*6) || (outputWidth*6 == outputHeight) ) )
 			{
 				const bool horizontal = outputWidth == outputHeight*6;
