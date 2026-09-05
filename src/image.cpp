@@ -4619,7 +4619,7 @@ namespace bimg
 		_imageContainer.m_offset      = (uint32_t)offset;
 		_imageContainer.m_width       = width;
 		_imageContainer.m_height      = height;
-		_imageContainer.m_depth       = depth;
+		_imageContainer.m_depth       = 1 < depth ? depth : 0;
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
 		_imageContainer.m_numLayers   = uint16_t(bx::max<uint32_t>(numberOfArrayElements, 1) );
@@ -5145,7 +5145,7 @@ namespace bimg
 		_imageContainer.m_offset      = uint32_t(levels[numMips - 1].byteOffset);
 		_imageContainer.m_width       = width;
 		_imageContainer.m_height      = height;
-		_imageContainer.m_depth       = depth;
+		_imageContainer.m_depth       = 1 < depth ? depth : 0;
 		_imageContainer.m_format      = format;
 		_imageContainer.m_orientation = Orientation::R0;
 		_imageContainer.m_numLayers   = uint16_t(numLayers);
