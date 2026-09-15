@@ -367,6 +367,7 @@ namespace bimg
 		);
 
 	///
+	/// Set _srgb to false for linear data. Alpha is always averaged linearly.
 	void imageRgba8Downsample2x2(
 		  void* _dst
 		, uint32_t _width
@@ -375,6 +376,7 @@ namespace bimg
 		, uint32_t _srcPitch
 		, uint32_t _dstPitch
 		, const void* _src
+		, bool _srgb = true
 		);
 
 	///

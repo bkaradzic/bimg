@@ -1042,7 +1042,7 @@ namespace bimg
 		}
 	}
 
-	ImageContainer* imageGenerateMips(bx::AllocatorI* _allocator, const ImageContainer& _image)
+	ImageContainer* imageGenerateMips(bx::AllocatorI* _allocator, const ImageContainer& _image, bool _srgb)
 	{
 		if (_image.m_format != TextureFormat::RGBA8
 		&&  _image.m_format != TextureFormat::RGBA32F)
@@ -1092,6 +1092,7 @@ namespace bimg
 								, srcMip.m_width*4
 								, dstMip.m_width*4
 								, srcMip.m_data
+								, _srgb
 								);
 						}
 						else if (output->m_format == TextureFormat::RGBA32F)

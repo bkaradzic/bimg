@@ -1262,7 +1262,12 @@ namespace bimg
 	static void* simpleWebpAlloc(void* _userdata, size_t _size)
 	{
 		bx::AllocatorI* allocator = (bx::AllocatorI*)_userdata;
-		return bx::alloc(allocator, _size);
+		void* data = bx::alloc(allocator, _size);
+		if (NULL != data)
+		{
+			bx::memSet(data, 0, _size);
+		}
+		return data;
 	}
 
 	static void simpleWebpFree(void* _userdata, void* _ptr)
