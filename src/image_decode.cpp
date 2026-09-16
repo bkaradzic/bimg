@@ -161,6 +161,20 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 
 namespace bimg
 {
+#if BIMG_CONFIG_PARSE_PNG
+	static uint32_t pngReadPackedSample(const uint8_t* _data, uint32_t _index, uint32_t _bitDepth)
+	{
+		const uint64_t bitOffset = uint64_t(_index)*_bitDepth;
+		const uint32_t shift     = 8 - _bitDepth - uint32_t(bitOffset&7);
+		return (_data[bitOffset>>3]>>shift) & ( (1u<<_bitDepth)-1);
+	}
+
+	static uint8_t pngExpandGraySample(uint32_t _sample, uint32_t _bitDepth)
+	{
+		return uint8_t(_sample*255 / ( (1u<<_bitDepth)-1) );
+	}
+#endif // BIMG_CONFIG_PARSE_PNG
+
 	static ImageContainer* imageParseLodePng(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
@@ -191,8 +205,9 @@ namespace bimg
 		}
 		else
 		{
-			bool palette   = false;
-			bool supported = false;
+			const bool colorKey  = 0 != state.info_raw.key_defined;
+			bool       palette   = false;
+			bool       supported = false;
 
 			switch (state.info_raw.bitdepth)
 			{
@@ -200,15 +215,27 @@ namespace bimg
 				case 2:
 				case 4:
 					palette   = LCT_PALETTE == state.info_raw.colortype;
-					format    = palette ? bimg::TextureFormat::RGBA8 : bimg::TextureFormat::R8;
 					supported = true;
+
+					if (palette)
+					{
+						format = bimg::TextureFormat::RGBA8;
+					}
+					else if (colorKey)
+					{
+						format = bimg::TextureFormat::RG8;
+					}
+					else
+					{
+						format = bimg::TextureFormat::R8;
+					}
 					break;
 
 				case 8:
 					switch (state.info_raw.colortype)
 					{
 						case LCT_GREY:
-							format = bimg::TextureFormat::R8;
+							format = colorKey ? bimg::TextureFormat::RG8 : bimg::TextureFormat::R8;
 							supported = true;
 							break;
 
@@ -218,7 +245,7 @@ namespace bimg
 							break;
 
 						case LCT_RGB:
-							format = bimg::TextureFormat::RGB8;
+							format = colorKey ? bimg::TextureFormat::RGBA8 : bimg::TextureFormat::RGB8;
 							supported = true;
 							break;
 
@@ -247,7 +274,7 @@ namespace bimg
 								uint16_t* rgba = (uint16_t*)data + ii;
 								rgba[0] = bx::toHostEndian(rgba[0], false);
 							}
-							format = bimg::TextureFormat::R16;
+							format = colorKey ? bimg::TextureFormat::RG16 : bimg::TextureFormat::R16;
 							supported = true;
 							break;
 
@@ -304,7 +331,9 @@ namespace bimg
 				const uint8_t* copyData = data;
 
 				TextureFormat::Enum dstFormat = format;
-				if (palette) {
+				if (palette
+				||  colorKey)
+				{
 					copyData = NULL;
 				}
 				else if (1 == state.info_raw.bitdepth
@@ -381,6 +410,104 @@ namespace bimg
 							bx::memCopy( (uint8_t*)output->m_data + ii*4, state.info_raw.palette + data[ii]*4, 4);
 						}
 					}
+				}
+				else if (colorKey)
+				{
+					const uint32_t bitDepth = state.info_raw.bitdepth;
+					const uint32_t keyR     = state.info_raw.key_r;
+					const uint32_t keyG     = state.info_raw.key_g;
+					const uint32_t keyB     = state.info_raw.key_b;
+
+					bool hasAlpha = false;
+
+					if (LCT_GREY == state.info_raw.colortype)
+					{
+						if (8 > bitDepth)
+						{
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								const uint32_t sample      = pngReadPackedSample(data, ii, bitDepth);
+								const bool     transparent = keyR == sample;
+
+								uint8_t* dst = (uint8_t*)output->m_data + ii*2;
+								dst[0] = pngExpandGraySample(sample, bitDepth);
+								dst[1] = transparent ? 0 : UINT8_MAX;
+
+								hasAlpha |= transparent;
+							}
+						}
+						else if (8 == bitDepth)
+						{
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								const uint8_t* src = (uint8_t*)data + ii;
+								      uint8_t* dst = (uint8_t*)output->m_data + ii*2;
+								const bool transparent = keyR == src[0];
+
+								dst[0] = src[0];
+								dst[1] = transparent ? 0 : UINT8_MAX;
+
+								hasAlpha |= transparent;
+							}
+						}
+						else
+						{
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								const uint16_t* src = (uint16_t*)data + ii;
+								      uint16_t* dst = (uint16_t*)output->m_data + ii*2;
+								const bool transparent = keyR == src[0];
+
+								dst[0] = src[0];
+								dst[1] = transparent ? 0 : UINT16_MAX;
+
+								hasAlpha |= transparent;
+							}
+						}
+					}
+					else
+					{
+						if (8 == bitDepth)
+						{
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								const uint8_t* src = (uint8_t*)data + ii*3;
+								      uint8_t* dst = (uint8_t*)output->m_data + ii*4;
+								const bool transparent = keyR == src[0]
+									&& keyG == src[1]
+									&& keyB == src[2]
+									;
+
+								dst[0] = src[0];
+								dst[1] = src[1];
+								dst[2] = src[2];
+								dst[3] = transparent ? 0 : UINT8_MAX;
+
+								hasAlpha |= transparent;
+							}
+						}
+						else
+						{
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								const uint16_t* src = (uint16_t*)data + ii*3;
+								      uint16_t* dst = (uint16_t*)output->m_data + ii*4;
+								const bool transparent = keyR == src[0]
+									&& keyG == src[1]
+									&& keyB == src[2]
+									;
+
+								dst[0] = src[0];
+								dst[1] = src[1];
+								dst[2] = src[2];
+								dst[3] = transparent ? 0 : UINT16_MAX;
+
+								hasAlpha |= transparent;
+							}
+						}
+					}
+
+					output->m_hasAlpha = hasAlpha;
 				}
 				else if (1 == state.info_raw.bitdepth)
 				{
@@ -1453,6 +1580,13 @@ namespace bimg
 			return false;
 		}
 
+		const uint8_t* begin = (const uint8_t*)_data + 8;
+		const uint8_t* end   = (const uint8_t*)_data + _size;
+		const bool colorKey  = true
+			&& (LCT_GREY == colortype || LCT_RGB == colortype)
+			&& NULL != lodepng_chunk_find_const(begin, end, "tRNS")
+			;
+
 		// Mirror the final container format selection in imageParseLodePng.
 		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
 		bool supported = false;
@@ -1462,18 +1596,30 @@ namespace bimg
 			case 1:
 			case 2:
 			case 4:
-				format    = (LCT_PALETTE == colortype) ? bimg::TextureFormat::RGBA8 : bimg::TextureFormat::R8;
 				supported = true;
+
+				if (LCT_PALETTE == colortype)
+				{
+					format = bimg::TextureFormat::RGBA8;
+				}
+				else if (colorKey)
+				{
+					format = bimg::TextureFormat::RG8;
+				}
+				else
+				{
+					format = bimg::TextureFormat::R8;
+				}
 				break;
 
 			case 8:
 				switch (colortype)
 				{
-					case LCT_GREY:       format = bimg::TextureFormat::R8;    supported = true; break;
-					case LCT_GREY_ALPHA: format = bimg::TextureFormat::RG8;   supported = true; break;
-					case LCT_RGB:        format = bimg::TextureFormat::RGB8;  supported = true; break;
-					case LCT_RGBA:       format = bimg::TextureFormat::RGBA8; supported = true; break;
-					case LCT_PALETTE:    format = bimg::TextureFormat::RGBA8; supported = true; break;
+					case LCT_GREY:       format = colorKey ? bimg::TextureFormat::RG8   : bimg::TextureFormat::R8;   supported = true; break;
+					case LCT_GREY_ALPHA: format = bimg::TextureFormat::RG8;                                          supported = true; break;
+					case LCT_RGB:        format = colorKey ? bimg::TextureFormat::RGBA8 : bimg::TextureFormat::RGB8; supported = true; break;
+					case LCT_RGBA:       format = bimg::TextureFormat::RGBA8;                                        supported = true; break;
+					case LCT_PALETTE:    format = bimg::TextureFormat::RGBA8;                                        supported = true; break;
 					default: break;
 				}
 				break;
@@ -1481,10 +1627,10 @@ namespace bimg
 			case 16:
 				switch (colortype)
 				{
-					case LCT_GREY:       format = bimg::TextureFormat::R16;    supported = true; break;
-					case LCT_GREY_ALPHA: format = bimg::TextureFormat::RG16;   supported = true; break;
-					case LCT_RGB:        format = bimg::TextureFormat::RGBA16; supported = true; break;
-					case LCT_RGBA:       format = bimg::TextureFormat::RGBA16; supported = true; break;
+					case LCT_GREY:       format = colorKey ? bimg::TextureFormat::RG16 : bimg::TextureFormat::R16; supported = true; break;
+					case LCT_GREY_ALPHA: format = bimg::TextureFormat::RG16;                                       supported = true; break;
+					case LCT_RGB:        format = bimg::TextureFormat::RGBA16;                                     supported = true; break;
+					case LCT_RGBA:       format = bimg::TextureFormat::RGBA16;                                     supported = true; break;
 					default: break;
 				}
 				break;
