@@ -319,6 +319,13 @@ namespace bimg
 					dstFormat = bimg::TextureFormat::RGBA16;
 					copyData  = NULL;
 				}
+				else if (8 == state.info_raw.bitdepth
+				&& (LCT_GREY       == state.info_raw.colortype
+				||  LCT_GREY_ALPHA == state.info_raw.colortype) )
+				{
+					dstFormat = bimg::TextureFormat::RGBA8;
+					copyData  = NULL;
+				}
 
 				output = imageAlloc(_allocator
 					, dstFormat
@@ -442,6 +449,23 @@ namespace bimg
 						dst[1] = src[1];
 						dst[2] = src[2];
 						dst[3] = UINT16_MAX;
+					}
+				}
+				else if (8 == state.info_raw.bitdepth
+				&& (LCT_GREY       == state.info_raw.colortype
+				||  LCT_GREY_ALPHA == state.info_raw.colortype) )
+				{
+					// Grayscale (+alpha) has no dedicated GPU format; expand
+					// luminance across RGB and keep alpha so RGBA consumers get
+					// the right image instead of (L, A, 0, 255).
+					const bool     grayAlpha = LCT_GREY_ALPHA == state.info_raw.colortype;
+					const uint32_t srcBpp    = grayAlpha ? 2 : 1;
+					for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+					{
+						const uint8_t* src = (uint8_t*)data + ii*srcBpp;
+						      uint8_t* dst = (uint8_t*)output->m_data + ii*4;
+						dst[0] = dst[1] = dst[2] = src[0];
+						dst[3] = grayAlpha ? src[1] : UINT8_MAX;
 					}
 				}
 
