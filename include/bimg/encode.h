@@ -149,9 +149,11 @@ namespace bimg
 		);
 
 	///
+	/// For RGBA8, _srgb selects sRGB or linear RGB filtering. Float data is linear.
 	ImageContainer* imageGenerateMips(
 		  bx::AllocatorI* _allocator
 		, const ImageContainer& _image
+		, bool _srgb = true
 		);
 
 	struct LightingModel

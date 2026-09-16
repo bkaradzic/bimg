@@ -442,7 +442,22 @@ namespace bimg
 		}
 	}
 
-	void imageRgba8Downsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
+	template<bool SrgbT>
+	BX_FORCE_INLINE float toLinearUnorm8(uint8_t _value)
+	{
+		const float value = _value * (1.0f/255.0f);
+		return SrgbT ? bx::toLinear(value) : value;
+	}
+
+	template<bool SrgbT>
+	BX_FORCE_INLINE uint8_t toGammaUnorm8(float _value)
+	{
+		const float encoded = SrgbT ? bx::toGamma(_value) : _value;
+		return uint8_t(bx::clamp(encoded*255.0f + 0.5f, 0.0f, 255.0f) );
+	}
+
+	template<bool SrgbT>
+	static void imageRgba8Downsample2x2RefT(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
@@ -463,36 +478,46 @@ namespace bimg
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
-					float rr = bx::toLinear(rgba[          0]);
-					float gg = bx::toLinear(rgba[          1]);
-					float bb = bx::toLinear(rgba[          2]);
-					float aa =              rgba[          3];
-					rr      += bx::toLinear(rgba[          4]);
-					gg      += bx::toLinear(rgba[          5]);
-					bb      += bx::toLinear(rgba[          6]);
-					aa      +=              rgba[          7];
-					rr      += bx::toLinear(rgba[_srcPitch+0]);
-					gg      += bx::toLinear(rgba[_srcPitch+1]);
-					bb      += bx::toLinear(rgba[_srcPitch+2]);
-					aa      +=              rgba[_srcPitch+3];
-					rr      += bx::toLinear(rgba[_srcPitch+4]);
-					gg      += bx::toLinear(rgba[_srcPitch+5]);
-					bb      += bx::toLinear(rgba[_srcPitch+6]);
-					aa      +=              rgba[_srcPitch+7];
+					float rr = toLinearUnorm8<SrgbT>(rgba[          0]);
+					float gg = toLinearUnorm8<SrgbT>(rgba[          1]);
+					float bb = toLinearUnorm8<SrgbT>(rgba[          2]);
+					float aa = toLinearUnorm8<false>(rgba[          3]);
+					rr      += toLinearUnorm8<SrgbT>(rgba[          4]);
+					gg      += toLinearUnorm8<SrgbT>(rgba[          5]);
+					bb      += toLinearUnorm8<SrgbT>(rgba[          6]);
+					aa      += toLinearUnorm8<false>(rgba[          7]);
+					rr      += toLinearUnorm8<SrgbT>(rgba[_srcPitch+0]);
+					gg      += toLinearUnorm8<SrgbT>(rgba[_srcPitch+1]);
+					bb      += toLinearUnorm8<SrgbT>(rgba[_srcPitch+2]);
+					aa      += toLinearUnorm8<false>(rgba[_srcPitch+3]);
+					rr      += toLinearUnorm8<SrgbT>(rgba[_srcPitch+4]);
+					gg      += toLinearUnorm8<SrgbT>(rgba[_srcPitch+5]);
+					bb      += toLinearUnorm8<SrgbT>(rgba[_srcPitch+6]);
+					aa      += toLinearUnorm8<false>(rgba[_srcPitch+7]);
 
 					rr *= 0.25f;
 					gg *= 0.25f;
 					bb *= 0.25f;
 					aa *= 0.25f;
-					rr = bx::toGamma(rr);
-					gg = bx::toGamma(gg);
-					bb = bx::toGamma(bb);
-					dst[0] = (uint8_t)rr;
-					dst[1] = (uint8_t)gg;
-					dst[2] = (uint8_t)bb;
-					dst[3] = (uint8_t)aa;
+
+					dst[0] = toGammaUnorm8<SrgbT>(rr);
+					dst[1] = toGammaUnorm8<SrgbT>(gg);
+					dst[2] = toGammaUnorm8<SrgbT>(bb);
+					dst[3] = toGammaUnorm8<false>(aa);
 				}
 			}
+		}
+	}
+
+	void imageRgba8Downsample2x2Ref(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src, bool _srgb)
+	{
+		if (_srgb)
+		{
+			imageRgba8Downsample2x2RefT<true>(_dst, _width, _height, _depth, _srcPitch, _dstPitch, _src);
+		}
+		else
+		{
+			imageRgba8Downsample2x2RefT<false>(_dst, _width, _height, _depth, _srcPitch, _dstPitch, _src);
 		}
 	}
 
@@ -509,7 +534,7 @@ namespace bimg
 		const simd128_t tmp1     = simd_f32_div(tmp0, f1_055);
 		const simd128_t hi       = simd_f32_pow(tmp1, f2_4);
 		const simd128_t mask     = simd_f32_cmple(_a, f0_04045);
-		const simd128_t result   = simd_selb(mask, hi, lo);
+		const simd128_t result   = simd_selb(mask, lo, hi);
 
 		return result;
 	}
@@ -528,12 +553,13 @@ namespace bimg
 		const simd128_t tmp1       = simd_f32_mul(tmp0, f1_055);
 		const simd128_t hi         = simd_f32_sub(tmp1, f0_055);
 		const simd128_t mask       = simd_f32_cmple(_a, f0_0031308);
-		const simd128_t result     = simd_selb(mask, hi, lo);
+		const simd128_t result     = simd_selb(mask, lo, hi);
 
 		return result;
 	}
 
-	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
+	template<bool SrgbT>
+	static void imageRgba8Downsample2x2T(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src)
 	{
 		const uint32_t dstWidth  = _width/2;
 		const uint32_t dstHeight = _height/2;
@@ -547,13 +573,15 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 
 		using namespace bx;
-		const simd128_t unpack = simd128_ld(1.0f, 1.0f/256.0f, 1.0f/65536.0f, 1.0f/16777216.0f);
+		const simd128_t unpack = simd128_ld(1.0f/255.0f, 1.0f/(256.0f*255.0f), 1.0f/(65536.0f*255.0f), 1.0f/(16777216.0f*255.0f));
 		const simd128_t pack   = simd128_ld(1.0f, 256.0f*0.5f, 65536.0f, 16777216.0f*0.5f);
 		const simd128_t umask  = simd128_ld(0xffu, 0xff00u, 0xff0000u, 0xff000000u);
 		const simd128_t pmask  = simd128_ld(0xffu, 0x7f80u, 0xff0000u, 0x7f800000u);
 		const simd128_t wflip  = simd128_ld(0u, 0u, 0u, 0x80000000u);
 		const simd128_t wadd   = simd128_ld(0.0f, 0.0f, 0.0f, 32768.0f*65536.0f);
 		const simd128_t quater = simd128_splat(0.25f);
+		const simd128_t scale  = simd128_splat(255.0f);
+		const simd128_t half   = simd128_splat(0.5f);
 
 		for (uint32_t zz = 0; zz < _depth; ++zz)
 		{
@@ -589,18 +617,19 @@ namespace bimg
 					const simd128_t abgr2n = simd_f32_mul(abgr2c, unpack);
 					const simd128_t abgr3n = simd_f32_mul(abgr3c, unpack);
 
-					const simd128_t abgr0l = simd_to_linear(abgr0n);
-					const simd128_t abgr1l = simd_to_linear(abgr1n);
-					const simd128_t abgr2l = simd_to_linear(abgr2n);
-					const simd128_t abgr3l = simd_to_linear(abgr3n);
+					const simd128_t abgr0l = SrgbT ? simd_to_linear(abgr0n) : abgr0n;
+					const simd128_t abgr1l = SrgbT ? simd_to_linear(abgr1n) : abgr1n;
+					const simd128_t abgr2l = SrgbT ? simd_to_linear(abgr2n) : abgr2n;
+					const simd128_t abgr3l = SrgbT ? simd_to_linear(abgr3n) : abgr3n;
 
 					const simd128_t sum0   = simd_f32_add(abgr0l, abgr1l);
 					const simd128_t sum1   = simd_f32_add(abgr2l, abgr3l);
 					const simd128_t sum2   = simd_f32_add(sum0, sum1);
 					const simd128_t avg0   = simd_f32_mul(sum2, quater);
-					const simd128_t avg1   = simd_to_gamma(avg0);
+					const simd128_t avg1   = SrgbT ? simd_to_gamma(avg0) : avg0;
 
-					const simd128_t avg2   = simd_f32_mul(avg1, pack);
+					const simd128_t bytes  = simd_f32_min(scale, simd_f32_add(simd_f32_mul(avg1, scale), half) );
+					const simd128_t avg2   = simd_f32_mul(bytes, pack);
 					const simd128_t ftoi0  = simd_f32_ftoi_trunc(avg2);
 					const simd128_t ftoi1  = simd_and(ftoi0, pmask);
 					const simd128_t zwxy   = simd128_x32_swiz_zwxy(ftoi1);
@@ -612,6 +641,18 @@ namespace bimg
 					simd_x32_st1(dst, result);
 				}
 			}
+		}
+	}
+
+	void imageRgba8Downsample2x2(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch, const void* _src, bool _srgb)
+	{
+		if (_srgb)
+		{
+			imageRgba8Downsample2x2T<true>(_dst, _width, _height, _depth, _srcPitch, _dstPitch, _src);
+		}
+		else
+		{
+			imageRgba8Downsample2x2T<false>(_dst, _width, _height, _depth, _srcPitch, _dstPitch, _src);
 		}
 	}
 
@@ -1042,15 +1083,21 @@ namespace bimg
 	void imageSwizzleBgra8(void* _dst, uint32_t _dstPitch, uint32_t _width, uint32_t _height, const void* _src, uint32_t _srcPitch)
 	{
 		// Test can we do four 4-byte pixels at the time.
+		const bool pitchAligned = 1 >= _height
+			|| (0 == (_srcPitch & 0xf) && 0 == (_dstPitch & 0xf) )
+			;
+
 		if (0 != (_width&0x3)
 		||  _width < 4
 		||  !bx::isAligned(_src, 16)
-		||  !bx::isAligned(_dst, 16) )
+		||  !bx::isAligned(_dst, 16)
+		||  !pitchAligned)
 		{
 			BX_WARN(false, "Image swizzle is taking slow path.");
 			BX_WARN(bx::isAligned(_src, 16), "Source %p is not 16-byte aligned.", _src);
 			BX_WARN(bx::isAligned(_dst, 16), "Destination %p is not 16-byte aligned.", _dst);
 			BX_WARN(_width < 4, "Image width must be multiple of 4 (width %d).", _width);
+			BX_WARN(pitchAligned, "Image pitch must be multiple of 16 (src %d, dst %d).", _srcPitch, _dstPitch);
 			imageSwizzleBgra8Ref(_dst, _dstPitch, _width, _height, _src, _srcPitch);
 			return;
 		}
@@ -1272,6 +1319,20 @@ namespace bimg
 
 	bool imageConvert(bx::AllocatorI* _allocator, void* _dst, TextureFormat::Enum _dstFormat, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _srcPitch, uint32_t _dstPitch)
 	{
+		if ( (TextureFormat::RGBA8 == _srcFormat && TextureFormat::BGRA8 == _dstFormat)
+		||   (TextureFormat::BGRA8 == _srcFormat && TextureFormat::RGBA8 == _dstFormat) )
+		{
+			const uint8_t* src = (const uint8_t*)_src;
+			uint8_t*       dst = (uint8_t*)_dst;
+
+			for (uint32_t zz = 0; zz < _depth; ++zz, src += size_t(_srcPitch)*_height, dst += size_t(_dstPitch)*_height)
+			{
+				imageSwizzleBgra8(dst, _dstPitch, _width, _height, src, _srcPitch);
+			}
+
+			return true;
+		}
+
 		UnpackFn unpack = s_packUnpack[_srcFormat].unpack;
 		PackFn   pack   = s_packUnpack[_dstFormat].pack;
 		if (NULL == pack
