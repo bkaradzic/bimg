@@ -66,6 +66,25 @@
 #	define BIMG_CONFIG_PARSE_ENABLE 1
 #endif // BIMG_CONFIG_PARSE_ENABLE
 
+/// Use WIC (Windows Imaging Component) instead of the bundled decoders for PNG, JPEG, BMP and GIF.
+/// Which of them it decodes is dictated by their `BIMG_CONFIG_PARSE_*`. Windows only.
+///
+#ifndef BIMG_CONFIG_USE_WIC
+#	define BIMG_CONFIG_USE_WIC 0
+#endif // BIMG_CONFIG_USE_WIC
+
+#if BIMG_CONFIG_USE_WIC && !BX_PLATFORM_WINDOWS
+#	undef  BIMG_CONFIG_USE_WIC
+#	define BIMG_CONFIG_USE_WIC 0
+#endif // BIMG_CONFIG_USE_WIC && !BX_PLATFORM_WINDOWS
+
+/// Use stb_image for BMP, GIF, HDR, JPEG, PIC, PNM, PSD and TGA. When disabled those formats are
+/// not parsed, except for BMP, GIF and JPEG when `BIMG_CONFIG_USE_WIC` decodes them.
+///
+#ifndef BIMG_CONFIG_USE_STB_IMAGE
+#	define BIMG_CONFIG_USE_STB_IMAGE 1
+#endif // BIMG_CONFIG_USE_STB_IMAGE
+
 /// AVIF (AV1 Image File Format) - image format based on AV1.
 ///
 #ifndef BIMG_CONFIG_PARSE_AVIF
@@ -75,7 +94,7 @@
 /// BMP (Windows Bitmap) - uncompressed raster image format.
 ///
 #ifndef BIMG_CONFIG_PARSE_BMP
-#	define BIMG_CONFIG_PARSE_BMP BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_BMP (BIMG_CONFIG_PARSE_ENABLE && (BIMG_CONFIG_USE_WIC || BIMG_CONFIG_USE_STB_IMAGE) )
 #endif // BIMG_CONFIG_PARSE_BMP
 
 /// EXR (OpenEXR) - high dynamic range image format by ILM.
@@ -87,13 +106,13 @@
 /// GIF (Graphics Interchange Format) - indexed-color image format with animation support.
 ///
 #ifndef BIMG_CONFIG_PARSE_GIF
-#	define BIMG_CONFIG_PARSE_GIF BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_GIF (BIMG_CONFIG_PARSE_ENABLE && (BIMG_CONFIG_USE_WIC || BIMG_CONFIG_USE_STB_IMAGE) )
 #endif // BIMG_CONFIG_PARSE_GIF
 
 /// HDR (Radiance RGBE) - high dynamic range image format.
 ///
 #ifndef BIMG_CONFIG_PARSE_HDR
-#	define BIMG_CONFIG_PARSE_HDR BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_HDR (BIMG_CONFIG_PARSE_ENABLE && BIMG_CONFIG_USE_STB_IMAGE)
 #endif // BIMG_CONFIG_PARSE_HDR
 
 /// HEIF (High Efficiency Image File Format) - image format based on HEVC.
@@ -105,13 +124,13 @@
 /// JPEG (Joint Photographic Experts Group) - lossy compressed image format.
 ///
 #ifndef BIMG_CONFIG_PARSE_JPEG
-#	define BIMG_CONFIG_PARSE_JPEG BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_JPEG (BIMG_CONFIG_PARSE_ENABLE && (BIMG_CONFIG_USE_WIC || BIMG_CONFIG_USE_STB_IMAGE) )
 #endif // BIMG_CONFIG_PARSE_JPEG
 
 /// PIC (Softimage) - image format used by Softimage 3D tools.
 ///
 #ifndef BIMG_CONFIG_PARSE_PIC
-#	define BIMG_CONFIG_PARSE_PIC BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_PIC (BIMG_CONFIG_PARSE_ENABLE && BIMG_CONFIG_USE_STB_IMAGE)
 #endif // BIMG_CONFIG_PARSE_PIC
 
 /// PNG (Portable Network Graphics) - lossless compressed image format.
@@ -123,19 +142,19 @@
 /// PNM (Portable Any Map) - family of simple image formats (PBM, PGM, PPM).
 ///
 #ifndef BIMG_CONFIG_PARSE_PNM
-#	define BIMG_CONFIG_PARSE_PNM BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_PNM (BIMG_CONFIG_PARSE_ENABLE && BIMG_CONFIG_USE_STB_IMAGE)
 #endif // BIMG_CONFIG_PARSE_PNM
 
 /// PSD (Adobe Photoshop Document) - layered image format.
 ///
 #ifndef BIMG_CONFIG_PARSE_PSD
-#	define BIMG_CONFIG_PARSE_PSD BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_PSD (BIMG_CONFIG_PARSE_ENABLE && BIMG_CONFIG_USE_STB_IMAGE)
 #endif // BIMG_CONFIG_PARSE_PSD
 
 /// TGA (Truevision TGA) - raster image format with optional RLE compression.
 ///
 #ifndef BIMG_CONFIG_PARSE_TGA
-#	define BIMG_CONFIG_PARSE_TGA BIMG_CONFIG_PARSE_ENABLE
+#	define BIMG_CONFIG_PARSE_TGA (BIMG_CONFIG_PARSE_ENABLE && BIMG_CONFIG_USE_STB_IMAGE)
 #endif // BIMG_CONFIG_PARSE_TGA
 
 /// WebP - lossy and lossless image format by Google.
@@ -144,15 +163,27 @@
 #	define BIMG_CONFIG_PARSE_WEBP BIMG_CONFIG_PARSE_ENABLE
 #endif // BIMG_CONFIG_PARSE_WEBP
 
-/// WIC (Windows Imaging Component) - Windows-only backup decoder for common raster formats (PNG, JPEG, BMP, GIF).
-///
-#ifndef BIMG_CONFIG_PARSE_WIC
-#	define BIMG_CONFIG_PARSE_WIC (BIMG_CONFIG_PARSE_ENABLE && BX_PLATFORM_WINDOWS && (0 \
-		|| 0 == BIMG_CONFIG_PARSE_PNG                                                   \
-		|| 0 == BIMG_CONFIG_PARSE_JPEG                                                  \
-		|| 0 == BIMG_CONFIG_PARSE_BMP                                                   \
-		|| 0 == BIMG_CONFIG_PARSE_GIF                                                   \
-		) )
-#endif // BIMG_CONFIG_PARSE_WIC
+static_assert(!BIMG_CONFIG_PARSE_BMP  || BIMG_CONFIG_USE_WIC || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_BMP requires BIMG_CONFIG_USE_WIC or BIMG_CONFIG_USE_STB_IMAGE.");
+static_assert(!BIMG_CONFIG_PARSE_GIF  || BIMG_CONFIG_USE_WIC || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_GIF requires BIMG_CONFIG_USE_WIC or BIMG_CONFIG_USE_STB_IMAGE.");
+static_assert(!BIMG_CONFIG_PARSE_JPEG || BIMG_CONFIG_USE_WIC || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_JPEG requires BIMG_CONFIG_USE_WIC or BIMG_CONFIG_USE_STB_IMAGE.");
+static_assert(!BIMG_CONFIG_PARSE_HDR  || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_HDR requires BIMG_CONFIG_USE_STB_IMAGE.");
+static_assert(!BIMG_CONFIG_PARSE_PIC  || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_PIC requires BIMG_CONFIG_USE_STB_IMAGE.");
+static_assert(!BIMG_CONFIG_PARSE_PNM  || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_PNM requires BIMG_CONFIG_USE_STB_IMAGE.");
+static_assert(!BIMG_CONFIG_PARSE_PSD  || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_PSD requires BIMG_CONFIG_USE_STB_IMAGE.");
+static_assert(!BIMG_CONFIG_PARSE_TGA  || BIMG_CONFIG_USE_STB_IMAGE, "BIMG_CONFIG_PARSE_TGA requires BIMG_CONFIG_USE_STB_IMAGE.");
+
+#if BIMG_CONFIG_USE_STB_IMAGE && !(0                     \
+	||  (BIMG_CONFIG_PARSE_BMP  && !BIMG_CONFIG_USE_WIC) \
+	||  (BIMG_CONFIG_PARSE_GIF  && !BIMG_CONFIG_USE_WIC) \
+	||  (BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC) \
+	||   BIMG_CONFIG_PARSE_HDR                           \
+	||   BIMG_CONFIG_PARSE_PIC                           \
+	||   BIMG_CONFIG_PARSE_PNM                           \
+	||   BIMG_CONFIG_PARSE_PSD                           \
+	||   BIMG_CONFIG_PARSE_TGA                           \
+	)
+#	undef  BIMG_CONFIG_USE_STB_IMAGE
+#	define BIMG_CONFIG_USE_STB_IMAGE 0
+#endif // BIMG_CONFIG_USE_STB_IMAGE && !(...)
 
 #endif // BIMG_CONFIG_H_HEADER_GUARD

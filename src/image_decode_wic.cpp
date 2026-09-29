@@ -5,7 +5,12 @@
 
 #include "bimg_p.h"
 
-#if BIMG_CONFIG_PARSE_WIC && BX_PLATFORM_WINDOWS
+#if BIMG_CONFIG_USE_WIC && (0            \
+	|| BIMG_CONFIG_PARSE_PNG  \
+	|| BIMG_CONFIG_PARSE_JPEG \
+	|| BIMG_CONFIG_PARSE_BMP  \
+	|| BIMG_CONFIG_PARSE_GIF  \
+	)
 
 #include <bx/os.h>
 
@@ -24,6 +29,7 @@
 				if (NULL != (_ptr) )   \
 				{                      \
 					(_ptr)->Release(); \
+					(_ptr) = NULL;     \
 				}                      \
 			BX_MACRO_BLOCK_END
 
@@ -61,137 +67,223 @@ namespace bimg
 		return ImageParser::Count;
 	}
 
-	ImageContainer* imageParseWic(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	static bool wicIsEnabled(ImageParser::Enum _format)
 	{
-		BX_UNUSED(_err);
-
-		const ImageParser::Enum format = wicDetectFormat( (const uint8_t*)_data, _size);
-
-		if (false
-		||  (ImageParser::Png  == format && BIMG_CONFIG_PARSE_PNG )
-		||  (ImageParser::Jpeg == format && BIMG_CONFIG_PARSE_JPEG)
-		||  (ImageParser::Bmp  == format && BIMG_CONFIG_PARSE_BMP )
-		||  (ImageParser::Gif  == format && BIMG_CONFIG_PARSE_GIF )
-		   )
+		switch (_format)
 		{
-			return NULL;
+		case ImageParser::Png:  return 0 != BIMG_CONFIG_PARSE_PNG;
+		case ImageParser::Jpeg: return 0 != BIMG_CONFIG_PARSE_JPEG;
+		case ImageParser::Bmp:  return 0 != BIMG_CONFIG_PARSE_BMP;
+		case ImageParser::Gif:  return 0 != BIMG_CONFIG_PARSE_GIF;
+		default:                return false;
+		}
+	}
+
+	struct WicFrame
+	{
+		WicFrame()
+			: m_wicDll(NULL)
+			, m_ole32Dll(NULL)
+			, m_coUninitialize(NULL)
+			, m_factory(NULL)
+			, m_stream(NULL)
+			, m_decoder(NULL)
+			, m_frame(NULL)
+			, m_width(0)
+			, m_height(0)
+		{
 		}
 
-		void* wicDll = bx::dlopen("windowscodecs.dll");
-		if (NULL == wicDll)
+		~WicFrame()
 		{
-			return NULL;
-		}
+			WIC_RELEASE(m_frame);
+			WIC_RELEASE(m_decoder);
+			WIC_RELEASE(m_stream);
+			WIC_RELEASE(m_factory);
 
-		typedef HRESULT (WINAPI* PFN_DllGetClassObject)(REFCLSID, REFIID, LPVOID*);
-		PFN_DllGetClassObject dllGetClassObject = bx::dlsym<PFN_DllGetClassObject>(wicDll, "DllGetClassObject");
-		if (NULL == dllGetClassObject)
-		{
-			bx::dlclose(wicDll);
-			return NULL;
-		}
-
-		void* ole32Dll = bx::dlopen("ole32.dll");
-		typedef HRESULT (WINAPI* PFN_CoInitializeEx)(LPVOID, DWORD);
-		typedef void    (WINAPI* PFN_CoUninitialize)(void);
-		PFN_CoUninitialize coUninitialize = NULL;
-		bool comNeedsUninit = false;
-
-		if (NULL != ole32Dll)
-		{
-			PFN_CoInitializeEx coInitializeEx = bx::dlsym<PFN_CoInitializeEx>(ole32Dll, "CoInitializeEx");
-			coUninitialize = bx::dlsym<PFN_CoUninitialize>(ole32Dll, "CoUninitialize");
-
-			if (NULL != coInitializeEx)
+			if (NULL != m_coUninitialize)
 			{
-				const HRESULT hr = coInitializeEx(NULL, COINIT_MULTITHREADED);
-				comNeedsUninit = (S_OK == hr || S_FALSE == hr) && NULL != coUninitialize;
+				m_coUninitialize();
+			}
+
+			if (NULL != m_ole32Dll)
+			{
+				bx::dlclose(m_ole32Dll);
+			}
+
+			if (NULL != m_wicDll)
+			{
+				bx::dlclose(m_wicDll);
 			}
 		}
 
-		IClassFactory*      classFactory = NULL;
-		IWICImagingFactory* factory      = NULL;
-		HRESULT hr = dllGetClassObject(kCLSID_WICImagingFactory, __uuidof(IClassFactory), (void**)&classFactory);
-		if (SUCCEEDED(hr) && NULL != classFactory)
+		bool open(const void* _data, uint32_t _size, bx::Error* _err)
 		{
-			classFactory->CreateInstance(NULL, __uuidof(IWICImagingFactory), (void**)&factory);
-			classFactory->Release();
-		}
-
-		ImageContainer* image = NULL;
-		if (NULL != factory)
-		{
-			IWICStream*            stream    = NULL;
-			IWICBitmapDecoder*     decoder   = NULL;
-			IWICBitmapFrameDecode* frame     = NULL;
-			IWICFormatConverter*   converter = NULL;
-
-			if (true
-			&&  SUCCEEDED(factory->CreateStream(&stream) )
-			&&  SUCCEEDED(stream->InitializeFromMemory( (WICInProcPointer)const_cast<void*>(_data), _size) )
-			&&  SUCCEEDED(factory->CreateDecoderFromStream(stream, NULL, WICDecodeMetadataCacheOnDemand, &decoder) )
-			&&  SUCCEEDED(decoder->GetFrame(0, &frame) )
-			&&  SUCCEEDED(factory->CreateFormatConverter(&converter) )
-			&&  SUCCEEDED(converter->Initialize(frame, kGUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom) )
-			   )
+			m_wicDll = bx::dlopen("windowscodecs.dll");
+			if (NULL == m_wicDll)
 			{
-				UINT width  = 0;
-				UINT height = 0;
-				frame->GetSize(&width, &height);
+				BX_ERROR_SET(_err, BIMG_ERROR, "WIC: windowscodecs.dll is not available.");
+				return false;
+			}
 
-				if (0 < width
-				&&  0 < height)
+			typedef HRESULT (WINAPI* PFN_DllGetClassObject)(REFCLSID, REFIID, LPVOID*);
+			PFN_DllGetClassObject dllGetClassObject = bx::dlsym<PFN_DllGetClassObject>(m_wicDll, "DllGetClassObject");
+			if (NULL == dllGetClassObject)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "WIC: DllGetClassObject is not available.");
+				return false;
+			}
+
+			m_ole32Dll = bx::dlopen("ole32.dll");
+			if (NULL != m_ole32Dll)
+			{
+				typedef HRESULT (WINAPI* PFN_CoInitializeEx)(LPVOID, DWORD);
+				typedef void    (WINAPI* PFN_CoUninitialize)(void);
+				PFN_CoInitializeEx coInitializeEx = bx::dlsym<PFN_CoInitializeEx>(m_ole32Dll, "CoInitializeEx");
+				PFN_CoUninitialize coUninitialize = bx::dlsym<PFN_CoUninitialize>(m_ole32Dll, "CoUninitialize");
+
+				if (NULL != coInitializeEx)
 				{
-					image = imageAlloc(_allocator, TextureFormat::RGBA8, width, height, 0, 1, false, false);
-					if (NULL != image)
+					const HRESULT hr = coInitializeEx(NULL, COINIT_MULTITHREADED);
+					if (S_OK == hr
+					||  S_FALSE == hr)
 					{
-						hr = converter->CopyPixels(NULL, width * 4, image->m_size, (BYTE*)image->m_data);
-						if (FAILED(hr) )
-						{
-							imageFree(image);
-							image = NULL;
-						}
-						else
-						{
-							image->m_parser = format;
-
-							bool hasAlpha = false;
-							const uint8_t* rgba = (const uint8_t*)image->m_data;
-							for (uint32_t ii = 3; ii < image->m_size; ii += 4)
-							{
-								if (0xff != rgba[ii])
-								{
-									hasAlpha = true;
-									break;
-								}
-							}
-
-							image->m_hasAlpha = hasAlpha;
-						}
+						m_coUninitialize = coUninitialize;
 					}
 				}
 			}
 
+			IClassFactory* classFactory = NULL;
+			if (SUCCEEDED(dllGetClassObject(kCLSID_WICImagingFactory, __uuidof(IClassFactory), (void**)&classFactory) )
+			&&  NULL != classFactory)
+			{
+				classFactory->CreateInstance(NULL, __uuidof(IWICImagingFactory), (void**)&m_factory);
+				classFactory->Release();
+			}
+
+			if (NULL == m_factory)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Failed to create imaging factory.");
+				return false;
+			}
+
+			if (FAILED(m_factory->CreateStream(&m_stream) )
+			||  FAILED(m_stream->InitializeFromMemory( (BYTE*)const_cast<void*>(_data), _size) )
+			||  FAILED(m_factory->CreateDecoderFromStream(m_stream, NULL, WICDecodeMetadataCacheOnDemand, &m_decoder) )
+			||  FAILED(m_decoder->GetFrame(0, &m_frame) ) )
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Failed to decode image.");
+				return false;
+			}
+
+			UINT width  = 0;
+			UINT height = 0;
+			if (FAILED(m_frame->GetSize(&width, &height) )
+			||  0 == width
+			||  0 == height)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Invalid image size.");
+				return false;
+			}
+
+			m_width  = width;
+			m_height = height;
+
+			return true;
+		}
+
+		void*                  m_wicDll;
+		void*                  m_ole32Dll;
+		void                   (WINAPI* m_coUninitialize)(void);
+		IWICImagingFactory*    m_factory;
+		IWICStream*            m_stream;
+		IWICBitmapDecoder*     m_decoder;
+		IWICBitmapFrameDecode* m_frame;
+		uint32_t               m_width;
+		uint32_t               m_height;
+	};
+
+	ImageContainer* imageParseWic(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		const ImageParser::Enum format = wicDetectFormat( (const uint8_t*)_data, _size);
+
+		if (!wicIsEnabled(format) )
+		{
+			return NULL;
+		}
+
+		WicFrame wic;
+		if (!wic.open(_data, _size, _err) )
+		{
+			return NULL;
+		}
+
+		IWICFormatConverter* converter = NULL;
+		if (FAILED(wic.m_factory->CreateFormatConverter(&converter) )
+		||  FAILED(converter->Initialize(wic.m_frame, kGUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, NULL, 0.0, WICBitmapPaletteTypeCustom) ) )
+		{
 			WIC_RELEASE(converter);
-			WIC_RELEASE(frame);
-			WIC_RELEASE(decoder);
-			WIC_RELEASE(stream);
-			WIC_RELEASE(factory);
+			BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Failed to convert image to RGBA8.");
+			return NULL;
 		}
 
-		if (comNeedsUninit)
+		ImageContainer* image = imageAlloc(_allocator, TextureFormat::RGBA8, wic.m_width, wic.m_height, 0, 1, false, false);
+		if (NULL == image)
 		{
-			coUninitialize();
+			WIC_RELEASE(converter);
+			BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Unsupported dimensions.");
+			return NULL;
 		}
 
-		if (NULL != ole32Dll)
+		const HRESULT hr = converter->CopyPixels(NULL, wic.m_width*4, image->m_size, (BYTE*)image->m_data);
+		WIC_RELEASE(converter);
+
+		if (FAILED(hr) )
 		{
-			bx::dlclose(ole32Dll);
+			imageFree(image);
+			BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Failed to copy pixels.");
+			return NULL;
 		}
 
-		bx::dlclose(wicDll);
+		image->m_parser = format;
+
+		bool hasAlpha = false;
+		const uint8_t* rgba = (const uint8_t*)image->m_data;
+		for (uint32_t ii = 3; ii < image->m_size; ii += 4)
+		{
+			if (0xff != rgba[ii])
+			{
+				hasAlpha = true;
+				break;
+			}
+		}
+
+		image->m_hasAlpha = hasAlpha;
 
 		return image;
+	}
+
+	bool imageParseInfoWic(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+		BX_ERROR_SCOPE(_err);
+
+		const ImageParser::Enum format = wicDetectFormat( (const uint8_t*)_data, _size);
+
+		if (!wicIsEnabled(format) )
+		{
+			return false;
+		}
+
+		WicFrame wic;
+		if (!wic.open(_data, _size, _err) )
+		{
+			return false;
+		}
+
+		return imageInfoFinalize(_imageContainer, format, TextureFormat::RGBA8, wic.m_width, wic.m_height, _err);
 	}
 
 } // namespace bimg
@@ -205,6 +297,11 @@ namespace bimg
 		return NULL;
 	}
 
+	bool imageParseInfoWic(bx::AllocatorI* /*_allocator*/, ImageContainer& /*_imageContainer*/, const void* /*_data*/, uint32_t /*_size*/, bx::Error* /*_err*/)
+	{
+		return false;
+	}
+
 } // namespace bimg
 
-#endif // BIMG_CONFIG_PARSE_WIC && BX_PLATFORM_WINDOWS
+#endif // BIMG_CONFIG_USE_WIC && (BIMG_CONFIG_PARSE_PNG || BIMG_CONFIG_PARSE_JPEG || BIMG_CONFIG_PARSE_BMP || BIMG_CONFIG_PARSE_GIF)
