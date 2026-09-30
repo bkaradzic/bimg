@@ -112,9 +112,9 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wmisleading-indentation");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wshift-negative-value");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wimplicit-fallthrough");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // unreferenced function with internal linkage has been removed
-#define STBI_MALLOC(_size)        lodepng_malloc(_size)
-#define STBI_REALLOC(_ptr, _size) lodepng_realloc(_ptr, _size)
-#define STBI_FREE(_ptr)           lodepng_free(_ptr)
+#define STBI_MALLOC(_size)        ::malloc(_size)
+#define STBI_REALLOC(_ptr, _size) ::realloc(_ptr, _size)
+#define STBI_FREE(_ptr)           ::free(_ptr)
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
 #define STBI_NO_PNG // supported via LODEPNG
