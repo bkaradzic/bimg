@@ -131,6 +131,25 @@ namespace bimg
 		, bx::Error* _err
 		);
 
+	///
+	bool imageInfoFinalize(
+		  ImageContainer& _imageContainer
+		, ImageParser::Enum _parser
+		, TextureFormat::Enum _format
+		, uint32_t _width
+		, uint32_t _height
+		, bx::Error* _err
+		);
+
+	///
+	bool imageParseInfoWic(
+		  bx::AllocatorI* _allocator
+		, ImageContainer& _imageContainer
+		, const void* _data
+		, uint32_t _size
+		, bx::Error* _err
+		);
+
 } // namespace bimg
 
 #endif // BIMG_P_H_HEADER_GUARD

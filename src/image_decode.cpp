@@ -29,7 +29,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4702) // warning C4702: unreachable code
 BX_PRAGMA_DIAGNOSTIC_POP()
 #endif // BIMG_CONFIG_PARSE_EXR
 
-#if BIMG_CONFIG_PARSE_PNG
+#if BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4127) // warning C4127: conditional expression is constant
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4267) // warning C4267: '=' : conversion from 'size_t' to 'unsigned short', possible loss of data
@@ -41,6 +41,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4334) // warning C4334: '<<' : result of 32 - 
 #define LODEPNG_NO_COMPILE_CPP
 #include <lodepng/lodepng.cpp>
 BX_PRAGMA_DIAGNOSTIC_POP();
+#endif // BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 
 void* lodepng_malloc(size_t _size)
 {
@@ -56,7 +57,6 @@ void lodepng_free(void* _ptr)
 {
 	::free(_ptr);
 }
-#endif // BIMG_CONFIG_PARSE_PNG
 
 #if BIMG_CONFIG_PARSE_HEIF
 #	include <libheif/heif.h>
@@ -90,22 +90,13 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4701) // warning C4701: potentially uninitiali
 BX_PRAGMA_DIAGNOSTIC_POP();
 #endif // BIMG_CONFIG_PARSE_WEBP
 
-#define BIMG_USE_STB_IMAGE 0   \
-	||  BIMG_CONFIG_PARSE_JPEG \
-	||  BIMG_CONFIG_PARSE_BMP  \
-	||  BIMG_CONFIG_PARSE_PSD  \
-	||  BIMG_CONFIG_PARSE_TGA  \
-	||  BIMG_CONFIG_PARSE_GIF  \
-	||  BIMG_CONFIG_PARSE_HDR  \
-	||  BIMG_CONFIG_PARSE_PIC  \
-	||  0
-
-#if BIMG_USE_STB_IMAGE
+#if BIMG_CONFIG_USE_STB_IMAGE
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wint-to-pointer-cast")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmissing-field-initializers");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wsign-compare");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wunused-but-set-variable");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Warray-bounds");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wmisleading-indentation");
@@ -119,17 +110,13 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // unreferenced function with internal 
 #define STB_IMAGE_STATIC
 #define STBI_NO_PNG // supported via LODEPNG
 
-#if !BIMG_CONFIG_PARSE_JPEG
+#if !BIMG_CONFIG_PARSE_JPEG || BIMG_CONFIG_USE_WIC
 #	define STBI_NO_JPEG
-#endif // !BIMG_CONFIG_PARSE_JPEG
+#endif // !BIMG_CONFIG_PARSE_JPEG || BIMG_CONFIG_USE_WIC
 
-#if !BIMG_CONFIG_PARSE_BMP
+#if !BIMG_CONFIG_PARSE_BMP || BIMG_CONFIG_USE_WIC
 #	define STBI_NO_BMP
-#endif // !BIMG_CONFIG_PARSE_BMP
-
-#if !BIMG_CONFIG_PARSE_PSD
-#	define STBI_NO_PSD
-#endif // !BIMG_CONFIG_PARSE_PSD
+#endif // !BIMG_CONFIG_PARSE_BMP || BIMG_CONFIG_USE_WIC
 
 #if !BIMG_CONFIG_PARSE_PSD
 #	define STBI_NO_PSD
@@ -139,9 +126,9 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // unreferenced function with internal 
 #	define STBI_NO_TGA
 #endif // !BIMG_CONFIG_PARSE_TGA
 
-#if !BIMG_CONFIG_PARSE_GIF
+#if !BIMG_CONFIG_PARSE_GIF || BIMG_CONFIG_USE_WIC
 #	define STBI_NO_GIF
-#endif // !BIMG_CONFIG_PARSE_GIF
+#endif // !BIMG_CONFIG_PARSE_GIF || BIMG_CONFIG_USE_WIC
 
 #if !BIMG_CONFIG_PARSE_HDR
 #	define STBI_NO_HDR
@@ -157,11 +144,11 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // unreferenced function with internal 
 
 #include <stb/stb_image.h>
 BX_PRAGMA_DIAGNOSTIC_POP();
-#endif // BIMG_USE_STB_IMAGE
+#endif // BIMG_CONFIG_USE_STB_IMAGE
 
 namespace bimg
 {
-#if BIMG_CONFIG_PARSE_PNG
+#if BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 	static uint32_t pngReadPackedSample(const uint8_t* _data, uint32_t _index, uint32_t _bitDepth)
 	{
 		const uint64_t bitOffset = uint64_t(_index)*_bitDepth;
@@ -173,7 +160,7 @@ namespace bimg
 	{
 		return uint8_t(_sample*255 / ( (1u<<_bitDepth)-1) );
 	}
-#endif // BIMG_CONFIG_PARSE_PNG
+#endif // BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 
 	static ImageContainer* imageParseLodePng(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
@@ -186,7 +173,7 @@ namespace bimg
 			return NULL;
 		}
 
-#if BIMG_CONFIG_PARSE_PNG
+#if BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 		ImageContainer* output = NULL;
 		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
 		uint32_t width  = 0;
@@ -664,7 +651,7 @@ namespace bimg
 		BX_UNUSED(_allocator, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "PNG parsing is disabled (BIMG_CONFIG_PARSE_PNG).");
 		return NULL;
-#endif // BIMG_CONFIG_PARSE_PNG
+#endif // BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 	}
 
 #if BIMG_CONFIG_PARSE_EXR
@@ -924,7 +911,7 @@ namespace bimg
 #endif // BIMG_CONFIG_PARSE_PNG
 	}
 
-#if BIMG_USE_STB_IMAGE
+#if BIMG_CONFIG_USE_STB_IMAGE
 	static ImageParser::Enum imageStbImageFormat(const void* _data, uint32_t _size)
 	{
 		const uint8_t* data = (const uint8_t*)_data;
@@ -973,13 +960,13 @@ namespace bimg
 		// TGA has no signature; stb_image probes it last.
 		return ImageParser::Tga;
 	}
-#endif // BIMG_USE_STB_IMAGE
+#endif // BIMG_CONFIG_USE_STB_IMAGE
 
 	static ImageContainer* imageParseStbImage(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
 
-#if BIMG_USE_STB_IMAGE
+#if BIMG_CONFIG_USE_STB_IMAGE
 		const int isHdr = stbi_is_hdr_from_memory( (const uint8_t*)_data, (int)_size);
 
 		void* data;
@@ -1067,7 +1054,7 @@ namespace bimg
 			return NULL;
 		}
 
-#if BIMG_CONFIG_PARSE_JPEG
+#if BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC
 		Orientation::Enum orientation = Orientation::R0;
 
 		bx::Error exifErr;
@@ -1193,7 +1180,7 @@ namespace bimg
 		BX_UNUSED(_allocator, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "JPEG parsing is disabled (BIMG_CONFIG_PARSE_JPEG).");
 		return NULL;
-#endif // BIMG_CONFIG_PARSE_JPEG
+#endif // BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC
 	}
 
 	static bool imageIsAvifBrand(const void* _data, uint32_t _size)
@@ -1510,7 +1497,7 @@ namespace bimg
 #endif // BIMG_CONFIG_PARSE_WEBP
 	}
 
-	static bool imageInfoFinalize(ImageContainer& _imageContainer, ImageParser::Enum _parser, TextureFormat::Enum _format, uint32_t _width, uint32_t _height, bx::Error* _err)
+	bool imageInfoFinalize(ImageContainer& _imageContainer, ImageParser::Enum _parser, TextureFormat::Enum _format, uint32_t _width, uint32_t _height, bx::Error* _err)
 	{
 		if (0 == _width
 		||  0 == _height
@@ -1562,7 +1549,7 @@ namespace bimg
 			return false;
 		}
 
-#if BIMG_CONFIG_PARSE_PNG
+#if BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 		LodePNGState state;
 		lodepng_state_init(&state);
 
@@ -1650,7 +1637,7 @@ namespace bimg
 		BX_UNUSED(_data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "PNG parsing is disabled (BIMG_CONFIG_PARSE_PNG).");
 		return false;
-#endif // BIMG_CONFIG_PARSE_PNG
+#endif // BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
 	}
 
 	static bool imageParseInfoTinyExr(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
@@ -1739,7 +1726,7 @@ namespace bimg
 #endif // BIMG_CONFIG_PARSE_EXR
 	}
 
-#if BIMG_CONFIG_PARSE_JPEG
+#if BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC
 	static Orientation::Enum imageParseJpegOrientation(const void* _data, uint32_t _size)
 	{
 		Orientation::Enum orientation = Orientation::R0;
@@ -1860,13 +1847,13 @@ namespace bimg
 
 		return orientation;
 	}
-#endif // BIMG_CONFIG_PARSE_JPEG
+#endif // BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC
 
 	static bool imageParseInfoStbImage(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_UNUSED(_allocator);
 
-#if BIMG_USE_STB_IMAGE
+#if BIMG_CONFIG_USE_STB_IMAGE
 		int width  = 0;
 		int height = 0;
 		int comp   = 0;
@@ -1895,7 +1882,7 @@ namespace bimg
 #else
 		BX_UNUSED(_imageContainer, _data, _size, _err);
 		return false;
-#endif // BIMG_USE_STB_IMAGE
+#endif // BIMG_CONFIG_USE_STB_IMAGE
 	}
 
 	static bool imageParseInfoJpeg(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
@@ -1909,7 +1896,7 @@ namespace bimg
 			return false;
 		}
 
-#if BIMG_CONFIG_PARSE_JPEG && BIMG_USE_STB_IMAGE
+#if BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC && BIMG_CONFIG_USE_STB_IMAGE
 		const Orientation::Enum orientation = imageParseJpegOrientation(_data, _size);
 
 		int width  = 0;
@@ -1938,10 +1925,10 @@ namespace bimg
 		_imageContainer.m_orientation = orientation;
 		return true;
 #else
-		BX_UNUSED(_data, _size);
+		BX_UNUSED(_imageContainer, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "JPEG parsing is disabled (BIMG_CONFIG_PARSE_JPEG).");
 		return false;
-#endif // BIMG_CONFIG_PARSE_JPEG && BIMG_USE_STB_IMAGE
+#endif // BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC && BIMG_CONFIG_USE_STB_IMAGE
 	}
 
 	static bool imageParseInfoSimpleWebp(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
@@ -2136,6 +2123,7 @@ namespace bimg
 		typedef bool (*ImageParseInfoFn)(bx::AllocatorI*, ImageContainer&, const void*, uint32_t, bx::Error*);
 		static const ImageParseInfoFn parsers[] =
 		{
+			imageParseInfoWic,
 			imageParseInfoLodePng,
 			imageParseInfoTinyExr,
 			imageParseInfoJpeg,
