@@ -1599,14 +1599,19 @@ namespace bimg
 		if (0 == _width
 		&&  0 == _height)
 		{
-			_width  = uint32_t(bx::ceil(bx::min(width,  float(kSvgMaxSize) ) ) );
-			_height = uint32_t(bx::ceil(bx::min(height, float(kSvgMaxSize) ) ) );
-
 			if (width  <= float(kSvgMaxSize)
 			&&  height <= float(kSvgMaxSize) )
 			{
-				_outWidth  = _width;
-				_outHeight = _height;
+				_outWidth  = uint32_t(bx::floor(width  + 0.5f) );
+				_outHeight = uint32_t(bx::floor(height + 0.5f) );
+				if (0 == _outWidth
+				||  0 == _outHeight)
+				{
+					nsvgDelete(image);
+					BX_ERROR_SET(_err, BIMG_ERROR, "SVG: Unsupported dimensions.");
+					return NULL;
+				}
+
 				_outScale  = 1.0f;
 
 				return image;
