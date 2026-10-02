@@ -90,6 +90,29 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4701) // warning C4701: potentially uninitiali
 BX_PRAGMA_DIAGNOSTIC_POP();
 #endif // BIMG_CONFIG_PARSE_WEBP
 
+#if BIMG_CONFIG_PARSE_SVG
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wsign-compare")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: conversion from 'X' to 'Y', possible loss of data
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4456) // warning C4456: declaration of 'X' hides previous local declaration
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4702) // warning C4702: unreachable code
+#define NANOSVG_CPLUSPLUS
+#define NANOSVG_IMPLEMENTATION
+#define NANOSVGRAST_CPLUSPLUS
+#define NANOSVGRAST_IMPLEMENTATION
+namespace
+{
+#include <nanosvg/nanosvg.h>
+#include <nanosvg/nanosvgrast.h>
+} // namespace
+BX_PRAGMA_DIAGNOSTIC_POP();
+#endif // BIMG_CONFIG_PARSE_SVG
+
 #if BIMG_CONFIG_USE_STB_IMAGE
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wint-to-pointer-cast")
@@ -1497,6 +1520,208 @@ namespace bimg
 #endif // BIMG_CONFIG_PARSE_WEBP
 	}
 
+	static bool imageIsSvg(const void* _data, uint32_t _size)
+	{
+		const char* data = (const char*)_data;
+		uint32_t pos = 0;
+
+		static const uint8_t utf8Bom[] = { 0xef, 0xbb, 0xbf };
+
+		if (_size >= sizeof(utf8Bom)
+		&&  0 == bx::memCmp(data, utf8Bom, sizeof(utf8Bom) ) )
+		{
+			pos = sizeof(utf8Bom);
+		}
+
+		for (; pos < _size && bx::isSpace(data[pos]); ++pos)
+		{
+		}
+
+		if (pos >= _size
+		||  '<' != data[pos])
+		{
+			return false;
+		}
+
+		for (; pos + 4 < _size; ++pos)
+		{
+			if (0 == bx::memCmp(&data[pos], "<svg", 4)
+			&&  (bx::isSpace(data[pos+4]) || '>' == data[pos+4]) )
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+#if BIMG_CONFIG_PARSE_SVG
+	// Longer side of an image rasterized at the size stated in the document.
+	static constexpr uint32_t kSvgMaxSize = 4096;
+
+	static NSVGimage* svgParse(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, uint32_t _width, uint32_t _height, uint32_t& _outWidth, uint32_t& _outHeight, float& _outScale, bx::Error* _err)
+	{
+		if (_width  > UINT16_MAX
+		||  _height > UINT16_MAX)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "SVG: Unsupported dimensions.");
+			return NULL;
+		}
+
+		// nsvgParse modifies its input, and expects it to be null terminated.
+		char* text = (char*)bx::alloc(_allocator, _size+1);
+		bx::memCopy(text, _data, _size);
+		text[_size] = '\0';
+
+		NSVGimage* image = nsvgParse(text, "px", 96.0f);
+
+		bx::free(_allocator, text);
+
+		if (NULL == image)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "SVG: Failed to parse.");
+			return NULL;
+		}
+
+		const float width  = image->width;
+		const float height = image->height;
+
+		if (!bx::isFinite(width)
+		||  !bx::isFinite(height)
+		||  !(0.0f < width)
+		||  !(0.0f < height) )
+		{
+			nsvgDelete(image);
+			BX_ERROR_SET(_err, BIMG_ERROR, "SVG: Unsupported dimensions.");
+			return NULL;
+		}
+
+		if (0 == _width
+		&&  0 == _height)
+		{
+			_width  = uint32_t(bx::ceil(bx::min(width,  float(kSvgMaxSize) ) ) );
+			_height = uint32_t(bx::ceil(bx::min(height, float(kSvgMaxSize) ) ) );
+
+			if (width  <= float(kSvgMaxSize)
+			&&  height <= float(kSvgMaxSize) )
+			{
+				_outWidth  = _width;
+				_outHeight = _height;
+				_outScale  = 1.0f;
+
+				return image;
+			}
+
+			_width  = kSvgMaxSize;
+			_height = kSvgMaxSize;
+		}
+
+		const float scaleX = 0 != _width  ? float(_width )/width  : bx::kFloatInfinity;
+		const float scaleY = 0 != _height ? float(_height)/height : bx::kFloatInfinity;
+
+		if (scaleX <= scaleY)
+		{
+			_outWidth  = _width;
+			_outHeight = uint32_t(bx::ceil(height*scaleX) );
+			_outScale  = scaleX;
+		}
+		else
+		{
+			_outWidth  = uint32_t(bx::ceil(width*scaleY) );
+			_outHeight = _height;
+			_outScale  = scaleY;
+		}
+
+		_outWidth  = bx::clamp<uint32_t>(_outWidth,  1, 0 != _width  ? _width  : UINT16_MAX);
+		_outHeight = bx::clamp<uint32_t>(_outHeight, 1, 0 != _height ? _height : UINT16_MAX);
+
+		return image;
+	}
+#endif // BIMG_CONFIG_PARSE_SVG
+
+	ImageContainer* imageParseSvg(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, uint32_t _width, uint32_t _height, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		if (!imageIsSvg(_data, _size) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_SVG
+		uint32_t width  = 0;
+		uint32_t height = 0;
+		float    scale  = 1.0f;
+
+		NSVGimage* image = svgParse(_allocator, _data, _size, _width, _height, width, height, scale, _err);
+
+		if (NULL == image)
+		{
+			return NULL;
+		}
+
+		ImageContainer* output = imageAlloc(_allocator
+			, bimg::TextureFormat::RGBA8
+			, width
+			, height
+			, 0
+			, 1
+			, false
+			, false
+			);
+
+		NSVGrasterizer* rasterizer = NULL != output
+			? nsvgCreateRasterizer()
+			: NULL
+			;
+
+		if (NULL == rasterizer)
+		{
+			if (NULL != output)
+			{
+				imageFree(output);
+			}
+
+			nsvgDelete(image);
+			BX_ERROR_SET(_err, BIMG_ERROR, "SVG: Unsupported dimensions.");
+			return NULL;
+		}
+
+		uint8_t* data = (uint8_t*)output->m_data;
+		bx::memSet(data, 0, output->m_size);
+
+		nsvgRasterize(rasterizer, image, 0.0f, 0.0f, scale, data, int(width), int(height), int(width*4) );
+
+		nsvgDeleteRasterizer(rasterizer);
+		nsvgDelete(image);
+
+		bool hasAlpha = false;
+
+		for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+		{
+			if (data[ii*4 + 3] < UINT8_MAX)
+			{
+				hasAlpha = true;
+				break;
+			}
+		}
+
+		output->m_hasAlpha = hasAlpha;
+		output->m_parser   = ImageParser::Svg;
+
+		return output;
+#else
+		BX_UNUSED(_allocator, _width, _height);
+		BX_ERROR_SET(_err, BIMG_ERROR, "SVG parsing is disabled (BIMG_CONFIG_PARSE_SVG).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_SVG
+	}
+
+	static ImageContainer* imageParseNanoSvg(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		return imageParseSvg(_allocator, _data, _size, 0, 0, _err);
+	}
+
 	bool imageInfoFinalize(ImageContainer& _imageContainer, ImageParser::Enum _parser, TextureFormat::Enum _format, uint32_t _width, uint32_t _height, bx::Error* _err)
 	{
 		if (0 == _width
@@ -1634,7 +1859,7 @@ namespace bimg
 
 		return imageInfoFinalize(_imageContainer, ImageParser::Png, format, width, height, _err);
 #else
-		BX_UNUSED(_data, _size);
+		BX_UNUSED(_imageContainer, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "PNG parsing is disabled (BIMG_CONFIG_PARSE_PNG).");
 		return false;
 #endif // BIMG_CONFIG_PARSE_PNG && !BIMG_CONFIG_USE_WIC
@@ -1720,7 +1945,7 @@ namespace bimg
 		_imageContainer.m_hasAlpha = hasAlpha;
 		return true;
 #else
-		BX_UNUSED(_data, _size);
+		BX_UNUSED(_imageContainer, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "EXR parsing is disabled (BIMG_CONFIG_PARSE_EXR).");
 		return false;
 #endif // BIMG_CONFIG_PARSE_EXR
@@ -1965,10 +2190,39 @@ namespace bimg
 
 		return imageInfoFinalize(_imageContainer, ImageParser::Webp, bimg::TextureFormat::RGBA8, uint32_t(width), uint32_t(height), _err);
 #else
-		BX_UNUSED(_allocator, _data, _size);
+		BX_UNUSED(_allocator, _imageContainer, _data, _size);
 		BX_ERROR_SET(_err, BIMG_ERROR, "WebP parsing is disabled (BIMG_CONFIG_PARSE_WEBP).");
 		return false;
 #endif // BIMG_CONFIG_PARSE_WEBP
+	}
+
+	static bool imageParseInfoNanoSvg(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		if (!imageIsSvg(_data, _size) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_SVG
+		uint32_t width  = 0;
+		uint32_t height = 0;
+		float    scale  = 1.0f;
+
+		NSVGimage* image = svgParse(_allocator, _data, _size, 0, 0, width, height, scale, _err);
+
+		if (NULL == image)
+		{
+			return false;
+		}
+
+		nsvgDelete(image);
+
+		return imageInfoFinalize(_imageContainer, ImageParser::Svg, bimg::TextureFormat::RGBA8, width, height, _err);
+#else
+		BX_UNUSED(_allocator, _imageContainer);
+		BX_ERROR_SET(_err, BIMG_ERROR, "SVG parsing is disabled (BIMG_CONFIG_PARSE_SVG).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_SVG
 	}
 
 	static bool imageParseInfoLibHeif(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
@@ -2128,6 +2382,7 @@ namespace bimg
 			imageParseInfoTinyExr,
 			imageParseInfoJpeg,
 			imageParseInfoSimpleWebp,
+			imageParseInfoNanoSvg,
 			imageParseInfoStbImage,
 			imageParseInfoLibAvif,
 			imageParseInfoLibHeif,
@@ -2167,6 +2422,7 @@ namespace bimg
 			imageParseTinyExr,
 			imageParseJpeg,
 			imageParseSimpleWebp,
+			imageParseNanoSvg,
 			imageParseStbImage,
 			imageParseLibAvif,
 			imageParseLibHeif,
@@ -2265,6 +2521,10 @@ namespace bimg
 #endif // BIMG_CONFIG_PARSE_PSD
 
 		"pvr",
+
+#if BIMG_CONFIG_PARSE_SVG
+		"svg",
+#endif // BIMG_CONFIG_PARSE_SVG
 
 #if BIMG_CONFIG_PARSE_TGA
 		"tga",

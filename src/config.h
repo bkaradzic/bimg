@@ -151,6 +151,12 @@
 #	define BIMG_CONFIG_PARSE_PSD (BIMG_CONFIG_PARSE_ENABLE && BIMG_CONFIG_USE_STB_IMAGE)
 #endif // BIMG_CONFIG_PARSE_PSD
 
+/// SVG (Scalable Vector Graphics) - vector image format, rasterized when parsed.
+///
+#ifndef BIMG_CONFIG_PARSE_SVG
+#	define BIMG_CONFIG_PARSE_SVG BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_SVG
+
 /// TGA (Truevision TGA) - raster image format with optional RLE compression.
 ///
 #ifndef BIMG_CONFIG_PARSE_TGA
