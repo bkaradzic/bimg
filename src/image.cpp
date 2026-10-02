@@ -336,6 +336,7 @@ namespace bimg
 		"PNM",  // Pnm
 		"PSD",  // Psd
 		"PVR3", // Pvr3
+		"SVG",  // Svg
 		"TGA",  // Tga
 		"WebP", // Webp
 	};

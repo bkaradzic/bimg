@@ -28,6 +28,26 @@ namespace bimg
 		, bx::Error* _err = NULL
 		);
 
+	/// Rasterizes SVG image at the requested size.
+	///
+	/// @param[in] _width Width in pixels. When 0 it follows from `_height`.
+	/// @param[in] _height Height in pixels. When 0 it follows from `_width`.
+	///
+	/// @remarks
+	///   Aspect ratio is always preserved. When both `_width` and `_height` are given the image is
+	///   scaled to fit inside of them. When both are 0 the image is rasterized at the size stated
+	///   in the document, scaled down if needed to fit inside of 4096x4096, which is also what
+	///   `bimg::imageParse` does.
+	///
+	ImageContainer* imageParseSvg(
+		  bx::AllocatorI* _allocator
+		, const void* _data
+		, uint32_t _size
+		, uint32_t _width
+		, uint32_t _height
+		, bx::Error* _err = NULL
+		);
+
 	/// Returns a NULL-terminated list of the lower-case file name extensions for
 	/// the image formats that are compiled into this build.
 	const char* const* getSupportedExt();

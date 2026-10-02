@@ -204,6 +204,7 @@ namespace bimg
 			Pnm,   //!< Portable AnyMap (PBM/PGM/PPM).
 			Psd,   //!< Photoshop Document.
 			Pvr3,  //!< PVR (v3).
+			Svg,   //!< Scalable Vector Graphics.
 			Tga,   //!< Truevision TGA.
 			Webp,  //!< WebP.
 
