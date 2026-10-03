@@ -35,9 +35,10 @@ namespace bimg
 	///
 	/// @remarks
 	///   Aspect ratio is always preserved. When both `_width` and `_height` are given the image is
-	///   scaled to fit inside of them. When both are 0 the image is rasterized at the size stated
-	///   in the document, scaled down if needed to fit inside of 4096x4096, which is also what
-	///   `bimg::imageParse` does.
+	///   scaled to fit inside of them. When both are 0 documents that fit inside of 4096x4096 are
+	///   rasterized at native scale, with pixel dimensions rounded to the nearest integer (half
+	///   up). Dimensions rounding to 0 are rejected. Larger documents are scaled down to fit
+	///   inside of 4096x4096. `bimg::imageParse` and `bimg::imageParseInfo` use the same size policy.
 	///
 	ImageContainer* imageParseSvg(
 		  bx::AllocatorI* _allocator
