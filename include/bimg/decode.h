@@ -10,7 +10,7 @@
 
 namespace bimg
 {
-	///
+	/// PNG color-key transparency preserves source RGB in fully transparent pixels.
 	ImageContainer* imageParse(
 		  bx::AllocatorI* _allocator
 		, const void* _data

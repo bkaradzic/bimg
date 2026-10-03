@@ -203,6 +203,107 @@ namespace bimg
 		uint32_t               m_height;
 	};
 
+	static bool wicRestorePngGrayKey(WicFrame& _wic, const void* _data, uint32_t _size, ImageContainer& _image, bx::Error* _err)
+	{
+		static const uint8_t pngHeader[] =
+		{
+			0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a,
+			0, 0, 0, 13, 'I', 'H', 'D', 'R',
+		};
+		const uint8_t* data = (const uint8_t*)_data;
+		if (_size < 33
+		||  0 != bx::memCmp(data, pngHeader, sizeof(pngHeader) )
+		||  0 != data[25])
+		{
+			return true;
+		}
+
+		const uint32_t bitDepth = data[24];
+		uint32_t formatIndex;
+		switch (bitDepth)
+		{
+		case 1: formatIndex = 0; break;
+		case 2: formatIndex = 1; break;
+		case 4: formatIndex = 2; break;
+		case 8: formatIndex = 3; break;
+		default: return true;
+		}
+
+		static const GUID indexedFormats[] =
+		{
+			{ 0x6fddc324, 0x4e03, 0x4bfe, { 0xb1, 0x85, 0x3d, 0x77, 0x76, 0x8d, 0xc9, 0x01 } },
+			{ 0x6fddc324, 0x4e03, 0x4bfe, { 0xb1, 0x85, 0x3d, 0x77, 0x76, 0x8d, 0xc9, 0x02 } },
+			{ 0x6fddc324, 0x4e03, 0x4bfe, { 0xb1, 0x85, 0x3d, 0x77, 0x76, 0x8d, 0xc9, 0x03 } },
+			{ 0x6fddc324, 0x4e03, 0x4bfe, { 0xb1, 0x85, 0x3d, 0x77, 0x76, 0x8d, 0xc9, 0x04 } },
+		};
+		WICPixelFormatGUID sourceFormat;
+		if (FAILED(_wic.m_frame->GetPixelFormat(&sourceFormat) ) )
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Failed to query PNG pixel format.");
+			return false;
+		}
+
+		if (!IsEqualGUID(sourceFormat, indexedFormats[formatIndex]) )
+		{
+			return true;
+		}
+
+		IWICPalette* palette = NULL;
+		if (FAILED(_wic.m_factory->CreatePalette(&palette) )
+		||  FAILED(_wic.m_frame->CopyPalette(palette) ) )
+		{
+			WIC_RELEASE(palette);
+			BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Failed to read PNG grayscale palette.");
+			return false;
+		}
+
+		WICColor colors[256];
+		UINT count = 0;
+		const HRESULT hr = palette->GetColors(BX_COUNTOF(colors), colors, &count);
+		WIC_RELEASE(palette);
+		if (FAILED(hr)
+		||  count != (1u<<bitDepth) )
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Invalid PNG grayscale palette.");
+			return false;
+		}
+
+		uint32_t key = UINT32_MAX;
+		for (uint32_t ii = 0; ii < count; ++ii)
+		{
+			const uint32_t alpha = colors[ii]>>24;
+			if (0xff != alpha)
+			{
+				if (0 != alpha
+				||  UINT32_MAX != key)
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Invalid PNG grayscale transparency.");
+					return false;
+				}
+
+				key = ii;
+			}
+		}
+
+		if (UINT32_MAX != key)
+		{
+			// WIC retains grayscale indices but zeros the transparent palette entry's RGB.
+			const uint8_t gray = uint8_t(key*255 / (count-1) );
+			uint8_t* rgba = (uint8_t*)_image.m_data;
+			for (uint32_t ii = 0; ii < _image.m_size; ii += 4)
+			{
+				if (0 == rgba[ii+3])
+				{
+					rgba[ii+0] = gray;
+					rgba[ii+1] = gray;
+					rgba[ii+2] = gray;
+				}
+			}
+		}
+
+		return true;
+	}
+
 	ImageContainer* imageParseWic(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
@@ -244,6 +345,13 @@ namespace bimg
 		{
 			imageFree(image);
 			BX_ERROR_SET(_err, BIMG_ERROR, "WIC: Failed to copy pixels.");
+			return NULL;
+		}
+
+		if (ImageParser::Png == format
+		&&  !wicRestorePngGrayKey(wic, _data, _size, *image, _err) )
+		{
+			imageFree(image);
 			return NULL;
 		}
 
