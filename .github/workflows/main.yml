@@ -118,8 +118,8 @@ jobs:
       fail-fast: true
       matrix:
         include: [
-          { runs-on: macos-14, arch: osx-arm64, bindir: osx-arm64, config: debug,   binsuffix: Debug   },
-          { runs-on: macos-14, arch: osx-arm64, bindir: osx-arm64, config: release, binsuffix: Release },
+          { runs-on: macos-15, arch: osx-arm64, bindir: osx-arm64, config: debug,   binsuffix: Debug   },
+          { runs-on: macos-15, arch: osx-arm64, bindir: osx-arm64, config: release, binsuffix: Release },
         ]
     name: osx-${{ matrix.arch }}-${{ matrix.config }}
     runs-on: ${{ matrix.runs-on }}
@@ -199,6 +199,7 @@ jobs:
       - uses: mymindstorm/setup-emsdk@v14
         with:
           version: 5.0.2
+          actions-cache-folder: emsdk-cache
       - name: Build
         run: |
           cd bimg
