@@ -1141,7 +1141,10 @@ public:
 
 int main(int _argc, const char* _argv[])
 {
-	bx::CommandLine cmdLine(_argc, _argv, s_options, BX_COUNTOF(s_options) );
+	bx::DefaultAllocator defaultAllocator;
+	bx::CommandLineArgs args(&defaultAllocator, _argc, _argv);
+
+	bx::CommandLine cmdLine(args.getArgc(), args.getArgv(), s_options, BX_COUNTOF(s_options) );
 
 	if (cmdLine.hasArg('v', "version") )
 	{
@@ -1368,7 +1371,6 @@ int main(int _argc, const char* _argv[])
 		return bx::kExitFailure;
 	}
 
-	bx::DefaultAllocator defaultAllocator;
 	AlignedAllocator allocator(&defaultAllocator, 16);
 
 	uint8_t* inputData = (uint8_t*)bx::alloc(&allocator, inputSize);

@@ -172,7 +172,10 @@ static bool processFile(bx::AllocatorI* _allocator, const char* _filePath)
 
 int main(int _argc, const char* _argv[])
 {
-	bx::CommandLine cmdLine(_argc, _argv, s_options, BX_COUNTOF(s_options) );
+	bx::DefaultAllocator allocator;
+	bx::CommandLineArgs args(&allocator, _argc, _argv);
+
+	bx::CommandLine cmdLine(args.getArgc(), args.getArgv(), s_options, BX_COUNTOF(s_options) );
 
 	if (cmdLine.hasArg('v', "version") )
 	{
@@ -195,7 +198,6 @@ int main(int _argc, const char* _argv[])
 		return bx::kExitFailure;
 	}
 
-	bx::DefaultAllocator allocator;
 
 	bool any = false;
 	bool ok  = true;
