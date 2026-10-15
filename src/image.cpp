@@ -3432,22 +3432,26 @@ namespace bimg
 
 		{ 8, 0, 8, 0 },
 		{ 4, 4, 4, 4 },
-		{ 4, 4, 4, 4 },
+		{ 4, 4, 0, 0 },
 		{ 0, 8, 0, 8 },
 	};
 
-	uint32_t morton2d(uint32_t _x, uint32_t _y)
+	uint32_t morton2d(uint32_t _x, uint32_t _y, uint32_t _width, uint32_t _height)
 	{
 		using namespace bx;
 
-		const simd32_t xx     = simd32_splat(_x);
-		const simd32_t yy     = simd32_splat(_y);
+		const uint32_t minDim = bx::min(_width, _height);
+		const uint32_t mask   = minDim - 1;
+		const uint32_t shift  = bx::countTrailingZeros(minDim);
+
+		const simd32_t xx     = simd32_splat(_x & mask);
+		const simd32_t yy     = simd32_splat(_y & mask);
 		const simd32_t tmpx   = simd32_x32_part1by1(xx);
 		const simd32_t tmpy   = simd32_x32_part1by1(yy);
 		const simd32_t xbits  = simd32_x32_sll(tmpx, 1);
 		const simd32_t result = simd32_or(xbits, tmpy);
 
-		return result.u32;
+		return result.u32 | ( ( (_x | _y) & ~mask) << shift);
 	}
 
 	uint32_t getColor(const uint8_t _src[8])
@@ -3502,7 +3506,7 @@ namespace bimg
 		//                                 +-- B opaque    +-- A opaque   |
 		//                                           alpha punchthrough --+
 
-		const uint8_t* bc = &_src[morton2d(_x, _y) * 8];
+		const uint8_t* bc = &_src[morton2d(_x, _y, _width, _height) * 8];
 
 		uint32_t mod = 0
 			| bc[3]<<24
@@ -3511,7 +3515,7 @@ namespace bimg
 			| bc[0]
 			;
 
-		const bool punchthrough = !!(bc[7] & 1);
+		const bool punchthrough = !!(bc[4] & 1);
 		const uint8_t* weightTable = s_pvrtcWeights[4 * punchthrough];
 		const uint8_t* factorTable = s_pvrtcFactors[0];
 
@@ -3527,10 +3531,10 @@ namespace bimg
 				const uint32_t x0 = (_x + xOffset) % _width;
 				const uint32_t x1 = (x0 +       1) % _width;
 
-				const uint32_t bc0 = getColor(&_src[morton2d(x0, y0) * 8]);
-				const uint32_t bc1 = getColor(&_src[morton2d(x1, y0) * 8]);
-				const uint32_t bc2 = getColor(&_src[morton2d(x0, y1) * 8]);
-				const uint32_t bc3 = getColor(&_src[morton2d(x1, y1) * 8]);
+				const uint32_t bc0 = getColor(&_src[morton2d(x0, y0, _width, _height) * 8]);
+				const uint32_t bc1 = getColor(&_src[morton2d(x1, y0, _width, _height) * 8]);
+				const uint32_t bc2 = getColor(&_src[morton2d(x0, y1, _width, _height) * 8]);
+				const uint32_t bc3 = getColor(&_src[morton2d(x1, y1, _width, _height) * 8]);
 
 				const uint8_t f0 = factorTable[0];
 				const uint8_t f1 = factorTable[1];
@@ -3610,7 +3614,7 @@ namespace bimg
 		//                                 +-- B opaque    +-- A opaque   |
 		//                                           alpha punchthrough --+
 
-		const uint8_t* bc = &_src[morton2d(_x, _y) * 8];
+		const uint8_t* bc = &_src[morton2d(_x, _y, _width, _height) * 8];
 
 		uint32_t mod = 0
 			| bc[3]<<24
@@ -3619,7 +3623,7 @@ namespace bimg
 			| bc[0]
 			;
 
-		const bool punchthrough = !!(bc[7] & 1);
+		const bool punchthrough = !!(bc[4] & 1);
 		const uint8_t* weightTable = s_pvrtcWeights[4 * punchthrough];
 		const uint8_t* factorTable = s_pvrtcFactors[0];
 
@@ -3635,10 +3639,10 @@ namespace bimg
 				const uint32_t x0 = (_x + xOffset) % _width;
 				const uint32_t x1 = (x0 +       1) % _width;
 
-				const uint32_t bc0 = getColor(&_src[morton2d(x0, y0) * 8]);
-				const uint32_t bc1 = getColor(&_src[morton2d(x1, y0) * 8]);
-				const uint32_t bc2 = getColor(&_src[morton2d(x0, y1) * 8]);
-				const uint32_t bc3 = getColor(&_src[morton2d(x1, y1) * 8]);
+				const uint32_t bc0 = getColor(&_src[morton2d(x0, y0, _width, _height) * 8]);
+				const uint32_t bc1 = getColor(&_src[morton2d(x1, y0, _width, _height) * 8]);
+				const uint32_t bc2 = getColor(&_src[morton2d(x0, y1, _width, _height) * 8]);
+				const uint32_t bc3 = getColor(&_src[morton2d(x1, y1, _width, _height) * 8]);
 
 				const uint8_t f0 = factorTable[0];
 				const uint8_t f1 = factorTable[1];
@@ -3704,7 +3708,7 @@ namespace bimg
 			return NULL;
 		}
 
-		ImageContainer* imageContainer = (ImageContainer*)bx::alignedAlloc(_allocator, size + bx::alignUp(sizeof(ImageContainer), 16), 16);
+		ImageContainer* imageContainer = (ImageContainer*)bx::alignedAlloc(_allocator, size_t(size) + bx::alignUp(sizeof(ImageContainer), 16), 16);
 
 		imageContainer->m_allocator   = _allocator;
 		imageContainer->m_data        = bx::alignPtr(imageContainer + 1, 0, 16);
@@ -6038,8 +6042,8 @@ namespace bimg
 			if (isCompressed(_srcFormat))
 			{
 				uint64_t size = imageGetSize(NULL, _width, _height, 0, false, false, 1, TextureFormat::RGBA8);
-				void* temp = bx::alloc(_allocator, size);
-				imageDecodeToRgba8(_allocator, temp, _src, _width, _height, _width*4, _srcFormat);
+				void* temp = bx::alloc(_allocator, size_t(size) );
+				imageDecodeToRgba8(_allocator, temp, src, _width, _height, _width*4, _srcFormat);
 				imageConvert(_allocator, dst, TextureFormat::R8, temp, TextureFormat::RGBA8, _width, _height, 1, _width*4, _dstPitch);
 				bx::free(_allocator, temp);
 			}
@@ -6672,7 +6676,7 @@ namespace bimg
 					status = astcenc_decompress_image(
 						  context
 						, (const uint8_t*)_src
-						, size
+						, size_t(size)
 						, &image
 						, &swizzle
 						, 0
@@ -6853,7 +6857,7 @@ namespace bimg
 				if (isCompressed(_srcFormat) )
 				{
 					uint64_t size = imageGetSize(NULL, _width, _height, 0, false, false, 1, TextureFormat::RGBA8);
-					void* temp = bx::alloc(_allocator, size);
+					void* temp = bx::alloc(_allocator, size_t(size) );
 					imageDecodeToRgba8(_allocator, temp, src, _width, _height, _width*4, _srcFormat);
 					imageRgba8ToRgba32f(dst, _width, _height, _width*4, temp);
 					bx::free(_allocator, temp);
