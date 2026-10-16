@@ -234,6 +234,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				outputWidth  = outputWidth * _options.maxSize / outputHeight;
 				outputHeight = _options.maxSize;
 			}
+
+			outputWidth  = bx::max(blockWidth  * minBlockX, ( (outputWidth  + blockWidth  - 1) / blockWidth )*blockWidth);
+			outputHeight = bx::max(blockHeight * minBlockY, ( (outputHeight + blockHeight - 1) / blockHeight)*blockHeight);
 		}
 
 		const bool needResize = false
