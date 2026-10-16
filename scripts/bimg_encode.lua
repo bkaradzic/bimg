@@ -52,13 +52,21 @@ project "bimg_encode"
 	configuration { "mingw* or linux* or osx*" }
 		buildoptions {
 			"-Wno-implicit-fallthrough",
+			"-Wno-parentheses",
+			"-Wno-return-type",
 			"-Wno-shadow",
 			"-Wno-shift-negative-value",
+			"-Wno-sign-compare",
 			"-Wno-undef",
 		}
 
 		buildoptions_cpp {
 			"-Wno-deprecated-copy",
+		}
+
+	configuration { "mingw* or linux-gcc-*" }
+		buildoptions_cpp {
+			"-Wno-class-memaccess",
 		}
 
 	configuration {}
