@@ -5,6 +5,8 @@
 
 #include "bimg_p.h"
 
+#include <bx/sort.h>
+
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function")
 
 #if BIMG_CONFIG_PARSE_EXR
@@ -2476,7 +2478,7 @@ namespace bimg
 		return output;
 	}
 
-	static const char* const s_supportedExt[] =
+	static constexpr const char* s_supportedExt[] =
 	{
 #if BIMG_CONFIG_PARSE_AVIF
 		"avif",
@@ -2541,6 +2543,7 @@ namespace bimg
 
 		NULL,
 	};
+	static_assert(bx::isSorted(s_supportedExt, BX_COUNTOF(s_supportedExt)-1, [](const char* _lhs, const char* _rhs) { return 0 >= bx::strCmpI(_lhs, _rhs); }) );
 
 	const char* const* getSupportedExt()
 	{
