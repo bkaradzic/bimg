@@ -430,16 +430,35 @@ namespace bimg
 		}
 	}
 
-	BX_NO_INLINE void imageCheckerboard(void* _dst, uint32_t _width, uint32_t _height, uint32_t _step, uint32_t _0, uint32_t _1)
+	static void imageCheckerboard(void* _dst, uint32_t _width, uint32_t _height, uint32_t _dstPitch, uint32_t _step, uint32_t _0, uint32_t _1)
 	{
-		uint32_t* dst = (uint32_t*)_dst;
-		for (uint32_t yy = 0; yy < _height; ++yy)
+		uint8_t* dst = (uint8_t*)_dst;
+		for (uint32_t yy = 0; yy < _height; ++yy, dst += _dstPitch)
 		{
+			uint32_t* row = (uint32_t*)dst;
 			for (uint32_t xx = 0; xx < _width; ++xx)
 			{
-				uint32_t abgr = ( (xx/_step)&1) ^ ( (yy/_step)&1) ? _1 : _0;
-				*dst++ = abgr;
+				row[xx] = ( (xx/_step)&1) ^ ( (yy/_step)&1) ? _1 : _0;
 			}
+		}
+	}
+
+	BX_NO_INLINE void imageCheckerboard(void* _dst, uint32_t _width, uint32_t _height, uint32_t _step, uint32_t _0, uint32_t _1)
+	{
+		imageCheckerboard(_dst, _width, _height, _width*4, _step, _0, _1);
+	}
+
+	static void imageCopyBlock(uint8_t* _dst, uint32_t _dstPitch, const void* _block, uint32_t _xx, uint32_t _yy, uint32_t _width, uint32_t _height, uint32_t _texelSize)
+	{
+		const uint32_t width  = bx::min<uint32_t>(4, _width  - _xx*4);
+		const uint32_t height = bx::min<uint32_t>(4, _height - _yy*4);
+
+		const uint8_t* src = (const uint8_t*)_block;
+		uint8_t* dst = &_dst[_yy*4*_dstPitch + _xx*4*_texelSize];
+
+		for (uint32_t ii = 0; ii < height; ++ii)
+		{
+			bx::memCopy(&dst[ii*_dstPitch], &src[ii*4*_texelSize], width*_texelSize);
 		}
 	}
 
@@ -1293,7 +1312,7 @@ namespace bimg
 
 		for (uint32_t ii = 0; ii < size; ++ii)
 		{
-			float rgba[4];
+			float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 			_unpack(rgba, &src[ii*_bpp/8]);
 			_pack(&dst[ii*_bpp/8], rgba);
 		}
@@ -1310,7 +1329,7 @@ namespace bimg
 			{
 				for (uint32_t xx = 0; xx < _width; ++xx)
 				{
-					float rgba[4];
+					float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 					_unpack(rgba, &src[xx*_srcBpp/8]);
 					_pack(&dst[xx*_dstBpp/8], rgba);
 				}
@@ -2749,6 +2768,10 @@ namespace bimg
 		}
 
 		uint8_t colors[4*4];
+		colors[ 3] = 255;
+		colors[ 7] = 255;
+		colors[11] = 255;
+		colors[15] = 255;
 
 		uint32_t c0 = _src[0] | (_src[1] << 8);
 		uint32_t c1 = _src[2] | (_src[3] << 8);
@@ -6059,8 +6082,8 @@ namespace bimg
 		const uint8_t* src = (const uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
-		uint32_t width  = _width/4;
-		uint32_t height = _height/4;
+		uint32_t width  = (_width  + 3)/4;
+		uint32_t height = (_height + 3)/4;
 
 		uint8_t temp[16*4];
 
@@ -6076,18 +6099,14 @@ namespace bimg
 						decodeBlockDxt1(temp, src);
 						src += 8;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "BC1 decoder is disabled (BIMG_CONFIG_DECODE_BC1).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6103,18 +6122,14 @@ namespace bimg
 						decodeBlockDxt(temp, src);
 						src += 8;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "BC2 decoder is disabled (BIMG_CONFIG_DECODE_BC2).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6130,18 +6145,14 @@ namespace bimg
 						decodeBlockDxt(temp, src);
 						src += 8;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "BC3 decoder is disabled (BIMG_CONFIG_DECODE_BC3).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6163,18 +6174,14 @@ namespace bimg
 							temp[ii*4+3] = 255;
 						}
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "BC4 decoder is disabled (BIMG_CONFIG_DECODE_BC4).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6197,18 +6204,14 @@ namespace bimg
 							temp[ii*4+3] = 255;
 						}
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "BC5 decoder is disabled (BIMG_CONFIG_DECODE_BC5).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6235,7 +6238,7 @@ namespace bimg
 			else
 			{
 				BX_WARN(false, "BC6 decoder is disabled (BIMG_CONFIG_DECODE_BC6).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6249,18 +6252,14 @@ namespace bimg
 						decodeBlockBc7(temp, src);
 						src += 16;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "BC7 decoder is disabled (BIMG_CONFIG_DECODE_BC7).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6275,18 +6274,14 @@ namespace bimg
 						decodeBlockEtc12(temp, src);
 						src += 8;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "ETC1/ETC2 decoder is disabled (BIMG_CONFIG_DECODE_ETC1/ETC2).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 			break;
 
@@ -6302,18 +6297,14 @@ namespace bimg
 
 						src += 16;
 
-						uint8_t* block = &dst[yy*_dstPitch * 4 + xx * 16];
-						bx::memCopy(&block[0 * _dstPitch], &temp[0], 16);
-						bx::memCopy(&block[1 * _dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2 * _dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3 * _dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "ETC2 decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00));
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00));
 			}
 			break;
 
@@ -6327,18 +6318,14 @@ namespace bimg
 						decodeBlockEtc2Rgb8A1(temp, src);
 						src += 8;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "ETC2A1 decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffff0000) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xffff0000) );
 			}
 			break;
 
@@ -6371,18 +6358,14 @@ namespace bimg
 
 						src += 8;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "EAC decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
 			}
 			break;
 
@@ -6417,29 +6400,25 @@ namespace bimg
 
 						src += 16;
 
-						uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-						bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-						bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-						bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-						bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+						imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 					}
 				}
 			}
 			else
 			{
 				BX_WARN(false, "EAC decoder is disabled (BIMG_CONFIG_DECODE_ETC2).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ffff) );
 			}
 			break;
 
 		case TextureFormat::PTC12:
 			BX_WARN(false, "PTC12 decoder is not implemented.");
-			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffff00ff) );
+			imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xffff00ff) );
 			break;
 
 		case TextureFormat::PTC12A:
 			BX_WARN(false, "PTC12A decoder is not implemented.");
-			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+			imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
 			break;
 
 		case TextureFormat::PTC14:
@@ -6449,11 +6428,7 @@ namespace bimg
 				{
 					decodeBlockPtc14(temp, src, xx, yy, width, height);
 
-					uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-					bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-					bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-					bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-					bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 				}
 			}
 			break;
@@ -6465,23 +6440,19 @@ namespace bimg
 				{
 					decodeBlockPtc14A(temp, src, xx, yy, width, height);
 
-					uint8_t* block = &dst[yy*_dstPitch*4 + xx*16];
-					bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-					bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-					bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-					bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 				}
 			}
 			break;
 
 		case TextureFormat::PTC22:
 			BX_WARN(false, "PTC22 decoder is not implemented.");
-			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff00ff00), UINT32_C(0xff0000ff) );
+			imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff00ff00), UINT32_C(0xff0000ff) );
 			break;
 
 		case TextureFormat::PTC24:
 			BX_WARN(false, "PTC24 decoder is not implemented.");
-			imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffffff) );
+			imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xffffffff) );
 			break;
 
 		case TextureFormat::ATC:
@@ -6492,11 +6463,7 @@ namespace bimg
 					decodeBlockATC(temp, src);
 					src += 8;
 
-					uint8_t* block = &dst[(yy*_dstPitch+xx*4)*4];
-					bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-					bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-					bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-					bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 				}
 			}
 			break;
@@ -6506,16 +6473,11 @@ namespace bimg
 			{
 				for (uint32_t xx = 0; xx < width; ++xx)
 				{
+					decodeBlockATC(temp, src + 8);
 					decodeBlockDxt23A(temp+3, src);
-					src += 8;
-					decodeBlockATC(temp, src);
-					src += 8;
+					src += 16;
 
-					uint8_t* block = &dst[(yy*_dstPitch+xx*4)*4];
-					bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-					bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-					bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-					bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 				}
 			}
 			break;
@@ -6525,16 +6487,11 @@ namespace bimg
 			{
 				for (uint32_t xx = 0; xx < width; ++xx)
 				{
+					decodeBlockATC(temp, src + 8);
 					decodeBlockDxt45A(temp+3, src);
-					src += 8;
-					decodeBlockATC(temp, src);
-					src += 8;
+					src += 16;
 
-					uint8_t* block = &dst[(yy*_dstPitch+xx*4)*4];
-					bx::memCopy(&block[0*_dstPitch], &temp[ 0], 16);
-					bx::memCopy(&block[1*_dstPitch], &temp[16], 16);
-					bx::memCopy(&block[2*_dstPitch], &temp[32], 16);
-					bx::memCopy(&block[3*_dstPitch], &temp[48], 16);
+					imageCopyBlock(dst, _dstPitch, temp, xx, yy, _width, _height, 4);
 				}
 			}
 			break;
@@ -6582,7 +6539,7 @@ namespace bimg
 				{
 					// Failed to convert, just make ugly red-yellow checkerboard texture.
 					BX_WARN(false, "Decoder for %s is not implemented.", getName(_srcFormat) );
-					imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xffff0000), UINT32_C(0xffffff00) );
+					imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xffff0000), UINT32_C(0xffffff00) );
 				}
 			}
 			break;
@@ -6641,7 +6598,7 @@ namespace bimg
 					if (status != ASTCENC_SUCCESS)
 					{
 						BX_TRACE("astc error in config init %s", astcenc_get_error_string(status));
-						imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+						imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
 						break;
 					}
 
@@ -6651,9 +6608,15 @@ namespace bimg
 					if (status != ASTCENC_SUCCESS)
 					{
 						BX_TRACE("astc error in context alloc %s", astcenc_get_error_string(status));
-						imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+						imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
 						break;
 					}
+
+					const uint32_t tightPitch = _width*4;
+					void* imageData = tightPitch == _dstPitch
+						? _dst
+						: bx::alloc(_allocator, tightPitch*_height)
+						;
 
 					//Put image data into an astcenc_image
 					astcenc_image image{};
@@ -6661,7 +6624,7 @@ namespace bimg
 					image.dim_y     = _height;
 					image.dim_z     = 1;
 					image.data_type = ASTCENC_TYPE_U8;
-					image.data      = &_dst;
+					image.data      = &imageData;
 
 					const uint64_t size = imageGetSize(NULL, _width, _height, 0, false, false, 1, _srcFormat);
 
@@ -6685,27 +6648,38 @@ namespace bimg
 					if (status != ASTCENC_SUCCESS)
 					{
 						BX_TRACE("astc error in compress image %s", astcenc_get_error_string(status));
-						imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
+						imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xffffff00) );
 
 						astcenc_context_free(context);
+
+						if (imageData != _dst)
+						{
+							bx::free(_allocator, imageData);
+						}
+
 						break;
 					}
 
 					astcenc_context_free(context);
+
+					if (imageData != _dst)
+					{
+						bx::memCopy(_dst, _dstPitch, imageData, tightPitch, tightPitch, _height);
+						bx::free(_allocator, imageData);
+					}
 			}
 #else
 			{
 				BX_WARN(false, "ASTC decoder is disabled (BIMG_CONFIG_DECODE_ASTC).");
-				imageCheckerboard(_dst, _width, _height, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
+				imageCheckerboard(_dst, _width, _height, _dstPitch, 16, UINT32_C(0xff000000), UINT32_C(0xff00ff00) );
 			}
 #endif
 			break;
 
 		default:
 			{
-				const uint32_t srcPitch = _width * 4;
 				imageDecodeToBgra8(_allocator, _dst, _src, _width, _height, _dstPitch, _srcFormat);
-				imageSwizzleBgra8(_dst, _dstPitch, _width, _height, _dst, srcPitch);
+				imageSwizzleBgra8(_dst, _dstPitch, _width, _height, _dst, _dstPitch);
 			}
 			break;
 		}
@@ -6782,16 +6756,17 @@ namespace bimg
 
 		const uint32_t srcBpp   = s_imageBlockInfo[_srcFormat].bitsPerPixel;
 		const uint32_t srcPitch = _width*srcBpp/8;
+		const uint32_t srcSlice = uint32_t(imageGetSize(NULL, _width, _height, 1, false, false, 1, _srcFormat) );
 
-		for (uint32_t zz = 0; zz < _depth; ++zz, src += _height*srcPitch, dst += _height*_dstPitch)
+		for (uint32_t zz = 0; zz < _depth; ++zz, src += srcSlice, dst += _height*_dstPitch)
 		{
 			switch (_srcFormat)
 			{
 			case TextureFormat::BC5:
 			case TextureFormat::BC5S:
 				{
-					uint32_t width  = _width/4;
-					uint32_t height = _height/4;
+					uint32_t width  = (_width  + 3)/4;
+					uint32_t height = (_height + 3)/4;
 
 					const uint8_t* srcData = src;
 
@@ -6806,18 +6781,17 @@ namespace bimg
 							decodeBlockDxt45A(temp+1, srcData);
 							srcData += 8;
 
+							float tmp[16*4];
+
 							for (uint32_t ii = 0; ii < 16; ++ii)
 							{
-								float nx = temp[ii*4+2]*2.0f/255.0f - 1.0f;
-								float ny = temp[ii*4+1]*2.0f/255.0f - 1.0f;
-
-								const uint32_t offset = (yy*4 + ii/4)*_width*16 + (xx*4 + ii%4)*16;
-								float* block = (float*)&dst[offset];
-								block[0] = nx;
-								block[1] = ny;
-								block[2] = 0.0f;
-								block[3] = 1.0f;
+								tmp[ii*4+0] = temp[ii*4+2]*2.0f/255.0f - 1.0f;
+								tmp[ii*4+1] = temp[ii*4+1]*2.0f/255.0f - 1.0f;
+								tmp[ii*4+2] = 0.0f;
+								tmp[ii*4+3] = 1.0f;
 							}
+
+							imageCopyBlock(dst, _dstPitch, tmp, xx, yy, _width, _height, 16);
 						}
 					}
 				}
@@ -6826,8 +6800,8 @@ namespace bimg
 			case TextureFormat::BC6H:
 			case TextureFormat::BC6HU:
 				{
-					uint32_t width  = _width/4;
-					uint32_t height = _height/4;
+					uint32_t width  = (_width  + 3)/4;
+					uint32_t height = (_height + 3)/4;
 
 					const uint8_t* srcData = src;
 
@@ -6839,18 +6813,14 @@ namespace bimg
 							decodeBlockBc6h(tmp, srcData);
 							srcData += 16;
 
-							uint8_t* block = (uint8_t*)&dst[yy*_dstPitch*4 + xx*64];
-							bx::memCopy(&block[0*_dstPitch], &tmp[ 0], 64);
-							bx::memCopy(&block[1*_dstPitch], &tmp[16], 64);
-							bx::memCopy(&block[2*_dstPitch], &tmp[32], 64);
-							bx::memCopy(&block[3*_dstPitch], &tmp[48], 64);
+							imageCopyBlock(dst, _dstPitch, tmp, xx, yy, _width, _height, 16);
 						}
 					}
 				}
 				break;
 
 			case TextureFormat::RGBA32F:
-				bx::memCopy(dst, src, _dstPitch*_height);
+				bx::memCopy(dst, _dstPitch, src, srcPitch, bx::min(srcPitch, _dstPitch), _height);
 				break;
 
 			default:
@@ -6859,7 +6829,10 @@ namespace bimg
 					uint64_t size = imageGetSize(NULL, _width, _height, 0, false, false, 1, TextureFormat::RGBA8);
 					void* temp = bx::alloc(_allocator, size_t(size) );
 					imageDecodeToRgba8(_allocator, temp, src, _width, _height, _width*4, _srcFormat);
-					imageRgba8ToRgba32f(dst, _width, _height, _width*4, temp);
+					for (uint32_t yy = 0; yy < _height; ++yy)
+					{
+						imageRgba8ToRgba32f(&dst[yy*_dstPitch], _width, 1, _width*4, (const uint8_t*)temp + yy*_width*4);
+					}
 					bx::free(_allocator, temp);
 				}
 				else
