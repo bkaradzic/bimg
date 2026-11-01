@@ -117,7 +117,8 @@ static bool processFile(bx::AllocatorI* _allocator, const char* _filePath)
 
 	if (!parsed)
 	{
-		bx::printf("%s: not a recognized image (%S)\n", _filePath, &err.getMessage() );
+		const bx::StringLiteral msg = err.getMessage();
+		bx::printf("%s: not a recognized image (%S)\n", _filePath, &msg);
 		return false;
 	}
 
