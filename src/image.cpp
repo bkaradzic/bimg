@@ -1600,9 +1600,9 @@ namespace bimg
 		return uint8_t(result.u32);
 	}
 
-	static void decodeBlockDxt(uint8_t _dst[16*4], const uint8_t _src[8])
+	[[maybe_unused]] static void decodeBlockDxt(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC2 || BIMG_CONFIG_DECODE_BC3) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_BC2 || BIMG_CONFIG_DECODE_BC3) )
 		{
 			return;
 		}
@@ -1636,9 +1636,9 @@ namespace bimg
 		}
 	}
 
-	static void decodeBlockDxt1(uint8_t _dst[16*4], const uint8_t _src[8])
+	[[maybe_unused]] static void decodeBlockDxt1(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC1 || BIMG_CONFIG_DECODE_BC2 || BIMG_CONFIG_DECODE_BC3) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_BC1 || BIMG_CONFIG_DECODE_BC2 || BIMG_CONFIG_DECODE_BC3) )
 		{
 			return;
 		}
@@ -1694,7 +1694,7 @@ namespace bimg
 
 	static void decodeBlockDxt23A(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC2) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_BC2) )
 		{
 			return;
 		}
@@ -1708,7 +1708,7 @@ namespace bimg
 
 	static void decodeBlockDxt45A(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC3 || BIMG_CONFIG_DECODE_BC4 || BIMG_CONFIG_DECODE_BC5) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_BC3 || BIMG_CONFIG_DECODE_BC4 || BIMG_CONFIG_DECODE_BC5) )
 		{
 			return;
 		}
@@ -2088,7 +2088,7 @@ namespace bimg
 
 	static void decodeBlockBc6h(uint16_t _dst[16*3], const uint8_t _src[16], bool _signed)
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
 		{
 			return;
 		}
@@ -2513,7 +2513,7 @@ namespace bimg
 
 	static void decodeBlockBc6h(float _dst[16*4], const uint8_t _src[16])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
 		{
 			return;
 		}
@@ -2564,9 +2564,9 @@ namespace bimg
 		{ 2, 6, 0, 0, 5, 5, 1, 0, { 2, 0 } }, // 7
 	};
 
-	static void decodeBlockBc7(uint8_t _dst[16*4], const uint8_t _src[16])
+	[[maybe_unused]] static void decodeBlockBc7(uint8_t _dst[16*4], const uint8_t _src[16])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_BC7) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_BC7) )
 		{
 			return;
 		}
@@ -2762,7 +2762,7 @@ namespace bimg
 	//
 	static void decodeBlockATC(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ATC) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_ATC) )
 		{
 			return;
 		}
@@ -3073,9 +3073,9 @@ namespace bimg
 		}
 	}
 
-	static void decodeBlockEtc12(uint8_t _dst[16*4], const uint8_t _src[8])
+	[[maybe_unused]] static void decodeBlockEtc12(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC1 || BIMG_CONFIG_DECODE_ETC2) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC1 || BIMG_CONFIG_DECODE_ETC2) )
 		{
 			return;
 		}
@@ -3227,9 +3227,9 @@ namespace bimg
 		}
 	}
 
-	static void decodeBlockEtc2Rgb8A1(uint8_t _dst[16*4], const uint8_t _src[8])
+	[[maybe_unused]] static void decodeBlockEtc2Rgb8A1(uint8_t _dst[16*4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
 		{
 			return;
 		}
@@ -3356,7 +3356,7 @@ namespace bimg
 
 	void decodeBlockEtc2Alpha(uint8_t _dst[16 * 4], const uint8_t _src[8])
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2))
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2))
 		{
 			return;
 		}
@@ -3383,7 +3383,7 @@ namespace bimg
 	template<bool SignedT>
 	static void decodeBlockEac(uint8_t _dst[16*4], const uint8_t _src[8], uint32_t _byteOffset)
 	{
-		if (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+		if constexpr (!BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
 		{
 			return;
 		}
@@ -6090,7 +6090,7 @@ namespace bimg
 		switch (_srcFormat)
 		{
 		case TextureFormat::BC1:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC1) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_BC1) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6111,7 +6111,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::BC2:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC2) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_BC2) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6134,7 +6134,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::BC3:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC3) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_BC3) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6158,7 +6158,7 @@ namespace bimg
 
 		case TextureFormat::BC4:
 		case TextureFormat::BC4S:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC4) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_BC4) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6187,7 +6187,7 @@ namespace bimg
 
 		case TextureFormat::BC5:
 		case TextureFormat::BC5S:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC5) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_BC5) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6217,7 +6217,7 @@ namespace bimg
 
 		case TextureFormat::BC6H:
 		case TextureFormat::BC6HU:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_BC6) )
 			{
 				ImageContainer* rgba32f = imageAlloc(_allocator
 					, TextureFormat::RGBA32F
@@ -6243,7 +6243,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::BC7:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_BC7) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_BC7) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6265,7 +6265,7 @@ namespace bimg
 
 		case TextureFormat::ETC1:
 		case TextureFormat::ETC2:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC1 || BIMG_CONFIG_DECODE_ETC2) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_ETC1 || BIMG_CONFIG_DECODE_ETC2) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6286,7 +6286,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::ETC2A:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2))
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2))
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6309,7 +6309,7 @@ namespace bimg
 			break;
 
 		case TextureFormat::ETC2A1:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
 			{
 				for (uint32_t yy = 0; yy < height; ++yy)
 				{
@@ -6331,7 +6331,7 @@ namespace bimg
 
 		case TextureFormat::EACR11:
 		case TextureFormat::EACR11S:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
 			{
 				const bool sign = TextureFormat::EACR11S == _srcFormat;
 
@@ -6371,7 +6371,7 @@ namespace bimg
 
 		case TextureFormat::EACRG11:
 		case TextureFormat::EACRG11S:
-			if (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
+			if constexpr (BX_ENABLED(BIMG_CONFIG_DECODE_ETC2) )
 			{
 				const bool sign = TextureFormat::EACRG11S == _srcFormat;
 
