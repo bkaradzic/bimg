@@ -562,8 +562,45 @@ namespace bimg
 		, bx::Error* _err = NULL
 		);
 
+	/// Write PNG. Uses WIC when available, otherwise bundled uncompressed writer.
+	///
+	/// @param[in] _writer Writer.
+	/// @param[in] _width Width in texels.
+	/// @param[in] _height Height in texels.
+	/// @param[in] _srcPitch Source pitch in bytes.
+	/// @param[in] _src Source texels.
+	/// @param[in] _format `TextureFormat::R8`, `TextureFormat::RGBA8` or `TextureFormat::BGRA8`.
+	/// @param[in] _yflip Write rows bottom to top.
+	/// @param[in,out] _err Error, when not NULL.
+	///
+	/// @returns Number of bytes written.
 	///
 	int32_t imageWritePng(
+		  bx::WriterI* _writer
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, TextureFormat::Enum _format
+		, bool _yflip
+		, bx::Error* _err = NULL
+		);
+
+	/// Write 24-bit BMP, alpha is dropped. Uses WIC when available, otherwise bundled uncompressed
+	/// writer.
+	///
+	/// @param[in] _writer Writer.
+	/// @param[in] _width Width in texels.
+	/// @param[in] _height Height in texels.
+	/// @param[in] _srcPitch Source pitch in bytes.
+	/// @param[in] _src Source texels.
+	/// @param[in] _format `TextureFormat::R8`, `TextureFormat::RGBA8` or `TextureFormat::BGRA8`.
+	/// @param[in] _yflip Write rows bottom to top.
+	/// @param[in,out] _err Error, when not NULL.
+	///
+	/// @returns Number of bytes written.
+	///
+	int32_t imageWriteBmp(
 		  bx::WriterI* _writer
 		, uint32_t _width
 		, uint32_t _height

@@ -78,6 +78,18 @@
 #	define BIMG_CONFIG_USE_WIC 0
 #endif // BIMG_CONFIG_USE_WIC && !BX_PLATFORM_WINDOWS
 
+/// Encode images with WIC when it's present at runtime, with no link time dependency. Bundled
+/// writers are the fallback. Windows only.
+///
+#ifndef BIMG_CONFIG_ENCODE_WIC
+#	define BIMG_CONFIG_ENCODE_WIC BX_PLATFORM_WINDOWS
+#endif // BIMG_CONFIG_ENCODE_WIC
+
+#if BIMG_CONFIG_ENCODE_WIC && !BX_PLATFORM_WINDOWS
+#	undef  BIMG_CONFIG_ENCODE_WIC
+#	define BIMG_CONFIG_ENCODE_WIC 0
+#endif // BIMG_CONFIG_ENCODE_WIC && !BX_PLATFORM_WINDOWS
+
 /// Use stb_image for BMP, GIF, HDR, JPEG, PIC, PNM, PSD and TGA. When disabled those formats are
 /// not parsed, except for BMP, GIF and JPEG when `BIMG_CONFIG_USE_WIC` decodes them.
 ///

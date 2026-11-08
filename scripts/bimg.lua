@@ -19,6 +19,8 @@ project "bimg"
 	files {
 		path.join(BIMG_DIR, "include/**"),
 		path.join(BIMG_DIR, "src/image.cpp"),
+		path.join(BIMG_DIR, "src/image_encode_wic.cpp"),
+		path.join(BIMG_DIR, "src/image_wic.h"),
 		path.join(BIMG_DIR, "src/bimg_p.h"),
 		path.join(BIMG_DIR, "src/config.h"),
 
