@@ -67,6 +67,17 @@ namespace bimg
 		uint32_t size;
 	};
 
+	struct WicContainer
+	{
+		enum Enum
+		{
+			Bmp,
+			Png,
+
+			Count
+		};
+	};
+
 	struct TextureCreate
 	{
 		TextureFormat::Enum m_format;
@@ -147,6 +158,19 @@ namespace bimg
 		, ImageContainer& _imageContainer
 		, const void* _data
 		, uint32_t _size
+		, bx::Error* _err
+		);
+
+	///
+	int32_t imageEncodeWic(
+		  bx::WriterI* _writer
+		, WicContainer::Enum _container
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, TextureFormat::Enum _format
+		, bool _yflip
 		, bx::Error* _err
 		);
 
