@@ -414,7 +414,7 @@ namespace bimg
 			_info->numMips = numMips;
 			_info->numLayers = _numLayers;
 			_info->cubeMap   = _cubeMap;
-			_info->storageSize  = uint32_t(size);
+			_info->storageSize  = uint32_t(bx::min<uint64_t>(size, UINT32_MAX) );
 			_info->bitsPerPixel = bpp;
 		}
 
@@ -454,7 +454,7 @@ namespace bimg
 		const uint32_t height = bx::min<uint32_t>(4, _height - _yy*4);
 
 		const uint8_t* src = (const uint8_t*)_block;
-		uint8_t* dst = &_dst[_yy*4*_dstPitch + _xx*4*_texelSize];
+		uint8_t* dst = &_dst[uint64_t(_yy)*4*_dstPitch + uint64_t(_xx)*4*_texelSize];
 
 		for (uint32_t ii = 0; ii < height; ++ii)
 		{
@@ -1463,9 +1463,9 @@ namespace bimg
 
 					const uint32_t dstBpp       = s_imageBlockInfo[_dstFormat].bitsPerPixel;
 					const uint32_t scratchPitch = mip.m_width * dstBpp / 8;
-					const uint32_t scratchSize  = scratchPitch * mip.m_height * mip.m_depth;
+					const uint64_t scratchSize  = uint64_t(scratchPitch) * mip.m_height * mip.m_depth;
 					uint8_t* scratch = needScratch
-						? (uint8_t*)bx::alloc(_allocator, scratchSize)
+						? (uint8_t*)bx::alloc(_allocator, size_t(scratchSize) )
 						: NULL
 						;
 
@@ -6852,7 +6852,7 @@ namespace bimg
 					imageDecodeToRgba8(_allocator, temp, src, _width, _height, _width*4, _srcFormat);
 					for (uint32_t yy = 0; yy < _height; ++yy)
 					{
-						imageRgba8ToRgba32f(&dst[yy*_dstPitch], _width, 1, _width*4, (const uint8_t*)temp + yy*_width*4);
+						imageRgba8ToRgba32f(&dst[uint64_t(yy)*_dstPitch], _width, 1, _width*4, (const uint8_t*)temp + uint64_t(yy)*_width*4);
 					}
 					bx::free(_allocator, temp);
 				}
@@ -7496,7 +7496,7 @@ namespace bimg
 		{
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				float rgba[4];
+				float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 				unpack(rgba, &data[xx*bpp/8]);
 
 				const float maxVal = bx::max(rgba[0], rgba[1], rgba[2]);
