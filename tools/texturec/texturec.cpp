@@ -7,6 +7,7 @@
 #include <bx/readerwriter.h>
 #include <bx/endian.h>
 #include <bx/math.h>
+#include <bx/pixelformat.h>
 
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -153,8 +154,33 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			outputFormat = bimg::TextureFormat::R8;
 		}
 
+		const bimg::ImageBlockInfo& parsedBlockInfo = bimg::getBlockInfo(inputFormat);
+		const bimg::ImageBlockInfo& outputBlockInfo = bimg::getBlockInfo(outputFormat);
+
+		const bool grayInput = true
+			&& !bimg::isCompressed(inputFormat)
+			&& bx::EncodingType::Unorm == bx::EncodingType::Enum(parsedBlockInfo.encoding)
+			&& (8 == parsedBlockInfo.rBits || 16 == parsedBlockInfo.rBits)
+			&& 0 == parsedBlockInfo.bBits
+			&& 0 == parsedBlockInfo.aBits
+			;
+
+		if (grayInput
+		&&  (0 != outputBlockInfo.bBits || 0 != outputBlockInfo.aBits) )
+		{
+			const bool wide = 16 == parsedBlockInfo.rBits;
+
+			bimg::ImageContainer* rgba = bimg::imageConvert(_allocator, wide ? bimg::TextureFormat::RGBA16 : bimg::TextureFormat::RGBA8, *input);
+
+			if (NULL != rgba)
+			{
+				bimg::imageFree(input);
+				input       = rgba;
+				inputFormat = rgba->m_format;
+			}
+		}
+
 		const bimg::ImageBlockInfo&  inputBlockInfo  = bimg::getBlockInfo(inputFormat);
-		const bimg::ImageBlockInfo&  outputBlockInfo = bimg::getBlockInfo(outputFormat);
 		const uint32_t blockWidth  = outputBlockInfo.blockWidth;
 		const uint32_t blockHeight = outputBlockInfo.blockHeight;
 		const uint32_t minBlockX   = outputBlockInfo.minBlockX;

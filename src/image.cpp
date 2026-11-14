@@ -27,47 +27,47 @@ namespace bimg
 		//  |   |  |   |  |  |   |  |   +---+---+---+----- r, g, b, a bits
 		//  |   |  |   |  |  |   |  |   r   g   b   a  +-- encoding type
 		//  |   |  |   |  |  |   |  |   |   |   |   |  |
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC1
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC2
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC3
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC4
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // BC4S
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC5
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // BC5S
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // BC6H
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Float) }, // BC6HU
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC7
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC1
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2A
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2A1
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // EACR11 UNORM
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // EACR11 SNORM
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // EACRG11 UNORM
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // EACRG11 SNORM
-		{   2,  8, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC12
-		{   4,  4, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC14
-		{   2,  8, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC12A
-		{   4,  4, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC14A
-		{   2,  8, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC22
-		{   4,  4, 4,  8, 2, 2,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC24
-		{   4,  4, 4,  8, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ATC
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ATCE
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ATCI
-		{   8,  4, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC4x4
-		{   6,  5, 4, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC5x4
-		{   6,  5, 5, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC5x5
-		{   4,  6, 5, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC6x5
-		{   4,  6, 6, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC6x6
-		{   4,  8, 5, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC8x5
-		{   3,  8, 6, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC8x6
-		{   2,  8, 8, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC8x8
-		{   3, 10, 5, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x5
-		{   2, 10, 6, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x6
-		{   2, 10, 8, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x8
-		{   1, 10,10, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x10
-		{   1, 12,10, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC12x10
-		{   1, 12,12, 16, 1, 1,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // ASTC12x12
+		{   4,  4, 4,  8, 1, 1,  0, 0,  5,  6,  5,  1, uint8_t(bx::EncodingType::Unorm) }, // BC1
+		{   8,  4, 4, 16, 1, 1,  0, 0,  5,  6,  5,  4, uint8_t(bx::EncodingType::Unorm) }, // BC2
+		{   8,  4, 4, 16, 1, 1,  0, 0,  5,  6,  5,  8, uint8_t(bx::EncodingType::Unorm) }, // BC3
+		{   4,  4, 4,  8, 1, 1,  0, 0,  8,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC4
+		{   4,  4, 4,  8, 1, 1,  0, 0,  8,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // BC4S
+		{   8,  4, 4, 16, 1, 1,  0, 0,  8,  8,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // BC5
+		{   8,  4, 4, 16, 1, 1,  0, 0,  8,  8,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // BC5S
+		{   8,  4, 4, 16, 1, 1,  0, 0, 16, 16, 16,  0, uint8_t(bx::EncodingType::Float) }, // BC6H
+		{   8,  4, 4, 16, 1, 1,  0, 0, 16, 16, 16,  0, uint8_t(bx::EncodingType::Float) }, // BC6HU
+		{   8,  4, 4, 16, 1, 1,  0, 0,  7,  7,  7,  8, uint8_t(bx::EncodingType::Unorm) }, // BC7
+		{   4,  4, 4,  8, 1, 1,  0, 0,  8,  8,  8,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC1
+		{   4,  4, 4,  8, 1, 1,  0, 0,  8,  8,  8,  0, uint8_t(bx::EncodingType::Unorm) }, // ETC2
+		{   8,  4, 4, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ETC2A
+		{   4,  4, 4,  8, 1, 1,  0, 0,  8,  8,  8,  1, uint8_t(bx::EncodingType::Unorm) }, // ETC2A1
+		{   4,  4, 4,  8, 1, 1,  0, 0, 11,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // EACR11 UNORM
+		{   4,  4, 4,  8, 1, 1,  0, 0, 11,  0,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // EACR11 SNORM
+		{   8,  4, 4, 16, 1, 1,  0, 0, 11, 11,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // EACRG11 UNORM
+		{   8,  4, 4, 16, 1, 1,  0, 0, 11, 11,  0,  0, uint8_t(bx::EncodingType::Snorm) }, // EACRG11 SNORM
+		{   2,  8, 4,  8, 2, 2,  0, 0,  5,  5,  5,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC12
+		{   4,  4, 4,  8, 2, 2,  0, 0,  5,  5,  5,  0, uint8_t(bx::EncodingType::Unorm) }, // PTC14
+		{   2,  8, 4,  8, 2, 2,  0, 0,  5,  5,  5,  4, uint8_t(bx::EncodingType::Unorm) }, // PTC12A
+		{   4,  4, 4,  8, 2, 2,  0, 0,  5,  5,  5,  4, uint8_t(bx::EncodingType::Unorm) }, // PTC14A
+		{   2,  8, 4,  8, 2, 2,  0, 0,  5,  5,  5,  4, uint8_t(bx::EncodingType::Unorm) }, // PTC22
+		{   4,  4, 4,  8, 2, 2,  0, 0,  5,  5,  5,  4, uint8_t(bx::EncodingType::Unorm) }, // PTC24
+		{   4,  4, 4,  8, 1, 1,  0, 0,  5,  6,  5,  0, uint8_t(bx::EncodingType::Unorm) }, // ATC
+		{   8,  4, 4, 16, 1, 1,  0, 0,  5,  6,  5,  4, uint8_t(bx::EncodingType::Unorm) }, // ATCE
+		{   8,  4, 4, 16, 1, 1,  0, 0,  5,  6,  5,  8, uint8_t(bx::EncodingType::Unorm) }, // ATCI
+		{   8,  4, 4, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC4x4
+		{   6,  5, 4, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC5x4
+		{   6,  5, 5, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC5x5
+		{   4,  6, 5, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC6x5
+		{   4,  6, 6, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC6x6
+		{   4,  8, 5, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC8x5
+		{   3,  8, 6, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC8x6
+		{   2,  8, 8, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC8x8
+		{   3, 10, 5, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x5
+		{   2, 10, 6, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x6
+		{   2, 10, 8, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x8
+		{   1, 10,10, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC10x10
+		{   1, 12,10, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC12x10
+		{   1, 12,12, 16, 1, 1,  0, 0,  8,  8,  8,  8, uint8_t(bx::EncodingType::Unorm) }, // ASTC12x12
 		{   0,  0, 0,  0, 0, 0,  0, 0,  0,  0,  0,  0, uint8_t(bx::EncodingType::Count) }, // Unknown
 		{   1,  8, 1,  1, 1, 1,  0, 0,  1,  0,  0,  0, uint8_t(bx::EncodingType::Unorm) }, // R1
 		{   8,  1, 1,  1, 1, 1,  0, 0,  0,  0,  0,  8, uint8_t(bx::EncodingType::Unorm) }, // A8
@@ -1423,8 +1423,113 @@ namespace bimg
 		return imageConvert(_allocator, _dst, _dstFormat, _src, _srcFormat, _width, _height, _depth, _width*srcBpp/8, dstPitch);
 	}
 
+	static bool isGrayscale(const ImageContainer& _image)
+	{
+		switch (_image.m_parser)
+		{
+		case ImageParser::Dds:
+		case ImageParser::Exr:
+		case ImageParser::Ktx:
+		case ImageParser::Ktx2:
+		case ImageParser::Pvr3:
+		case ImageParser::Count:
+			return false;
+
+		default:
+			break;
+		}
+
+		const ImageBlockInfo& blockInfo = s_imageBlockInfo[_image.m_format];
+		const bx::EncodingType::Enum encoding = bx::EncodingType::Enum(blockInfo.encoding);
+
+		return true
+			&& !isCompressed(_image.m_format)
+			&& bx::EncodingType::Unorm == encoding
+			&& (8 == blockInfo.rBits || 16 == blockInfo.rBits)
+			&& 0 == blockInfo.bBits
+			&& 0 == blockInfo.aBits
+			&& 1 == _image.m_numMips
+			&& 1 == _image.m_numLayers
+			&& 1 >= _image.m_depth
+			&& !_image.m_cubeMap
+			;
+	}
+
+	static ImageContainer* imageGrayToRgba(bx::AllocatorI* _allocator, const ImageContainer& _input)
+	{
+		const ImageBlockInfo& blockInfo = s_imageBlockInfo[_input.m_format];
+		const bool wide  = 16 == blockInfo.rBits;
+		const bool alpha =  0 != blockInfo.gBits;
+
+		ImageContainer* output = imageAlloc(_allocator
+			, wide ? TextureFormat::RGBA16 : TextureFormat::RGBA8
+			, _input.m_width
+			, _input.m_height
+			, 0
+			, 1
+			, false
+			, false
+			);
+
+		if (NULL == output)
+		{
+			return NULL;
+		}
+
+		output->m_orientation = _input.m_orientation;
+		output->m_parser      = _input.m_parser;
+		output->m_hasAlpha    = _input.m_hasAlpha;
+		output->m_srgb        = _input.m_srgb;
+
+		const uint32_t numChannels = alpha ? 2 : 1;
+
+		for (uint32_t ii = 0, num = _input.m_width*_input.m_height; ii < num; ++ii)
+		{
+			if (wide)
+			{
+				const uint16_t* src = (const uint16_t*)_input.m_data + ii*numChannels;
+				      uint16_t* dst = (uint16_t*)output->m_data + ii*4;
+				dst[0] = src[0];
+				dst[1] = src[0];
+				dst[2] = src[0];
+				dst[3] = alpha ? src[1] : UINT16_MAX;
+			}
+			else
+			{
+				const uint8_t* src = (const uint8_t*)_input.m_data + ii*numChannels;
+				      uint8_t* dst = (uint8_t*)output->m_data + ii*4;
+				dst[0] = src[0];
+				dst[1] = src[0];
+				dst[2] = src[0];
+				dst[3] = alpha ? src[1] : UINT8_MAX;
+			}
+		}
+
+		return output;
+	}
+
 	ImageContainer* imageConvert(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, const ImageContainer& _input, bool _convertMips)
 	{
+		const ImageBlockInfo& dstBlockInfo = s_imageBlockInfo[_dstFormat];
+
+		if (_dstFormat != _input.m_format
+		&&  isGrayscale(_input)
+		&&  (0 != dstBlockInfo.bBits || 0 != dstBlockInfo.aBits) )
+		{
+			ImageContainer* rgba = imageGrayToRgba(_allocator, _input);
+
+			if (NULL == rgba
+			||  _dstFormat == rgba->m_format)
+			{
+				return rgba;
+			}
+
+			ImageContainer* output = imageConvert(_allocator, _dstFormat, *rgba, _convertMips);
+			imageFree(rgba);
+
+			return output;
+		}
+
 		ImageContainer* output = imageAlloc(_allocator
 			, _dstFormat
 			, _input.m_width
