@@ -354,14 +354,10 @@ namespace bimg
 
 	uint8_t imageGetNumMips(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _depth)
 	{
-		const ImageBlockInfo& blockInfo = getBlockInfo(_format);
-		const uint32_t blockWidth  = blockInfo.blockWidth;
-		const uint32_t blockHeight = blockInfo.blockHeight;
-		const uint32_t minBlockX   = blockInfo.minBlockX;
-		const uint32_t minBlockY   = blockInfo.minBlockY;
+		BX_UNUSED(_format);
 
-		_width  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth )*blockWidth);
-		_height = bx::max<uint32_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
+		_width  = bx::max<uint32_t>(1, _width);
+		_height = bx::max<uint32_t>(1, _height);
 		_depth  = bx::max<uint32_t>(1, _depth);
 
 		uint8_t numMips = calcNumMips(true, _width, _height, _depth);
@@ -3829,14 +3825,8 @@ namespace bimg
 
 	ImageContainer* imageAlloc(bx::AllocatorI* _allocator, TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _numLayers, bool _cubeMap, bool _hasMips, const void* _data)
 	{
-		const ImageBlockInfo& blockInfo = getBlockInfo(_format);
-		const uint32_t blockWidth  = blockInfo.blockWidth;
-		const uint32_t blockHeight = blockInfo.blockHeight;
-		const uint32_t minBlockX   = blockInfo.minBlockX;
-		const uint32_t minBlockY   = blockInfo.minBlockY;
-
-		_width     = bx::max<uint32_t>(blockWidth  * minBlockX, ( (_width  + blockWidth  - 1) / blockWidth)*blockWidth);
-		_height    = bx::max<uint32_t>(blockHeight * minBlockY, ( (_height + blockHeight - 1) / blockHeight)*blockHeight);
+		_width     = bx::max<uint32_t>(1, _width);
+		_height    = bx::max<uint32_t>(1, _height);
 		_numLayers = bx::max<uint32_t>(1, _numLayers);
 
 		const uint32_t numSlices = bx::max<uint32_t>(1, _depth);

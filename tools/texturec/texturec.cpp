@@ -125,6 +125,39 @@ void imagePremultiplyAlpha(void* _inOut, uint32_t _width, uint32_t _height, uint
 	}
 }
 
+static const void* imagePadToBlocks(void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _dstWidth, uint32_t _dstHeight, uint32_t _bytesPerPixel)
+{
+	if (_width  == _dstWidth
+	&&  _height == _dstHeight)
+	{
+		return _src;
+	}
+
+	const uint32_t srcPitch = _width   *_bytesPerPixel;
+	const uint32_t dstPitch = _dstWidth*_bytesPerPixel;
+
+	const uint8_t* src = (const uint8_t*)_src;
+	uint8_t*       dst = (uint8_t*)_dst;
+
+	for (uint32_t zz = 0; zz < _depth; ++zz, src += srcPitch*_height, dst += dstPitch*_dstHeight)
+	{
+		for (uint32_t yy = 0; yy < _dstHeight; ++yy)
+		{
+			const uint8_t* srcRow = &src[bx::min(yy, _height-1)*srcPitch];
+			uint8_t*       dstRow = &dst[yy*dstPitch];
+
+			bx::memCopy(dstRow, srcRow, srcPitch);
+
+			for (uint32_t xx = _width; xx < _dstWidth; ++xx)
+			{
+				bx::memCopy(&dstRow[xx*_bytesPerPixel], &srcRow[(_width-1)*_bytesPerPixel], _bytesPerPixel);
+			}
+		}
+	}
+
+	return _dst;
+}
+
 bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData, uint32_t _inputSize, const Options& _options, bx::Error* _err)
 {
 	BX_ERROR_SCOPE(_err);
@@ -180,9 +213,13 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			}
 		}
 
-		const bimg::ImageBlockInfo&  inputBlockInfo  = bimg::getBlockInfo(inputFormat);
-		const uint32_t blockWidth  = outputBlockInfo.blockWidth;
-		const uint32_t blockHeight = outputBlockInfo.blockHeight;
+		const bool partialBlocks = true
+			&& bimg::TextureFormat::ASTC4x4   <= outputFormat
+			&& bimg::TextureFormat::ASTC12x12 >= outputFormat
+			;
+
+		const uint32_t blockWidth  = partialBlocks ? 1 : outputBlockInfo.blockWidth;
+		const uint32_t blockHeight = partialBlocks ? 1 : outputBlockInfo.blockHeight;
 		const uint32_t minBlockX   = outputBlockInfo.minBlockX;
 		const uint32_t minBlockY   = outputBlockInfo.minBlockY;
 		uint32_t outputWidth  = bx::max(blockWidth  * minBlockX, ( (input->m_width  + blockWidth  - 1) / blockWidth )*blockWidth);
@@ -282,6 +319,34 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 			&& (bimg::LightingModel::Count == _options.radiance)
 			;
 
+		const bool signedNormalInput = bimg::TextureFormat::BC5 == inputFormat;
+
+		if (bimg::isCompressed(inputFormat)
+		&& (!passThru || inputFormat != outputFormat) )
+		{
+			const bool decodeToFloat = false
+				|| _options.normalMap
+				|| bimg::TextureFormat::BC6H  == inputFormat
+				|| bimg::TextureFormat::BC6HU == inputFormat
+				;
+
+			const bimg::TextureFormat::Enum format = decodeToFloat ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA8;
+
+			bimg::ImageContainer* decoded = bimg::imageConvert(_allocator, format, *input);
+
+			if (NULL == decoded)
+			{
+				bimg::imageFree(input);
+
+				BX_ERROR_SET(_err, TEXTRUREC_ERROR, "Failed to decode input image.");
+				return NULL;
+			}
+
+			bimg::imageFree(input);
+			input       = decoded;
+			inputFormat = format;
+		}
+
 		if (!_options.sdf
 		&&  needResize)
 		{
@@ -312,18 +377,6 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 			bimg::imageFree(src);
 			bimg::imageFree(input);
-
-			if (bimg::isCompressed(inputFormat) )
-			{
-				if (inputFormat == bimg::TextureFormat::BC6H)
-				{
-					inputFormat = bimg::TextureFormat::RGBA32F;
-				}
-				else
-				{
-					inputFormat = bimg::TextureFormat::RGBA8;
-				}
-			}
 
 			input = bimg::imageConvert(_allocator, inputFormat, *dst);
 			bimg::imageFree(dst);
@@ -422,7 +475,10 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				// Normal map.
 				if (_options.normalMap)
 				{
-					uint32_t size = (uint32_t)bimg::imageGetSize(
+					uint32_t width  = mip.m_width;
+					uint32_t height = mip.m_height;
+
+					const uint32_t size = (uint32_t)bimg::imageGetSize(
 						  NULL
 						, uint16_t(dstMip.m_width)
 						, uint16_t(dstMip.m_height)
@@ -435,24 +491,25 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					temp = bx::alloc(_allocator, size);
 					float* rgba32f = (float*)temp;
 					float* rgbaDst = (float*)bx::alloc(_allocator, size);
+					float* padded  = (float*)bx::alloc(_allocator, size);
 
 					bimg::imageDecodeToRgba32f(_allocator
 						, rgba32f
 						, mip.m_data
-						, mip.m_width
-						, mip.m_height
+						, width
+						, height
 						, mip.m_depth
-						, dstMip.m_width*16
+						, width*16
 						, mip.m_format
 						);
 
-					if (bimg::TextureFormat::BC5 != mip.m_format)
+					if (!signedNormalInput)
 					{
-						for (uint32_t yy = 0; yy < mip.m_height; ++yy)
+						for (uint32_t yy = 0; yy < height; ++yy)
 						{
-							for (uint32_t xx = 0; xx < mip.m_width; ++xx)
+							for (uint32_t xx = 0; xx < width; ++xx)
 							{
-								const uint32_t offset = (yy*mip.m_width + xx) * 4;
+								const uint32_t offset = (yy*width + xx) * 4;
 								float* inout = &rgba32f[offset];
 								inout[0] = inout[0] * 2.0f - 1.0f;
 								inout[1] = inout[1] * 2.0f - 1.0f;
@@ -464,18 +521,18 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					imageRgba32fNormalize(
 						  rgba32f
-						, dstMip.m_width
-						, dstMip.m_height
-						, dstMip.m_width*16
+						, width
+						, height
+						, width*16
 						, rgba32f
 						);
 
 					bimg::imageRgba32f11to01(
 						  rgbaDst
-						, dstMip.m_width
-						, dstMip.m_height
+						, width
+						, height
 						, dstMip.m_depth
-						, dstMip.m_width*16
+						, width*16
 						, rgba32f
 						);
 
@@ -483,7 +540,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					bimg::imageEncodeFromRgba32f(
 						  _allocator
 						, dstData
-						, rgbaDst
+						, imagePadToBlocks(padded, rgbaDst, width, height, dstMip.m_depth, dstMip.m_width, dstMip.m_height, 16)
 						, dstMip.m_width
 						, dstMip.m_height
 						, dstMip.m_depth
@@ -494,31 +551,37 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
 					{
+						const uint32_t mipWidth  = bx::max(1u, width /2);
+						const uint32_t mipHeight = bx::max(1u, height/2);
+
 						bimg::imageRgba32fDownsample2x2NormalMap(
 							  rgba32f
-							, dstMip.m_width
-							, dstMip.m_height
-							, dstMip.m_width*16
-							, bx::strideAlign(dstMip.m_width/2, blockWidth)*16
+							, width
+							, height
+							, width*16
+							, mipWidth*16
 							, rgba32f
 							);
 
-						bimg::imageRgba32f11to01(
-							  rgbaDst
-							, dstMip.m_width
-							, dstMip.m_height
-							, dstMip.m_depth
-							, dstMip.m_width*16
-							, rgba32f
-							);
+						width  = mipWidth;
+						height = mipHeight;
 
 						bimg::imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
 						dstData = const_cast<uint8_t*>(dstMip.m_data);
 
+						bimg::imageRgba32f11to01(
+							  rgbaDst
+							, width
+							, height
+							, dstMip.m_depth
+							, width*16
+							, rgba32f
+							);
+
 						bimg::imageEncodeFromRgba32f(
 							  _allocator
 							, dstData
-							, rgbaDst
+							, imagePadToBlocks(padded, rgbaDst, width, height, dstMip.m_depth, dstMip.m_width, dstMip.m_height, 16)
 							, dstMip.m_width
 							, dstMip.m_height
 							, dstMip.m_depth
@@ -528,15 +591,20 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 							);
 					}
 
+					bx::free(_allocator, padded);
 					bx::free(_allocator, rgbaDst);
 				}
 				// HDR
-				else if ( (!bimg::isCompressed(inputFormat) && 8 != inputBlockInfo.rBits)
+				else if (8 != bimg::getBlockInfo(inputFormat).rBits
 					 || outputFormat == bimg::TextureFormat::BC6H
 					 || outputFormat == bimg::TextureFormat::BC7
 						)
 				{
-					uint32_t size = (uint32_t)bimg::imageGetSize(
+					uint32_t width  = mip.m_width;
+					uint32_t height = mip.m_height;
+					uint32_t depth  = mip.m_depth;
+
+					const uint32_t size = (uint32_t)bimg::imageGetSize(
 						  NULL
 						, uint16_t(dstMip.m_width)
 						, uint16_t(dstMip.m_height)
@@ -549,15 +617,16 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					temp = bx::alloc(_allocator, size);
 					float* rgba32f = (float*)temp;
 					float* rgbaDst = (float*)bx::alloc(_allocator, size);
+					float* padded  = (float*)bx::alloc(_allocator, size);
 
 					bimg::imageDecodeToRgba32f(
 						  _allocator
 						, rgba32f
 						, mip.m_data
-						, mip.m_width
-						, mip.m_height
-						, mip.m_depth
-						, dstMip.m_width*16
+						, width
+						, height
+						, depth
+						, width*16
 						, mip.m_format
 						);
 
@@ -565,9 +634,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					{
 						imagePremultiplyAlpha(
 							  rgba32f
-							, dstMip.m_width
-							, dstMip.m_height
-							, dstMip.m_depth
+							, width
+							, height
+							, depth
 							, bimg::TextureFormat::RGBA32F
 							);
 					}
@@ -575,7 +644,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					bimg::imageEncodeFromRgba32f(
 						  _allocator
 						, dstData
-						, rgba32f
+						, imagePadToBlocks(padded, rgba32f, width, height, depth, dstMip.m_width, dstMip.m_height, 16)
 						, dstMip.m_width
 						, dstMip.m_height
 						, dstMip.m_depth
@@ -588,10 +657,10 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					&&  _err->isOk() )
 					{
 						bimg::imageRgba32fToLinear(rgba32f
-							, mip.m_width
-							, mip.m_height
-							, mip.m_depth
-							, mip.m_width*16
+							, width
+							, height
+							, depth
+							, width*16
 							, rgba32f
 							);
 
@@ -599,20 +668,24 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						{
 							bimg::imageRgba32fLinearDownsample2x2(
 								  rgba32f
-								, dstMip.m_width
-								, dstMip.m_height
-								, dstMip.m_depth
-								, dstMip.m_width*16
+								, width
+								, height
+								, depth
+								, width*16
 								, rgba32f
 								);
+
+							width  = bx::max(1u, width /2);
+							height = bx::max(1u, height/2);
+							depth  = bx::max(1u, depth /2);
 
 							if (_options.pma)
 							{
 								imagePremultiplyAlpha(
 									  rgba32f
-									, dstMip.m_width
-									, dstMip.m_height
-									, dstMip.m_depth
+									, width
+									, height
+									, depth
 									, bimg::TextureFormat::RGBA32F
 									);
 							}
@@ -622,17 +695,17 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 							bimg::imageRgba32fToGamma(
 								  rgbaDst
-								, mip.m_width
-								, mip.m_height
-								, mip.m_depth
-								, mip.m_width*16
+								, width
+								, height
+								, depth
+								, width*16
 								, rgba32f
 								);
 
 							bimg::imageEncodeFromRgba32f(
 								  _allocator
 								, dstData
-								, rgbaDst
+								, imagePadToBlocks(padded, rgbaDst, width, height, depth, dstMip.m_width, dstMip.m_height, 16)
 								, dstMip.m_width
 								, dstMip.m_height
 								, dstMip.m_depth
@@ -643,6 +716,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						}
 					}
 
+					bx::free(_allocator, padded);
 					bx::free(_allocator, rgbaDst);
 				}
 				// SDF
@@ -766,7 +840,10 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 				// RGBA8
 				else
 				{
-					uint32_t size = (uint32_t)bimg::imageGetSize(
+					uint32_t width  = mip.m_width;
+					uint32_t height = mip.m_height;
+
+					const uint32_t size = (uint32_t)bimg::imageGetSize(
 						  NULL
 						, uint16_t(dstMip.m_width)
 						, uint16_t(dstMip.m_height)
@@ -777,15 +854,16 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						, bimg::TextureFormat::RGBA8
 						);
 					temp = bx::alloc(_allocator, size);
-					uint8_t* rgba = (uint8_t*)temp;
+					uint8_t* rgba   = (uint8_t*)temp;
+					uint8_t* padded = (uint8_t*)bx::alloc(_allocator, size);
 
 					bimg::imageDecodeToRgba8(
 						  _allocator
 						, rgba
 						, mip.m_data
-						, mip.m_width
-						, mip.m_height
-						, mip.m_width*4
+						, width
+						, height
+						, width*4
 						, mip.m_format
 						);
 
@@ -793,9 +871,9 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					if (_options.alphaTest)
 					{
 						coverage = bimg::imageAlphaTestCoverage(bimg::TextureFormat::RGBA8
-							, mip.m_width
-							, mip.m_height
-							, mip.m_width*4
+							, width
+							, height
+							, width*4
 							, rgba
 							, _options.edge
 							);
@@ -805,27 +883,24 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 					if (_options.iqa)
 					{
 						ref = bx::alloc(_allocator, size);
-						bx::memCopy(ref, rgba, size);
+						bx::memCopy(ref, rgba, width*height*4);
 					}
 
 					if (_options.pma)
 					{
 						imagePremultiplyAlpha(
 							  rgba
-							, dstMip.m_width
-							, dstMip.m_height
+							, width
+							, height
 							, dstMip.m_depth
 							, bimg::TextureFormat::RGBA8
 							);
 					}
 
-					bimg::imageGetRawData(*output, side, 0, output->m_data, output->m_size, dstMip);
-					dstData = const_cast<uint8_t*>(dstMip.m_data);
-
 					bimg::imageEncodeFromRgba8(
 						  _allocator
 						, dstData
-						, rgba
+						, imagePadToBlocks(padded, rgba, width, height, dstMip.m_depth, dstMip.m_width, dstMip.m_height, 4)
 						, dstMip.m_width
 						, dstMip.m_height
 						, dstMip.m_depth
@@ -836,21 +911,27 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					for (uint8_t lod = 1; lod < numMips && _err->isOk(); ++lod)
 					{
+						const uint32_t mipWidth  = bx::max(1u, width /2);
+						const uint32_t mipHeight = bx::max(1u, height/2);
+
 						bimg::imageRgba8Downsample2x2(rgba
-							, dstMip.m_width
-							, dstMip.m_height
+							, width
+							, height
 							, dstMip.m_depth
-							, dstMip.m_width*4
-							, bx::strideAlign(dstMip.m_width/2, blockWidth)*4
+							, width*4
+							, mipWidth*4
 							, rgba
 							);
+
+						width  = mipWidth;
+						height = mipHeight;
 
 						if (_options.alphaTest)
 						{
 							bimg::imageScaleAlphaToCoverage(bimg::TextureFormat::RGBA8
-								, dstMip.m_width
-								, dstMip.m_height
-								, dstMip.m_width*4
+								, width
+								, height
+								, width*4
 								, rgba
 								, coverage
 								, _options.edge
@@ -861,8 +942,8 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						{
 							imagePremultiplyAlpha(
 								  rgba
-								, dstMip.m_width
-								, dstMip.m_height
+								, width
+								, height
 								, dstMip.m_depth
 								, bimg::TextureFormat::RGBA8
 								);
@@ -874,7 +955,7 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 						bimg::imageEncodeFromRgba8(
 							  _allocator
 							, dstData
-							, rgba
+							, imagePadToBlocks(padded, rgba, width, height, dstMip.m_depth, dstMip.m_width, dstMip.m_height, 4)
 							, dstMip.m_width
 							, dstMip.m_height
 							, dstMip.m_depth
@@ -886,15 +967,19 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 					if (NULL != ref)
 					{
+						bimg::imageGetRawData(*output, side, 0, output->m_data, output->m_size, dstMip);
+
 						bimg::imageDecodeToRgba8(
 							  _allocator
-							, rgba
-							, output->m_data
-							, mip.m_width
-							, mip.m_height
-							, mip.m_width*mip.m_bpp/8
+							, padded
+							, dstMip.m_data
+							, dstMip.m_width
+							, dstMip.m_height
+							, dstMip.m_width*4
 							, outputFormat
 							);
+
+						bx::memCopy(rgba, mip.m_width*4, padded, dstMip.m_width*4, mip.m_width*4, mip.m_height);
 
 						float result = bimg::imageQualityRgba8(
 							  ref
@@ -907,6 +992,8 @@ bimg::ImageContainer* convert(bx::AllocatorI* _allocator, const void* _inputData
 
 						bx::free(_allocator, ref);
 					}
+
+					bx::free(_allocator, padded);
 				}
 
 				bx::free(_allocator, temp);
