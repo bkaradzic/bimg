@@ -380,39 +380,12 @@ namespace bimg
 				{
 				if (palette)
 				{
-					if (1 == state.info_raw.bitdepth)
+					if (8 > state.info_raw.bitdepth)
 					{
-						for (uint32_t ii = 0, num = width*height/8; ii < num; ++ii)
+						for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
 						{
-							uint8_t* dst = (uint8_t*)output->m_data + ii*32;
-							bx::memCopy(dst,      state.info_raw.palette + ( (data[ii]>>7)&0x1)*4, 4);
-							bx::memCopy(dst +  4, state.info_raw.palette + ( (data[ii]>>6)&0x1)*4, 4);
-							bx::memCopy(dst +  8, state.info_raw.palette + ( (data[ii]>>5)&0x1)*4, 4);
-							bx::memCopy(dst + 12, state.info_raw.palette + ( (data[ii]>>4)&0x1)*4, 4);
-							bx::memCopy(dst + 16, state.info_raw.palette + ( (data[ii]>>3)&0x1)*4, 4);
-							bx::memCopy(dst + 20, state.info_raw.palette + ( (data[ii]>>2)&0x1)*4, 4);
-							bx::memCopy(dst + 24, state.info_raw.palette + ( (data[ii]>>1)&0x1)*4, 4);
-							bx::memCopy(dst + 28, state.info_raw.palette + (  data[ii]    &0x1)*4, 4);
-						}
-					}
-					else if (2 == state.info_raw.bitdepth)
-					{
-						for (uint32_t ii = 0, num = width*height/4; ii < num; ++ii)
-						{
-							uint8_t* dst = (uint8_t*)output->m_data + ii*16;
-							bx::memCopy(dst,      state.info_raw.palette + ( (data[ii]>>6)&0x3)*4, 4);
-							bx::memCopy(dst +  4, state.info_raw.palette + ( (data[ii]>>4)&0x3)*4, 4);
-							bx::memCopy(dst +  8, state.info_raw.palette + ( (data[ii]>>2)&0x3)*4, 4);
-							bx::memCopy(dst + 12, state.info_raw.palette + (  data[ii]    &0x3)*4, 4);
-						}
-					}
-					else if (4 == state.info_raw.bitdepth)
-					{
-						for (uint32_t ii = 0, num = width*height/2; ii < num; ++ii)
-						{
-							uint8_t* dst = (uint8_t*)output->m_data + ii*8;
-							bx::memCopy(dst,      state.info_raw.palette + ( (data[ii]>>4)&0xf)*4, 4);
-							bx::memCopy(dst +  4, state.info_raw.palette + (  data[ii]    &0xf)*4, 4);
+							const uint32_t idx = pngReadPackedSample(data, ii, state.info_raw.bitdepth);
+							bx::memCopy( (uint8_t*)output->m_data + ii*4, state.info_raw.palette + idx*4, 4);
 						}
 					}
 					else
@@ -521,53 +494,13 @@ namespace bimg
 
 					output->m_hasAlpha = hasAlpha;
 				}
-				else if (1 == state.info_raw.bitdepth)
+				else if (8 > state.info_raw.bitdepth)
 				{
-					for (uint32_t ii = 0, num = width*height/8; ii < num; ++ii)
+					uint8_t* dst = (uint8_t*)output->m_data;
+
+					for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
 					{
-						uint8_t* src = (uint8_t*)data + ii;
-						uint8_t eightBits = src[0];
-
-						uint8_t* dst = (uint8_t*)output->m_data + ii*8;
-						dst[0] = uint8_t( (eightBits>>7)&0x1)*255;
-						dst[1] = uint8_t( (eightBits>>6)&0x1)*255;
-						dst[2] = uint8_t( (eightBits>>5)&0x1)*255;
-						dst[3] = uint8_t( (eightBits>>4)&0x1)*255;
-						dst[4] = uint8_t( (eightBits>>3)&0x1)*255;
-						dst[5] = uint8_t( (eightBits>>2)&0x1)*255;
-						dst[6] = uint8_t( (eightBits>>1)&0x1)*255;
-						dst[7] = uint8_t( (eightBits   )&0x1)*255;
-
-					}
-				}
-				else if (2 == state.info_raw.bitdepth)
-				{
-					for (uint32_t ii = 0, num = width*height/4; ii < num; ++ii)
-					{
-						uint8_t* src = (uint8_t*)data + ii;
-						uint8_t eightBits = src[0];
-
-						uint8_t* dst = (uint8_t*)output->m_data + ii*4;
-						// Note: not exactly precise.
-						// Correct way: dst[0] = uint8_t(float( (eightBits>>6)&0x3)*(255.0f/4.0f) );
-						dst[0] = uint8_t(uint32_t( ( (eightBits>>6)&0x3)*64)&0xff);
-						dst[1] = uint8_t(uint32_t( ( (eightBits>>4)&0x3)*64)&0xff);
-						dst[2] = uint8_t(uint32_t( ( (eightBits>>2)&0x3)*64)&0xff);
-						dst[3] = uint8_t(uint32_t( ( (eightBits   )&0x3)*64)&0xff);
-					}
-				}
-				else if (4 == state.info_raw.bitdepth)
-				{
-					for (uint32_t ii = 0, num = width*height/2; ii < num; ++ii)
-					{
-						uint8_t* src = (uint8_t*)data + ii;
-						uint8_t eightBits = src[0];
-
-						uint8_t* dst = (uint8_t*)output->m_data + ii*2;
-						// Note: not exactly precise.
-						// Correct way: dst[0] = uint8_t(float( (eightBits>>4)&0xf)*(255.0f/16.0f) );
-						dst[0] = uint8_t(uint32_t( ( (eightBits>>4)&0xf)*16)&0xff);
-						dst[1] = uint8_t(uint32_t( ( (eightBits   )&0xf)*16)&0xff);
+						dst[ii] = pngExpandGraySample(pngReadPackedSample(data, ii, state.info_raw.bitdepth), state.info_raw.bitdepth);
 					}
 				}
 				else if (16      == state.info_raw.bitdepth

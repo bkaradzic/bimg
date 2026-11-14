@@ -656,7 +656,7 @@ namespace bimg
 
 	static float getAlpha(UnpackFn _unpack, const void* _data)
 	{
-		float rgba[4];
+		float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		_unpack(rgba, _data);
 		return rgba[3];
 	}
@@ -675,15 +675,20 @@ namespace bimg
 		const uint32_t numSamples = _upscale;
 		const float sampleStep = 1.0f / numSamples;
 
-		for (uint32_t yy = 0, ystep = _srcPitch; yy < _height-1; ++yy, src += ystep)
+		for (uint32_t yy = 0; yy < _height; ++yy)
 		{
-			const uint8_t* data = src;
-			for (uint32_t xx = 0; xx < _width-1; ++xx, data += xstep)
+			const uint8_t* row0 = src + yy*_srcPitch;
+			const uint8_t* row1 = src + bx::min(yy+1, _height-1)*_srcPitch;
+
+			for (uint32_t xx = 0; xx < _width; ++xx)
 			{
-				float alpha00 = _scale * getAlpha(unpack, data);
-				float alpha10 = _scale * getAlpha(unpack, data+xstep);
-				float alpha01 = _scale * getAlpha(unpack, data+ystep);
-				float alpha11 = _scale * getAlpha(unpack, data+ystep+xstep);
+				const uint32_t x0 = xx*xstep;
+				const uint32_t x1 = bx::min(xx+1, _width-1)*xstep;
+
+				float alpha00 = _scale * getAlpha(unpack, row0 + x0);
+				float alpha10 = _scale * getAlpha(unpack, row0 + x1);
+				float alpha01 = _scale * getAlpha(unpack, row1 + x0);
+				float alpha11 = _scale * getAlpha(unpack, row1 + x1);
 
 				for (float fy = 0.0f; fy < 1.0f; fy += sampleStep)
 				{
@@ -759,7 +764,7 @@ namespace bimg
 			uint8_t* data = src;
 			for (uint32_t xx = 0; xx < _width; ++xx, data += xstep)
 			{
-				float rgba[4];
+				float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 				unpack(rgba, data);
 				rgba[3] = bx::clamp(rgba[3]*scale, 0.0f, 1.0f);
 				pack(data, rgba);
