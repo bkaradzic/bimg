@@ -7155,6 +7155,16 @@ static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
    }
 }
 
+static void stbi__hdr_load_flat(stbi__context *s, float *hdr_data, int start, int num, int req_comp)
+{
+   int i;
+   for (i=start; i < num; ++i) {
+      stbi_uc rgbe[4];
+      stbi__getn(s, rgbe, 4);
+      stbi__hdr_convert(hdr_data + i * req_comp, rgbe, req_comp);
+   }
+}
+
 static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
    char buffer[STBI__HDR_BUFLEN];
@@ -7215,14 +7225,7 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    // image data is stored as some number of sca
    if ( width < 8 || width >= 32768) {
       // Read flat data
-      for (j=0; j < height; ++j) {
-         for (i=0; i < width; ++i) {
-            stbi_uc rgbe[4];
-           main_decode_loop:
-            stbi__getn(s, rgbe, 4);
-            stbi__hdr_convert(hdr_data + j * width * req_comp + i * req_comp, rgbe, req_comp);
-         }
-      }
+      stbi__hdr_load_flat(s, hdr_data, 0, width * height, req_comp);
    } else {
       // Read RLE-encoded data
       scanline = NULL;
@@ -7240,10 +7243,9 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
             rgbe[2] = (stbi_uc) len;
             rgbe[3] = (stbi_uc) stbi__get8(s);
             stbi__hdr_convert(hdr_data, rgbe, req_comp);
-            i = 1;
-            j = 0;
             STBI_FREE(scanline);
-            goto main_decode_loop; // yes, this makes no sense
+            stbi__hdr_load_flat(s, hdr_data, 1, width * height, req_comp);
+            return hdr_data;
          }
          len <<= 8;
          len |= stbi__get8(s);
