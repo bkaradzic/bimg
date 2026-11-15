@@ -74,7 +74,7 @@ namespace bimg
 		for (uint32_t yy = 0; yy < paddedHeight; ++yy)
 		{
 			const uint32_t sy = bx::min(yy, _height-1);
-			const uint8_t* srcRow = &_src[sy*srcPitch];
+			const uint8_t* srcRow = &_src[uint64_t(sy)*srcPitch];
 			uint32_t* dstRow = &bgra[yy*paddedWidth];
 
 			for (uint32_t xx = 0; xx < paddedWidth; ++xx)
@@ -102,10 +102,10 @@ namespace bimg
 		uint8_t* dst = (uint8_t*)_dst;
 
 		const uint32_t srcPitch = _width*4;
-		const uint32_t srcSlice = _height*srcPitch;
+		const uint64_t srcSlice = uint64_t(_height)*srcPitch;
 		const uint32_t dstBpp   = getBitsPerPixel(_format);
 		const uint32_t dstPitch = _width*dstBpp/8;
-		const uint32_t dstSlice = _height*dstPitch;
+		const uint64_t dstSlice = uint64_t(_height)*dstPitch;
 
 		for (uint32_t zz = 0; zz < _depth && _err->isOk(); ++zz, src += srcSlice, dst += dstSlice)
 		{
@@ -337,20 +337,20 @@ namespace bimg
 		default:
 			if (!imageConvert(_allocator, _dst, _dstFormat, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
 			{
-				uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*4);
+				uint8_t* temp = (uint8_t*)bx::alloc(_allocator, size_t(_width)*_height*_depth*4);
 				if (imageConvert(_allocator, temp, TextureFormat::RGBA8, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
 				{
 					for (uint32_t zz = 0; zz < _depth; ++zz)
 					{
-						const uint32_t zoffset = zz*_width*_height;
+						const uint64_t zoffset = uint64_t(zz)*_width*_height;
 
 						for (uint32_t yy = 0; yy < _height; ++yy)
 						{
-							const uint32_t yoffset = zoffset + yy*_width;
+							const uint64_t yoffset = zoffset + uint64_t(yy)*_width;
 
 							for (uint32_t xx = 0; xx < _width; ++xx)
 							{
-								const uint32_t offset = yoffset + xx;
+								const uint64_t offset = yoffset + xx;
 								const float* input = (const float*)&src[offset * 16];
 								uint8_t* output    = &temp[offset * 4];
 								output[0] = uint8_t(bx::clamp(input[0], 0.0f, 1.0f)*255.0f + 0.5f);
@@ -405,7 +405,7 @@ namespace bimg
 			case TextureFormat::ASTC12x10:
 			case TextureFormat::ASTC12x12:
 				{
-					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*4);
+					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, size_t(_width)*_height*_depth*4);
 					imageDecodeToRgba8(_allocator, temp, _src, _width, _height, _width*4, _srcFormat);
 					imageEncodeFromRgba8(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
 					bx::free(_allocator, temp);
@@ -415,7 +415,7 @@ namespace bimg
 			case bimg::TextureFormat::BC6H:
 			case bimg::TextureFormat::BC7:
 				{
-					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*16);
+					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, size_t(_width)*_height*_depth*16);
 					imageDecodeToRgba32f(_allocator, temp, _src, _width, _height, _depth, _width*16, _srcFormat);
 					imageEncodeFromRgba32f(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
 					bx::free(_allocator, temp);
@@ -504,7 +504,7 @@ namespace bimg
 			{
 				for (uint32_t xx = 0; xx < _width; ++xx)
 				{
-					const uint32_t offset = yy*_pitch + xx * 16;
+					const uint64_t offset = (uint64_t(zz)*_height + yy)*_pitch + xx*16;
 					const float* input = (const float*)&src[offset];
 					float* output = (float*)&dst[offset];
 					output[0] = input[0]*0.5f + 0.5f;
@@ -552,7 +552,7 @@ namespace bimg
 
 		for (uint32_t yy = 0; yy < _height; ++yy)
 		{
-			const uint8_t* src = (const uint8_t*)_src + yy*_srcPitch;
+			const uint8_t* src = (const uint8_t*)_src + uint64_t(yy)*_srcPitch;
 			double* dst = &imgIn[yy*_width];
 			for (uint32_t xx = 0; xx < _width; ++xx)
 			{
@@ -677,8 +677,8 @@ namespace bimg
 
 		for (uint32_t yy = 0; yy < _height; ++yy)
 		{
-			const uint8_t* row0 = src + yy*_srcPitch;
-			const uint8_t* row1 = src + bx::min(yy+1, _height-1)*_srcPitch;
+			const uint8_t* row0 = src + uint64_t(yy)*_srcPitch;
+			const uint8_t* row1 = src + uint64_t(bx::min(yy+1, _height-1) )*_srcPitch;
 
 			for (uint32_t xx = 0; xx < _width; ++xx)
 			{
@@ -710,7 +710,7 @@ namespace bimg
 			}
 		}
 
-		return coverage / float(_width*_height*numSamples*numSamples);
+		return coverage / float(uint64_t(_width)*_height*numSamples*numSamples);
 	}
 
 	void imageScaleAlphaToCoverage(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _srcPitch, void* _src, float _desiredCoverage, float _alphaRef, uint32_t _upscale)

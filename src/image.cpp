@@ -493,7 +493,7 @@ namespace bimg
 		{
 			for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 			{
-				uint8_t* dst = (uint8_t*)_dst + _dstPitch*yy;
+				uint8_t* dst = (uint8_t*)_dst + uint64_t(yy)*_dstPitch;
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
@@ -609,7 +609,7 @@ namespace bimg
 		{
 			for (uint32_t yy = 0, ystep = _srcPitch*2; yy < dstHeight; ++yy, src += ystep)
 			{
-				uint8_t* dst = (uint8_t*)_dst + _dstPitch*yy;
+				uint8_t* dst = (uint8_t*)_dst + uint64_t(yy)*_dstPitch;
 				const uint8_t* rgba = src;
 				for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba += 8, dst += 4)
 				{
@@ -828,13 +828,13 @@ namespace bimg
 		}
 		else
 		{
-			const uint32_t slicePitch = _srcPitch*_height;
+			const uint64_t slicePitch = uint64_t(_srcPitch)*_height;
 
 			for (uint32_t zz = 0; zz < dstDepth; ++zz)
 			{
 				for (uint32_t yy = 0; yy < dstHeight; ++yy)
 				{
-					const uint8_t* row = &src[(zz*2*_height + yy*2)*_srcPitch];
+					const uint8_t* row = &src[(uint64_t(zz)*2*_height + yy*2)*_srcPitch];
 
 					const float* rgba0 = (const float*)&row[0];
 					const float* rgba1 = (const float*)&row[yoff];
@@ -964,13 +964,13 @@ namespace bimg
 		}
 		else
 		{
-			const uint32_t slicePitch = _srcPitch*_height;
+			const uint64_t slicePitch = uint64_t(_srcPitch)*_height;
 
 			for (uint32_t zz = 0; zz < dstDepth; ++zz)
 			{
 				for (uint32_t yy = 0; yy < dstHeight; ++yy)
 				{
-					const uint8_t* row = &src[(zz*2*_height + yy*2)*_srcPitch];
+					const uint8_t* row = &src[(uint64_t(zz)*2*_height + yy*2)*_srcPitch];
 
 					const float* rgba0 = (const float*)&row[0];
 					const float* rgba1 = (const float*)&row[yoff];
@@ -1061,7 +1061,7 @@ namespace bimg
 			const float* rgba0 = (const float*)&src[0];
 			const float* rgba1 = (const float*)&src[yoff];
 
-			uint8_t* dst = (uint8_t*)_dst + _dstPitch*yy;
+			uint8_t* dst = (uint8_t*)_dst + uint64_t(yy)*_dstPitch;
 
 			for (uint32_t xx = 0; xx < dstWidth; ++xx, rgba0 += 8, rgba1 += 8, dst += 16)
 			{
@@ -1173,7 +1173,7 @@ namespace bimg
 		const uint8_t* src = (uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
-		for (uint32_t zz = 0; zz < _depth; ++zz, src += _srcPitch*_height, dst += _dstPitch*_height)
+		for (uint32_t zz = 0; zz < _depth; ++zz, src += uint64_t(_srcPitch)*_height, dst += uint64_t(_dstPitch)*_height)
 		{
 			bx::memCopy(dst, _dstPitch, src, _srcPitch, pitch, _height);
 		}
@@ -1325,9 +1325,9 @@ namespace bimg
 		const uint8_t* src = (uint8_t*)_src;
 		uint8_t* dst = (uint8_t*)_dst;
 
-		const uint32_t size = _size * 8 / _bpp;
+		const uint64_t size = uint64_t(_size) * 8 / _bpp;
 
-		for (uint32_t ii = 0; ii < size; ++ii)
+		for (uint64_t ii = 0; ii < size; ++ii)
 		{
 			float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 			_unpack(rgba, &src[ii*_bpp/8]);
@@ -1588,9 +1588,9 @@ namespace bimg
 						for (uint32_t zz = 0; zz < dstMip.m_depth; ++zz)
 						{
 							bx::memCopy(
-								  dstData + zz*dstMip.m_height*dstPitch
+								  dstData + uint64_t(zz)*dstMip.m_height*dstPitch
 								, dstPitch
-								, scratch + zz*mip.m_height*scratchPitch
+								, scratch + uint64_t(zz)*mip.m_height*scratchPitch
 								, scratchPitch
 								, dstPitch
 								, dstMip.m_height
@@ -6175,8 +6175,9 @@ namespace bimg
 
 		const uint32_t srcBpp = s_imageBlockInfo[_srcFormat].bitsPerPixel;
 		const uint32_t srcPitch = _width*srcBpp/8;
+		const uint64_t srcSlice = imageGetSize(NULL, _width, _height, 1, false, false, 1, _srcFormat);
 
-		for (uint32_t zz = 0; zz < _depth; ++zz, src += _height*srcPitch, dst += _height*_dstPitch)
+		for (uint32_t zz = 0; zz < _depth; ++zz, src += srcSlice, dst += uint64_t(_height)*_dstPitch)
 		{
 			if (isCompressed(_srcFormat))
 			{
@@ -6731,7 +6732,7 @@ namespace bimg
 					const uint32_t tightPitch = _width*4;
 					void* imageData = tightPitch == _dstPitch
 						? _dst
-						: bx::alloc(_allocator, tightPitch*_height)
+						: bx::alloc(_allocator, size_t(tightPitch)*_height)
 						;
 
 					//Put image data into an astcenc_image
@@ -6872,9 +6873,9 @@ namespace bimg
 
 		const uint32_t srcBpp   = s_imageBlockInfo[_srcFormat].bitsPerPixel;
 		const uint32_t srcPitch = _width*srcBpp/8;
-		const uint32_t srcSlice = uint32_t(imageGetSize(NULL, _width, _height, 1, false, false, 1, _srcFormat) );
+		const uint64_t srcSlice = imageGetSize(NULL, _width, _height, 1, false, false, 1, _srcFormat);
 
-		for (uint32_t zz = 0; zz < _depth; ++zz, src += srcSlice, dst += _height*_dstPitch)
+		for (uint32_t zz = 0; zz < _depth; ++zz, src += srcSlice, dst += uint64_t(_height)*_dstPitch)
 		{
 			switch (_srcFormat)
 			{
@@ -7165,6 +7166,14 @@ namespace bimg
 		uint8_t type = _grayscale ? 3 :  2;
 		uint8_t bpp  = _grayscale ? 8 : 32;
 
+		if (UINT16_MAX < _width
+		||  UINT16_MAX < _height
+		||  INT32_MAX - 18 < uint64_t(_width)*_height*bpp/8)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "TGA: Image is too large.");
+			return 0;
+		}
+
 		uint8_t header[18] = {};
 		header[ 2] = type;
 		header[12] =  _width     &0xff;
@@ -7180,7 +7189,7 @@ namespace bimg
 		uint32_t dstPitch = _width*bpp/8;
 		if (_yflip)
 		{
-			const uint8_t* data = (const uint8_t*)_src + _srcPitch*_height - _srcPitch;
+			const uint8_t* data = (const uint8_t*)_src + uint64_t(_height-1)*_srcPitch;
 			for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
 			{
 				total += bx::write(_writer, data, dstPitch, _err);
@@ -7302,6 +7311,21 @@ namespace bimg
 			return 0;
 		}
 
+		const bool grayscale = TextureFormat::R8    == _format;
+		const bool bgra      = TextureFormat::BGRA8 == _format;
+
+		constexpr uint32_t kMaxBlockSize = 65532;
+		const uint32_t texelSize     = grayscale ? 1 : 4;
+		const uint32_t blockTexels   = kMaxBlockSize/texelSize;
+		const uint64_t numRowBlocks  = bx::max<uint64_t>(1, (uint64_t(_width) + blockTexels - 1)/blockTexels);
+		const uint64_t idatSize      = 2 + uint64_t(_height)*(1 + uint64_t(_width)*texelSize + numRowBlocks*5) + 4;
+
+		if (INT32_MAX - 64 < idatSize)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PNG: Image is too large.");
+			return 0;
+		}
+
 		const int32_t written = imageEncodeWic(_writer, WicContainer::Png, _width, _height, _srcPitch, _src, _format, _yflip, _err);
 
 		if (0 != written
@@ -7309,9 +7333,6 @@ namespace bimg
 		{
 			return written;
 		}
-
-		const bool grayscale = TextureFormat::R8    == _format;
-		const bool bgra      = TextureFormat::BGRA8 == _format;
 
 		int32_t total = 0;
 		total += bx::write(_writer, "\x89PNG\r\n\x1a\n", _err);
@@ -7326,12 +7347,7 @@ namespace bimg
 		total += bx::writeRep(&writerC, 0, 3, _err);
 		total += bx::write(_writer, bx::toBigEndian(writerC.end() ), _err);
 
-		const uint32_t bpp    = grayscale ? 8 : 32;
-		const uint32_t stride = _width*bpp/8;
-		const uint16_t zlen   = bx::toLittleEndian<uint16_t>(uint16_t(stride + 1) );
-		const uint16_t zlenC  = bx::toLittleEndian<uint16_t>(~zlen);
-
-		total += bx::write(_writer, bx::toBigEndian<uint32_t>(_height*(stride+6)+6), _err);
+		total += bx::write(_writer, bx::toBigEndian<uint32_t>(uint32_t(idatSize) ), _err);
 
 		writerC.begin();
 		total += bx::write(&writerC, "IDAT", _err);
@@ -7341,31 +7357,50 @@ namespace bimg
 		int32_t step = int32_t(_srcPitch);
 		if (_yflip)
 		{
-			data += _srcPitch*_height - _srcPitch;
+			data += uint64_t(_height-1)*_srcPitch;
 			step = -step;
 		}
 
 		HashWriter<bx::HashAdler32> writerA(&writerC);
 
-		for (uint32_t ii = 0; ii < _height && _err->isOk(); ++ii)
+		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy, data += step)
 		{
-			total += bx::write(&writerC, uint8_t(ii == _height-1 ? 1 : 0), _err);
-			total += bx::write(&writerC, zlen,  _err);
-			total += bx::write(&writerC, zlenC, _err);
+			const uint8_t* texels = data;
+			uint32_t xx = 0;
 
-			total += bx::write(&writerA, uint8_t(0), _err);
-
-			if (bgra)
+			do
 			{
-				total += writeTexels(&writerA, data, _width, format->m_bytes, format->m_rgba, 4, _err);
-			}
-			else
-			{
-				total += bx::write(&writerA, data, stride, _err);
-			}
+				const bool     first = 0 == xx;
+				const uint32_t num   = bx::min(_width - xx, blockTexels);
+				xx += num;
+				const bool     last  = yy == _height-1 && xx == _width;
 
-			data += step;
+				const uint16_t len  = bx::toLittleEndian<uint16_t>(uint16_t(num*texelSize + (first ? 1 : 0) ) );
+				const uint16_t lenC = bx::toLittleEndian<uint16_t>(~len);
+
+				total += bx::write(&writerC, uint8_t(last ? 1 : 0), _err);
+				total += bx::write(&writerC, len,  _err);
+				total += bx::write(&writerC, lenC, _err);
+
+				if (first)
+				{
+					total += bx::write(&writerA, uint8_t(0), _err);
+				}
+
+				if (bgra)
+				{
+					total += writeTexels(&writerA, texels, num, format->m_bytes, format->m_rgba, 4, _err);
+				}
+				else
+				{
+					total += bx::write(&writerA, texels, int32_t(num*texelSize), _err);
+				}
+
+				texels += num*format->m_bytes;
+			}
+			while (xx < _width && _err->isOk() );
 		}
+
 		total += bx::write(&writerC, bx::toBigEndian(writerA.end() ), _err);
 		total += bx::write(_writer,  bx::toBigEndian(writerC.end() ), _err);
 
@@ -7389,6 +7424,16 @@ namespace bimg
 			return 0;
 		}
 
+		const uint64_t row  = uint64_t(_width)*3;
+		const uint64_t pad  = bx::alignUp<uint64_t>(row, 4) - row;
+		const uint64_t size = (row + pad)*_height;
+
+		if (INT32_MAX - 54 < size)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "BMP: Image is too large.");
+			return 0;
+		}
+
 		const int32_t written = imageEncodeWic(_writer, WicContainer::Bmp, _width, _height, _srcPitch, _src, _format, _yflip, _err);
 
 		if (0 != written
@@ -7397,13 +7442,9 @@ namespace bimg
 			return written;
 		}
 
-		const uint32_t row  = _width*3;
-		const uint32_t pad  = bx::alignUp(row, 4) - row;
-		const uint32_t size = (row + pad)*_height;
-
 		int32_t total = 0;
 		total += bx::write(_writer, "BM", _err);
-		total += bx::write(_writer, bx::toLittleEndian<uint32_t>(54 + size), _err);
+		total += bx::write(_writer, bx::toLittleEndian<uint32_t>(uint32_t(54 + size) ), _err);
 		total += bx::writeRep(_writer, 0, 4, _err);
 		total += bx::write(_writer, bx::toLittleEndian<uint32_t>(54), _err);
 
@@ -7413,7 +7454,7 @@ namespace bimg
 		total += bx::write(_writer, bx::toLittleEndian<uint16_t>(1),  _err);
 		total += bx::write(_writer, bx::toLittleEndian<uint16_t>(24), _err);
 		total += bx::writeRep(_writer, 0, 4, _err);
-		total += bx::write(_writer, bx::toLittleEndian(size), _err);
+		total += bx::write(_writer, bx::toLittleEndian<uint32_t>(uint32_t(size) ), _err);
 		total += bx::writeRep(_writer, 0, 16, _err);
 
 		const uint8_t* data = (const uint8_t*)_src;
@@ -7421,7 +7462,7 @@ namespace bimg
 
 		if (!_yflip)
 		{
-			data += _srcPitch*_height - _srcPitch;
+			data += uint64_t(_height-1)*_srcPitch;
 			step = -step;
 		}
 
@@ -7680,10 +7721,10 @@ namespace bimg
 			)
 			, _err
 			);
-		const uint32_t pitchOrLinearSize = isCompressed(_format)
-			? _width*_height*bpp/8
-			: _width*bpp/8
-			;
+		const uint32_t pitchOrLinearSize = uint32_t(bx::min<uint64_t>(UINT32_MAX, isCompressed(_format)
+			? uint64_t(_width)*_height*bpp/8
+			: uint64_t(_width)*bpp/8
+			) );
 
 		total += bx::write(_writer, _height, _err);
 		total += bx::write(_writer, _width, _err);
