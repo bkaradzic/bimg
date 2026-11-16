@@ -22,7 +22,6 @@
 #include <bx/commandline.h>
 #include <bx/file.h>
 
-#include <string>
 
 #define BIMG_TEXTUREC_VERSION_MAJOR 1
 #define BIMG_TEXTUREC_VERSION_MINOR 18
@@ -1216,19 +1215,18 @@ void help(const char* _error = NULL, bool _showHelp = true)
 
 void help(const bx::StringView _str, const bx::Error& _err)
 {
-	std::string str;
+	bx::FixedString1024 str;
 	if (!_str.isEmpty() )
 	{
-		str.append(_str.getPtr(), _str.getTerm() - _str.getPtr() );
+		str.append(_str);
 		str.append(": ");
 	}
 
-	const bx::StringView& sv = _err.getMessage();
 	str.append("'");
-	str.append(sv.getPtr(), sv.getTerm() - sv.getPtr() );
+	str.append(_err.getMessage() );
 	str.append("'");
 
-	help(str.c_str(), false);
+	help(str.getCPtr(), false);
 }
 
 class AlignedAllocator : public bx::AllocatorI
