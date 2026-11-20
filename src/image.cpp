@@ -417,6 +417,38 @@ namespace bimg
 		return size;
 	}
 
+	static uint64_t imageGetMipSize(const ImageBlockInfo& _blockInfo, uint32_t _width, uint32_t _height, uint32_t _depth)
+	{
+		const uint32_t blockWidth  = _blockInfo.blockWidth;
+		const uint32_t blockHeight = _blockInfo.blockHeight;
+		const uint64_t numBlocksX  = bx::max<uint64_t>(_blockInfo.minBlockX, (uint64_t(_width)  + blockWidth  - 1) / blockWidth);
+		const uint64_t numBlocksY  = bx::max<uint64_t>(_blockInfo.minBlockY, (uint64_t(_height) + blockHeight - 1) / blockHeight);
+
+		return bx::satMul<uint64_t>(bx::satMul<uint64_t>(numBlocksX*numBlocksY, bx::max<uint32_t>(1, _depth) ), _blockInfo.blockSize);
+	}
+
+	static uint64_t imageGetRawDataSize(const ImageContainer& _imageContainer)
+	{
+		const ImageBlockInfo& blockInfo = s_imageBlockInfo[_imageContainer.m_format];
+		const uint32_t numSides = _imageContainer.m_numLayers * (_imageContainer.m_cubeMap ? 6 : 1);
+
+		uint32_t width  = _imageContainer.m_width;
+		uint32_t height = _imageContainer.m_height;
+		uint32_t depth  = _imageContainer.m_depth;
+		uint64_t size   = 0;
+
+		for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num; ++lod)
+		{
+			size = bx::satAdd(size, bx::satMul<uint64_t>(imageGetMipSize(blockInfo, width, height, depth), numSides) );
+
+			width  >>= 1;
+			height >>= 1;
+			depth  >>= 1;
+		}
+
+		return size;
+	}
+
 	BX_NO_INLINE void imageSolid(void* _dst, uint32_t _width, uint32_t _height, uint32_t _solid)
 	{
 		uint32_t* dst = (uint32_t*)_dst;
@@ -5649,15 +5681,13 @@ namespace bimg
 		const ImageBlockInfo& blockInfo = s_imageBlockInfo[_format];
 		const uint32_t blockWidth   = blockInfo.blockWidth;
 		const uint32_t blockHeight  = blockInfo.blockHeight;
-		const uint32_t minBlockX    = blockInfo.minBlockX;
-		const uint32_t minBlockY    = blockInfo.minBlockY;
 		const uint32_t blockSize    = blockInfo.blockSize;
 		const bool     isCompressed = blockWidth > 1 || blockHeight > 1;
 
 		const uint32_t numMips   = bx::max<uint8_t>(_numMips, 1);
 		const uint32_t numLayers = bx::max<uint32_t>(_numLayers, 1);
 		const uint32_t numFaces  = _cubeMap ? 6 : 1;
-		const uint32_t numSides  = numLayers * numFaces;
+		const uint64_t numSides  = uint64_t(numLayers) * numFaces;
 
 		const Ktx2DfdDescriptor dfd = ktx2DfdFromFormat(_format);
 		const uint32_t dfdTotalSize = ktx2DfdTotalSize(dfd);
@@ -5689,9 +5719,6 @@ namespace bimg
 		{
 			uint64_t byteOffset;
 			uint64_t byteLength;
-			uint32_t mipWidth;
-			uint32_t mipHeight;
-			uint32_t mipDepth;
 			uint64_t perFaceSize;
 		};
 
@@ -5699,28 +5726,27 @@ namespace bimg
 		bx::memSet(levels, 0, sizeof(levels) );
 
 		uint64_t curOffset = dfdByteOffset + dfdByteLength;
+		bool tooLarge = BX_COUNTOF(levels) < numMips;
 
-		for (int32_t lod = int32_t(numMips) - 1; lod >= 0; --lod)
+		for (int32_t lod = int32_t(numMips) - 1; lod >= 0 && !tooLarge; --lod)
 		{
-			uint32_t mipWidth  = bx::max<uint32_t>(blockWidth  * minBlockX, ( ( (_width  >> lod) + blockWidth  - 1) / blockWidth  )*blockWidth);
-			uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( ( (_height >> lod) + blockHeight - 1) / blockHeight )*blockHeight);
-			uint32_t mipDepth  = bx::max<uint32_t>(1, _depth >> lod);
-			mipWidth  = bx::max<uint32_t>(1, mipWidth);
-			mipHeight = bx::max<uint32_t>(1, mipHeight);
-
-			const uint64_t perFaceSize = uint64_t(mipWidth/blockWidth) * (mipHeight/blockHeight) * mipDepth * blockSize;
-			const uint64_t levelSize   = perFaceSize * numSides;
+			const uint64_t perFaceSize = imageGetMipSize(blockInfo, _width >> lod, _height >> lod, _depth >> lod);
+			const uint64_t levelSize   = bx::satMul(perFaceSize, numSides);
 
 			curOffset = ktx2AlignUp(curOffset, uint64_t(mipAlign) );
 
 			levels[lod].byteOffset  = curOffset;
 			levels[lod].byteLength  = levelSize;
-			levels[lod].mipWidth    = mipWidth;
-			levels[lod].mipHeight   = mipHeight;
-			levels[lod].mipDepth    = mipDepth;
 			levels[lod].perFaceSize = perFaceSize;
 
-			curOffset += levelSize;
+			curOffset = bx::satAdd(curOffset, levelSize);
+			tooLarge  = INT32_MAX < curOffset;
+		}
+
+		if (tooLarge)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "KTX2: Image is too large.");
+			return 0;
 		}
 
 		int32_t total = 0;
@@ -5849,28 +5875,31 @@ namespace bimg
 		{
 			uint64_t byteOffset;
 			uint64_t byteLength;
-			uint64_t perFaceSize;
 		};
 
 		LevelInfo levels[16];
 		bx::memSet(levels, 0, sizeof(levels) );
 
-		ImageMip mipInfo[16];
+		uint64_t curOffset = dfdByteOffset + dfdByteLength;
+		bool tooLarge = BX_COUNTOF(levels) < numMips;
 
-		for (uint32_t lod = 0; lod < numMips; ++lod)
+		for (int32_t lod = int32_t(numMips) - 1; lod >= 0 && !tooLarge; --lod)
 		{
-			imageGetRawData(_imageContainer, 0, uint8_t(lod), _data, _size, mipInfo[lod]);
-			levels[lod].perFaceSize = mipInfo[lod].m_size;
+			const uint64_t perFaceSize = imageGetMipSize(blockInfo, _imageContainer.m_width >> lod, _imageContainer.m_height >> lod, _imageContainer.m_depth >> lod);
+
+			curOffset = ktx2AlignUp(curOffset, uint64_t(mipAlign) );
+
+			levels[lod].byteOffset = curOffset;
+			levels[lod].byteLength = bx::satMul<uint64_t>(perFaceSize, numSides);
+
+			curOffset = bx::satAdd(curOffset, levels[lod].byteLength);
+			tooLarge  = INT32_MAX < curOffset;
 		}
 
-		uint64_t curOffset = dfdByteOffset + dfdByteLength;
-
-		for (int32_t lod = int32_t(numMips) - 1; lod >= 0; --lod)
+		if (tooLarge)
 		{
-			curOffset = ktx2AlignUp(curOffset, uint64_t(mipAlign) );
-			levels[lod].byteOffset = curOffset;
-			levels[lod].byteLength = levels[lod].perFaceSize * numSides;
-			curOffset += levels[lod].byteLength;
+			BX_ERROR_SET(_err, BIMG_ERROR, "KTX2: Image is too large.");
+			return 0;
 		}
 
 		int32_t total = 0;
@@ -7318,7 +7347,7 @@ namespace bimg
 		const uint32_t texelSize     = grayscale ? 1 : 4;
 		const uint32_t blockTexels   = kMaxBlockSize/texelSize;
 		const uint64_t numRowBlocks  = bx::max<uint64_t>(1, (uint64_t(_width) + blockTexels - 1)/blockTexels);
-		const uint64_t idatSize      = 2 + uint64_t(_height)*(1 + uint64_t(_width)*texelSize + numRowBlocks*5) + 4;
+		const uint64_t idatSize      = bx::satAdd<uint64_t>(2 + 4, bx::satMul<uint64_t>(_height, 1 + uint64_t(_width)*texelSize + numRowBlocks*5) );
 
 		if (INT32_MAX - 64 < idatSize)
 		{
@@ -7426,7 +7455,7 @@ namespace bimg
 
 		const uint64_t row  = uint64_t(_width)*3;
 		const uint64_t pad  = bx::alignUp<uint64_t>(row, 4) - row;
-		const uint64_t size = (row + pad)*_height;
+		const uint64_t size = bx::satMul<uint64_t>(row + pad, _height);
 
 		if (INT32_MAX - 54 < size)
 		{
@@ -7480,7 +7509,7 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
-		const uint32_t bpp = getBitsPerPixel(_format);
+		const uint32_t texelSize = getBitsPerPixel(_format)/8;
 		uint32_t bytesPerChannel = 0;
 
 		switch (_format)
@@ -7491,6 +7520,14 @@ namespace bimg
 
 		default:
 			BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Unsupported texture format.");
+			return 0;
+		}
+
+		const uint64_t size = bx::satMul<uint64_t>(_height, 8 /* offset */ + 8 /* y and size */ + uint64_t(_width)*texelSize);
+
+		if (INT32_MAX - 512 < size)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Image is too large.");
 			return 0;
 		}
 
@@ -7547,7 +7584,7 @@ namespace bimg
 		total += bx::write(_writer, "lineOrder", _err);
 		total += bx::write(_writer, '\0', _err);
 		total += bx::writeLE(_writer, uint32_t(1), _err);
-		total += bx::write(_writer, _yflip, _err);
+		total += bx::write(_writer, '\0', _err); // increasing y
 
 		total += bx::write(_writer, "pixelAspectRatio", _err);
 		total += bx::write(_writer, '\0', _err);
@@ -7572,16 +7609,24 @@ namespace bimg
 
 		total += bx::write(_writer, '\0', _err);
 
-		const uint32_t exrStride = _width*bpp/8;
+		const uint32_t exrStride = _width*texelSize;
 
-		uint64_t offset = 0;
+		uint64_t offset = uint64_t(total) + uint64_t(_height)*sizeof(uint64_t);
 		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
 		{
 			total += bx::writeLE(_writer, (offset), _err);
-			offset += exrStride + 8 /* offset */;
+			offset += exrStride + 8 /* y and size */;
 		}
 
 		const uint8_t* data = (const uint8_t*)_src;
+		int32_t step = int32_t(_srcPitch);
+
+		if (_yflip)
+		{
+			data += uint64_t(_height-1)*_srcPitch;
+			step = -step;
+		}
+
 		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
 		{
 			total += bx::writeLE(_writer, yy, _err);
@@ -7589,25 +7634,25 @@ namespace bimg
 
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				total += bx::write(_writer, &data[xx*bpp/8+3*bytesPerChannel], bytesPerChannel, _err);
+				total += bx::write(_writer, &data[xx*texelSize+3*bytesPerChannel], bytesPerChannel, _err);
 			}
 
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				total += bx::write(_writer, &data[xx*bpp/8+2*bytesPerChannel], bytesPerChannel, _err);
+				total += bx::write(_writer, &data[xx*texelSize+2*bytesPerChannel], bytesPerChannel, _err);
 			}
 
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				total += bx::write(_writer, &data[xx*bpp/8+1*bytesPerChannel], bytesPerChannel, _err);
+				total += bx::write(_writer, &data[xx*texelSize+1*bytesPerChannel], bytesPerChannel, _err);
 			}
 
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
-				total += bx::write(_writer, &data[xx*bpp/8+0*bytesPerChannel], bytesPerChannel, _err);
+				total += bx::write(_writer, &data[xx*texelSize+0*bytesPerChannel], bytesPerChannel, _err);
 			}
 
-			data += _srcPitch;
+			data += step;
 		}
 
 		return total;
@@ -7617,23 +7662,44 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
+		UnpackFn unpack = getUnpack(_format);
+
+		if (NULL == unpack)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "HDR: Unsupported texture format.");
+			return 0;
+		}
+
+		if ( (INT32_MAX - 64)/4 < uint64_t(_width)*_height)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "HDR: Image is too large.");
+			return 0;
+		}
+
 		int32_t total = 0;
 		total += bx::write(_writer, "#?RADIANCE\n" , _err);
 		total += bx::write(_writer, "FORMAT=32-bit_rle_rgbe\n" , _err);
 		total += bx::write(_writer, '\n' , _err);
 
-		total += bx::write(_writer, _err, "%cY %d +X %d\n", _yflip ? '+' : '-', _height, _width);
+		total += bx::write(_writer, _err, "-Y %d +X %d\n", _height, _width);
 
-		UnpackFn unpack = getUnpack(_format);
 		const uint32_t bpp  = getBitsPerPixel(_format);
 
 		const uint8_t* data = (const uint8_t*)_src;
+		int32_t step = int32_t(_srcPitch);
+
+		if (_yflip)
+		{
+			data += uint64_t(_height-1)*_srcPitch;
+			step = -step;
+		}
+
 		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
 		{
 			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
 			{
 				float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-				unpack(rgba, &data[xx*bpp/8]);
+				unpack(rgba, &data[uint64_t(xx)*bpp/8]);
 
 				const float maxVal = bx::max(rgba[0], rgba[1], rgba[2]);
 				const float exp    = bx::ceil(bx::log2(maxVal) );
@@ -7648,7 +7714,7 @@ namespace bimg
 				total += bx::write(_writer, rgbe, 4, _err);
 			}
 
-			data += _srcPitch;
+			data += step;
 		}
 
 		return total;
@@ -7802,6 +7868,12 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
+		if (INT32_MAX - 148 < imageGetRawDataSize(_imageContainer) )
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "DDS: Image is too large.");
+			return 0;
+		}
+
 		int32_t total = 0;
 		total += imageWriteDdsHeader(_writer
 			, TextureFormat::Enum(_imageContainer.m_format)
@@ -7819,12 +7891,12 @@ namespace bimg
 			return total;
 		}
 
-		for (uint8_t side = 0, numSides = uint8_t(_imageContainer.m_numLayers * (_imageContainer.m_cubeMap ? 6 : 1) ); side < numSides && _err->isOk(); ++side)
+		for (uint32_t side = 0, numSides = _imageContainer.m_numLayers * (_imageContainer.m_cubeMap ? 6 : 1); side < numSides && _err->isOk(); ++side)
 		{
 			for (uint8_t lod = 0, num = _imageContainer.m_numMips; lod < num && _err->isOk(); ++lod)
 			{
 				ImageMip mip;
-				if (imageGetRawData(_imageContainer, side, lod, _data, _size, mip) )
+				if (imageGetRawData(_imageContainer, uint16_t(side), lod, _data, _size, mip) )
 				{
 					total += bx::write(_writer, mip.m_data, mip.m_size, _err);
 				}
@@ -7869,6 +7941,32 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
+		const ImageBlockInfo& blockInfo = s_imageBlockInfo[_format];
+
+		const uint32_t numLayers = bx::max<uint32_t>(_numLayers, 1);
+		const uint32_t numSides = _cubeMap ? 6 : 1;
+
+		uint32_t width  = _width;
+		uint32_t height = _height;
+		uint32_t depth  = _depth;
+		uint64_t fileSize = 64;
+
+		for (uint8_t lod = 0; lod < _numMips && INT32_MAX >= fileSize; ++lod)
+		{
+			const uint64_t mipSize = imageGetMipSize(blockInfo, width, height, depth);
+			fileSize = bx::satAdd(fileSize + 4, bx::satMul(mipSize, uint64_t(numSides)*numLayers) );
+
+			width  >>= 1;
+			height >>= 1;
+			depth  >>= 1;
+		}
+
+		if (INT32_MAX < fileSize)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "KTX: Image is too large.");
+			return 0;
+		}
+
 		int32_t total = 0;
 		total += imageWriteKtxHeader(_writer, _format, _cubeMap, _width, _height, _depth, _numMips, _numLayers, _srgb, _err);
 
@@ -7877,29 +7975,15 @@ namespace bimg
 			return total;
 		}
 
-		const ImageBlockInfo& blockInfo = s_imageBlockInfo[_format];
-		const uint32_t blockWidth  = blockInfo.blockWidth;
-		const uint32_t blockHeight = blockInfo.blockHeight;
-		const uint32_t minBlockX   = blockInfo.minBlockX;
-		const uint32_t minBlockY   = blockInfo.minBlockY;
-		const uint8_t  blockSize   = blockInfo.blockSize;
-
 		const uint8_t* src = (const uint8_t*)_src;
 
-		const uint32_t numLayers = bx::max<uint32_t>(_numLayers, 1);
-		const uint32_t numSides = _cubeMap ? 6 : 1;
-
-		uint32_t width  = _width;
-		uint32_t height = _height;
-		uint32_t depth  = _depth;
+		width  = _width;
+		height = _height;
+		depth  = _depth;
 
 		for (uint8_t lod = 0; lod < _numMips && _err->isOk(); ++lod)
 		{
-			uint32_t mipWidth  = bx::max<uint32_t>(blockWidth  * minBlockX, ( (width  + blockWidth  - 1) / blockWidth )*blockWidth);
-			uint32_t mipHeight = bx::max<uint32_t>(blockHeight * minBlockY, ( (height + blockHeight - 1) / blockHeight)*blockHeight);
-			depth  = bx::max<uint32_t>(1, depth);
-
-			const uint32_t mipSize = mipWidth/blockWidth * mipHeight/blockHeight * depth * blockSize;
+			const uint32_t mipSize = uint32_t(imageGetMipSize(blockInfo, width, height, depth) );
 			const uint32_t size = numSides == 6 && numLayers == 1 ? mipSize : mipSize * numSides * numLayers;
 			total += bx::write(_writer, size, _err);
 
@@ -7923,6 +8007,12 @@ namespace bimg
 	int32_t imageWriteKtx(bx::WriterI* _writer, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_ERROR_SCOPE(_err);
+
+		if (INT32_MAX - 64 < bx::satAdd<uint64_t>(4*_imageContainer.m_numMips, imageGetRawDataSize(_imageContainer) ) )
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "KTX: Image is too large.");
+			return 0;
+		}
 
 		int32_t total = 0;
 		total += imageWriteKtxHeader(_writer
