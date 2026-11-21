@@ -199,6 +199,7 @@ namespace bimg
 			Jpeg,  //!< JPEG.
 			Ktx,   //!< Khronos Texture.
 			Ktx2,  //!< Khronos Texture 2.
+			Pfm,   //!< Portable Float Map.
 			Pic,   //!< Softimage PIC.
 			Png,   //!< Portable Network Graphics.
 			Pnm,   //!< Portable AnyMap (PBM/PGM/PPM).
@@ -625,6 +626,31 @@ namespace bimg
 
 	///
 	int32_t imageWriteHdr(
+		  bx::WriterI* _writer
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t _srcPitch
+		, const void* _src
+		, TextureFormat::Enum _format
+		, bool _yflip
+		, bx::Error* _err
+		);
+
+	/// Write PFM image (32-bit float, little endian): RGB, or grayscale when the format has
+	/// only a red channel.
+	///
+	/// @param[in] _writer Writer.
+	/// @param[in] _width Image width.
+	/// @param[in] _height Image height.
+	/// @param[in] _srcPitch Source pitch in bytes.
+	/// @param[in] _src Source texels.
+	/// @param[in] _format Any format with an unpack function.
+	/// @param[in] _yflip Write rows bottom to top.
+	/// @param[in,out] _err Error, when not NULL.
+	///
+	/// @returns Number of bytes written.
+	///
+	int32_t imageWritePfm(
 		  bx::WriterI* _writer
 		, uint32_t _width
 		, uint32_t _height

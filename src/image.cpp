@@ -331,6 +331,7 @@ namespace bimg
 		"JPEG", // Jpeg
 		"KTX",  // Ktx
 		"KTX2", // Ktx2
+		"PFM",  // Pfm
 		"PIC",  // Pic
 		"PNG",  // Png
 		"PNM",  // Pnm
@@ -7518,6 +7519,10 @@ namespace bimg
 			bytesPerChannel = 2;
 			break;
 
+		case TextureFormat::RGBA32F:
+			bytesPerChannel = 4;
+			break;
+
 		default:
 			BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Unsupported texture format.");
 			return 0;
@@ -7541,7 +7546,8 @@ namespace bimg
 		total += bx::write(_writer, '\0', _err);
 		total += bx::writeLE(_writer, uint32_t(18*4+1), _err);
 
-		const uint8_t cdata[] = { 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
+		const uint8_t pixelType = 4 == bytesPerChannel ? 2 : 1;
+		const uint8_t cdata[] = { 0, pixelType, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 };
 		// Order is always ABGR order because Photoshop and GIMP ignore these fields and
 		// assume it's in ABGR order.
 		total += bx::write(_writer, 'A', _err);
@@ -7859,6 +7865,63 @@ namespace bimg
 				, DDS_HEADER_SIZE+20
 				);
 			BX_UNUSED(headerStart);
+		}
+
+		return total;
+	}
+
+	int32_t imageWritePfm(bx::WriterI* _writer, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, TextureFormat::Enum _format, bool _yflip, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		UnpackFn unpack = getUnpack(_format);
+
+		if (NULL == unpack)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PFM: Unsupported texture format.");
+			return 0;
+		}
+
+		const ImageBlockInfo& blockInfo = getBlockInfo(_format);
+		const uint32_t numChannels = 0 == blockInfo.gBits && 0 == blockInfo.bBits ? 1 : 3;
+
+		if ( (INT32_MAX - 64)/(numChannels*4) < uint64_t(_width)*_height)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PFM: Image is too large.");
+			return 0;
+		}
+
+		int32_t total = 0;
+		total += bx::write(_writer, _err, "%s\n%d %d\n-1.0\n", 1 == numChannels ? "Pf" : "PF", _width, _height);
+
+		const uint32_t bpp = getBitsPerPixel(_format);
+
+		const uint8_t* data = (const uint8_t*)_src;
+		int32_t step = -int32_t(_srcPitch);
+
+		if (!_yflip)
+		{
+			data += uint64_t(_height-1)*_srcPitch;
+		}
+		else
+		{
+			step = -step;
+		}
+
+		for (uint32_t yy = 0; yy < _height && _err->isOk(); ++yy)
+		{
+			for (uint32_t xx = 0; xx < _width && _err->isOk(); ++xx)
+			{
+				float rgba[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+				unpack(rgba, &data[uint64_t(xx)*bpp/8]);
+
+				for (uint32_t ii = 0; ii < numChannels; ++ii)
+				{
+					total += bx::writeLE(_writer, rgba[ii], _err);
+				}
+			}
+
+			data += step;
 		}
 
 		return total;

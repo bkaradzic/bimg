@@ -6,6 +6,7 @@
 #include "bimg_p.h"
 
 #include <bx/sort.h>
+#include <bx/scanner.h>
 
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function")
 
@@ -867,6 +868,167 @@ namespace bimg
 		BX_ERROR_SET(_err, BIMG_ERROR, "EXR parsing is disabled (BIMG_CONFIG_PARSE_EXR).");
 		return NULL;
 #endif // BIMG_CONFIG_PARSE_PNG
+	}
+
+	static bool pfmIsMagic(const void* _data, uint32_t _size)
+	{
+		const char* data = (const char*)_data;
+
+		return 3 <= _size
+			&& 'P' == data[0]
+			&& ('F' == data[1] || 'f' == data[1])
+			&& bx::isSpace(data[2])
+			;
+	}
+
+#if BIMG_CONFIG_PARSE_PFM
+	struct PfmHeader
+	{
+		uint32_t width;
+		uint32_t height;
+		uint32_t numChannels;
+		uint32_t offset;
+		bool     bigEndian;
+	};
+
+	static bool pfmParseHeader(const void* _data, uint32_t _size, PfmHeader& _header, bx::Error* _err)
+	{
+		bx::Scanner scanner(bx::StringView( (const char*)_data, int32_t(_size) ) );
+
+		if (scanner.accept("PF").isEmpty() )
+		{
+			if (scanner.accept("Pf").isEmpty() )
+			{
+				return false;
+			}
+
+			_header.numChannels = 1;
+		}
+		else
+		{
+			_header.numChannels = 3;
+		}
+
+		if (scanner.accept(bx::Scanner::Class::Space).isEmpty() )
+		{
+			return false;
+		}
+
+		const bx::StringView width = scanner.accept(bx::Scanner::Class::NonSpace);
+		scanner.accept(bx::Scanner::Class::Space);
+		const bx::StringView height = scanner.accept(bx::Scanner::Class::NonSpace);
+		scanner.accept(bx::Scanner::Class::Space);
+		const bx::StringView scale = scanner.accept(bx::Scanner::Class::NonSpace);
+
+		float scaleValue = 0.0f;
+
+		if (!bx::fromString(&_header.width, width)
+		||  !bx::fromString(&_header.height, height)
+		||  !bx::fromString(&scaleValue, scale)
+		||  0.0f == scaleValue
+		||  scanner.accept(bx::isSpace).isEmpty() )
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PFM: Invalid header.");
+			return false;
+		}
+
+		_header.bigEndian = 0.0f < scaleValue;
+		_header.offset    = uint32_t(scanner.getCursor().getPtr() - (const char*)_data);
+
+		if (0 == _header.width
+		||  0 == _header.height
+		||  _header.width  > UINT16_MAX
+		||  _header.height > UINT16_MAX)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PFM: Unsupported image dimensions.");
+			return false;
+		}
+
+		const uint64_t dataSize = uint64_t(_header.width)*_header.height*_header.numChannels*sizeof(float);
+
+		if (dataSize > _size - _header.offset)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PFM: Truncated image data.");
+			return false;
+		}
+
+		return true;
+	}
+
+#endif // BIMG_CONFIG_PARSE_PFM
+
+	static ImageContainer* imageParsePfm(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		if (!pfmIsMagic(_data, _size) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_PFM
+		PfmHeader header;
+
+		if (!pfmParseHeader(_data, _size, header, _err) )
+		{
+			return NULL;
+		}
+
+		const TextureFormat::Enum format = 1 == header.numChannels
+			? TextureFormat::R32F
+			: TextureFormat::RGBA32F
+			;
+
+		ImageContainer* output = imageAlloc(_allocator
+			, format
+			, header.width
+			, header.height
+			, 0
+			, 1
+			, false
+			, false
+			);
+
+		if (NULL == output)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PFM: Unsupported dimensions.");
+			return NULL;
+		}
+
+		const uint8_t* src = (const uint8_t*)_data + header.offset;
+		float* dst = (float*)output->m_data;
+		const uint32_t dstChannels = 1 == header.numChannels ? 1 : 4;
+
+		for (uint32_t yy = 0; yy < header.height; ++yy)
+		{
+			const uint8_t* row = &src[uint64_t(header.height - 1 - yy)*header.width*header.numChannels*sizeof(float)];
+			float* dstRow = &dst[uint64_t(yy)*header.width*dstChannels];
+
+			for (uint32_t xx = 0; xx < header.width; ++xx)
+			{
+				for (uint32_t ii = 0; ii < header.numChannels; ++ii)
+				{
+					uint32_t bits;
+					bx::memCopy(&bits, &row[(xx*header.numChannels + ii)*sizeof(float)], sizeof(bits) );
+					bits = header.bigEndian ? bx::toBigEndian(bits) : bx::toLittleEndian(bits);
+					bx::memCopy(&dstRow[xx*dstChannels + ii], &bits, sizeof(bits) );
+				}
+
+				if (4 == dstChannels)
+				{
+					dstRow[xx*4 + 3] = 1.0f;
+				}
+			}
+		}
+
+		output->m_parser = ImageParser::Pfm;
+
+		return output;
+#else
+		BX_UNUSED(_allocator);
+		BX_ERROR_SET(_err, BIMG_ERROR, "PFM parsing is disabled (BIMG_CONFIG_PARSE_PFM).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_PFM
 	}
 
 #if BIMG_CONFIG_USE_STB_IMAGE
@@ -2014,6 +2176,37 @@ namespace bimg
 	}
 #endif // BIMG_CONFIG_PARSE_JPEG && !BIMG_CONFIG_USE_WIC
 
+	static bool imageParseInfoPfm(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+		if (!pfmIsMagic(_data, _size) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_PFM
+		PfmHeader header;
+
+		if (!pfmParseHeader(_data, _size, header, _err) )
+		{
+			return false;
+		}
+
+		return imageInfoFinalize(_imageContainer
+			, ImageParser::Pfm
+			, 1 == header.numChannels ? TextureFormat::R32F : TextureFormat::RGBA32F
+			, header.width
+			, header.height
+			, _err
+			);
+#else
+		BX_UNUSED(_imageContainer);
+		BX_ERROR_SET(_err, BIMG_ERROR, "PFM parsing is disabled (BIMG_CONFIG_PARSE_PFM).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_PFM
+	}
+
 	static bool imageParseInfoStbImage(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
 	{
 		BX_UNUSED(_allocator);
@@ -2323,6 +2516,7 @@ namespace bimg
 			imageParseInfoJpeg,
 			imageParseInfoSimpleWebp,
 			imageParseInfoNanoSvg,
+			imageParseInfoPfm,
 			imageParseInfoStbImage,
 			imageParseInfoLibAvif,
 			imageParseInfoLibHeif,
@@ -2363,6 +2557,7 @@ namespace bimg
 			imageParseJpeg,
 			imageParseSimpleWebp,
 			imageParseNanoSvg,
+			imageParsePfm,
 			imageParseStbImage,
 			imageParseLibAvif,
 			imageParseLibHeif,
