@@ -1019,6 +1019,7 @@ static const char* const s_outputExt[] =
 	"hdr",
 	"ktx",
 	"ktx2",
+	"pfm",
 	"png",
 	NULL,
 };
@@ -1042,6 +1043,7 @@ static const FileFormatDesc s_fileFormatDesc[] =
 	{ "jpg",  "JPEG Interchange Format."     },
 	{ "ktx",  "Khronos Texture."             },
 	{ "ktx2", "Khronos Texture 2."           },
+	{ "pfm",  "Portable Float Map."          },
 	{ "pgm",  "Portable Gray Map."           },
 	{ "png",  "Portable Network Graphics."   },
 	{ "ppm",  "Portable Pixel Map."          },
@@ -1341,6 +1343,7 @@ int main(int _argc, const char* _argv[])
 	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".png") : saveAs;
 	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".exr") : saveAs;
 	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".hdr") : saveAs;
+	saveAs = saveAs.isEmpty() ? bx::strFindI(outputFileName, ".pfm") : saveAs;
 	if (saveAs.isEmpty() )
 	{
 		help("Output file format must be specified.");
@@ -1432,9 +1435,10 @@ int main(int _argc, const char* _argv[])
 		{
 			options.format = bimg::TextureFormat::RGBA16F;
 		}
-		else if (options.format != bimg::TextureFormat::RGBA16F)
+		else if (options.format != bimg::TextureFormat::RGBA16F
+			 &&  options.format != bimg::TextureFormat::RGBA32F)
 		{
-			help("Output EXR format must be RGBA16F.");
+			help("Output EXR format must be RGBA16F or RGBA32F.");
 			return bx::kExitFailure;
 		}
 	}
@@ -1548,7 +1552,21 @@ int main(int _argc, const char* _argv[])
 				bimg::imageWriteExr(&writer
 					, mip.m_width
 					, mip.m_height
-					, mip.m_width*8
+					, mip.m_width*getBitsPerPixel(mip.m_format)/8
+					, mip.m_data
+					, output->m_format
+					, false
+					, &err
+					);
+			}
+			else if (!bx::strFindI(saveAs, "pfm").isEmpty() )
+			{
+				bimg::ImageMip mip;
+				bimg::imageGetRawData(*output, 0, 0, output->m_data, output->m_size, mip);
+				bimg::imageWritePfm(&writer
+					, mip.m_width
+					, mip.m_height
+					, mip.m_width*getBitsPerPixel(mip.m_format)/8
 					, mip.m_data
 					, output->m_format
 					, false

@@ -139,6 +139,12 @@
 #	define BIMG_CONFIG_PARSE_JPEG (BIMG_CONFIG_PARSE_ENABLE && (BIMG_CONFIG_USE_WIC || BIMG_CONFIG_USE_STB_IMAGE) )
 #endif // BIMG_CONFIG_PARSE_JPEG
 
+/// PFM (Portable Float Map) - 32-bit floating point RGB or grayscale image format.
+///
+#ifndef BIMG_CONFIG_PARSE_PFM
+#	define BIMG_CONFIG_PARSE_PFM BIMG_CONFIG_PARSE_ENABLE
+#endif // BIMG_CONFIG_PARSE_PFM
+
 /// PIC (Softimage) - image format used by Softimage 3D tools.
 ///
 #ifndef BIMG_CONFIG_PARSE_PIC
