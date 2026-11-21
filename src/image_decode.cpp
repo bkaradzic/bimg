@@ -764,10 +764,11 @@ namespace bimg
 					if (asFloat)
 					{
 						const float  zero = 0.0f;
+						const float  one  = 1.0f;
 						const float* srcR = UINT8_MAX == idxR ? &zero : (const float*)(exrImage.images)[idxR];
 						const float* srcG = UINT8_MAX == idxG ? &zero : (const float*)(exrImage.images)[idxG];
 						const float* srcB = UINT8_MAX == idxB ? &zero : (const float*)(exrImage.images)[idxB];
-						const float* srcA = UINT8_MAX == idxA ? &zero : (const float*)(exrImage.images)[idxA];
+						const float* srcA = UINT8_MAX == idxA ? &one  : (const float*)(exrImage.images)[idxA];
 
 						const uint32_t bytesPerPixel = dstBpp/8;
 						for (uint32_t ii = 0, num = exrImage.width * exrImage.height; ii < num; ++ii)
@@ -792,10 +793,11 @@ namespace bimg
 					else
 					{
 						const uint16_t  zero = 0;
+						const uint16_t  one  = bx::halfFromFloat(1.0f);
 						const uint16_t* srcR = UINT8_MAX == idxR ? &zero : (const uint16_t*)(exrImage.images)[idxR];
 						const uint16_t* srcG = UINT8_MAX == idxG ? &zero : (const uint16_t*)(exrImage.images)[idxG];
 						const uint16_t* srcB = UINT8_MAX == idxB ? &zero : (const uint16_t*)(exrImage.images)[idxB];
-						const uint16_t* srcA = UINT8_MAX == idxA ? &zero : (const uint16_t*)(exrImage.images)[idxA];
+						const uint16_t* srcA = UINT8_MAX == idxA ? &one  : (const uint16_t*)(exrImage.images)[idxA];
 
 						const uint32_t bytesPerPixel = dstBpp/8;
 						for (uint32_t ii = 0, num = exrImage.width * exrImage.height; ii < num; ++ii)
@@ -809,7 +811,7 @@ namespace bimg
 							};
 							bx::memCopy(&data[ii * bytesPerPixel], rgba, bytesPerPixel);
 
-							hasAlpha |= (hasAlpha || rgba[3] < UINT16_MAX);
+							hasAlpha |= (hasAlpha || bx::halfToFloat(rgba[3]) < 1.0f);
 
 							srcR += stepR;
 							srcG += stepG;
